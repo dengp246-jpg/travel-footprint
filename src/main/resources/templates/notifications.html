@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('通知中心 | 旅迹')}"></head>
+<body>
+<header th:replace="~{fragments :: nav}"></header>
+<section th:replace="~{fragments :: flash}"></section>
+
+<main class="container page-shell">
+    <section class="section-heading">
+        <div>
+            <span class="eyebrow">通知中心</span>
+            <h1>最近互动提醒</h1>
+            <p>这里集中显示点赞、评论、关注等与你有关的动态。</p>
+        </div>
+    </section>
+
+    <div class="empty-state" th:if="${#lists.isEmpty(notifications)}">
+        目前还没有新的通知，去发布内容或和别人互动一下吧。
+    </div>
+
+    <div class="notification-list" th:if="${!#lists.isEmpty(notifications)}">
+        <a class="notification-card" th:each="item : ${notifications}" th:href="${item.linkPath != null ? item.linkPath : '/'}">
+            <div>
+                <strong th:text="${item.message}">通知文案</strong>
+                <p th:text="${item.type}">类型</p>
+            </div>
+            <span th:text="${#temporals.format(item.createdAt, 'yyyy-MM-dd HH:mm')}">时间</span>
+        </a>
+    </div>
+</main>
+</body>
+</html>

@@ -1,0 +1,27 @@
+databases:
+  - name: travel-footprint-db
+    databaseName: travel_footprint
+    user: travel_footprint_user
+    plan: basic-256mb
+
+services:
+  - type: web
+    name: travel-footprint
+    runtime: docker
+    plan: starter
+    dockerfilePath: ./Dockerfile
+    autoDeploy: true
+    healthCheckPath: /
+    envVars:
+      - key: APP_UPLOAD_DIR
+        value: /app/uploads
+      - key: H2_CONSOLE_ENABLED
+        value: "false"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: travel-footprint-db
+          property: connectionString
+    disk:
+      name: travel-footprint-uploads
+      mountPath: /app/uploads
+      sizeGB: 1

@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('收藏清单 | 旅迹')}"></head>
+<body>
+<header th:replace="~{fragments :: nav}"></header>
+<section th:replace="~{fragments :: flash}"></section>
+
+<main class="container page-shell">
+    <section class="section-heading">
+        <div>
+            <span class="eyebrow">我的收藏</span>
+            <h1>想去清单</h1>
+            <p>把喜欢的景点和足迹先收进这里，方便之后集中查看。</p>
+        </div>
+        <a class="secondary-button" th:href="@{/}">回到首页</a>
+    </section>
+
+    <div class="empty-state" th:if="${#lists.isEmpty(posts)}">
+        你还没有收藏任何景点足迹，看到喜欢的内容后可以在详情页点击“收藏景点”。
+    </div>
+
+    <div class="profile-post-grid" th:if="${!#lists.isEmpty(posts)}">
+        <article class="post-card compact" th:each="post : ${posts}">
+            <div class="post-card-media" th:if="${post.photoPath != null}">
+                <img th:src="@{${post.photoPath}}" th:alt="${post.title}">
+            </div>
+            <div class="post-card-body">
+                <span class="post-location" th:text="${post.location}">地点</span>
+                <div class="chip-row">
+                    <span class="chip chip-accent" th:text="${post.category}">分类</span>
+                </div>
+                <h3 th:text="${post.title}">标题</h3>
+                <p class="post-excerpt" th:text="${post.content}">正文</p>
+                <div class="engagement-row">
+                    <span th:text="|点赞 ${likeCounts[post.id]}|">点赞 0</span>
+                    <span th:text="|评论 ${commentCounts[post.id]}|">评论 0</span>
+                    <span th:text="|收藏 ${favoriteCounts[post.id]}|">收藏 0</span>
+                    <span th:text="|评分 ${#numbers.formatDecimal(ratingAverages[post.id], 1, 1)}|">评分 0.0</span>
+                </div>
+                <div class="post-actions">
+                    <a class="secondary-button" th:href="@{/posts/{id}(id=${post.id})}">查看详情</a>
+                    <span class="liked-text" th:if="${favoritePostIds.contains(post.id)}">已收藏</span>
+                </div>
+            </div>
+        </article>
+    </div>
+</main>
+</body>
+</html>

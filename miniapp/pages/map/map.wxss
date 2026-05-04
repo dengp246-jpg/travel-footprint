@@ -1,0 +1,57 @@
+.intro-card,
+.province-card {
+  margin-bottom: 24rpx;
+}
+
+.toggle-row {
+  display: flex;
+  gap: 16rpx;
+  margin-top: 24rpx;
+}
+
+.mode-pill {
+  flex: 1;
+  text-align: center;
+  padding: 18rpx 0;
+  border-radius: 999rpx;
+  background: #ecfeff;
+  color: #0f766e;
+}
+
+.mode-pill.active {
+  background: #0f766e;
+  color: #ffffff;
+}
+
+.province-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16rpx;
+}
+
+.province-chip {
+  padding: 14rpx 22rpx;
+  border-radius: 999rpx;
+  background: #f1f5f9;
+  color: #334155;
+}
+
+.province-chip.selected {
+  background: #0f766e;
+  color: #ffffff;
+}
+
+.point-item {
+  padding: 18rpx 0;
+  border-bottom: 2rpx solid #f1f5f9;
+}
+
+.point-item:last-child {
+  border-bottom: 0;
+}
+
+.point-title {
+  font-size: 30rpx;
+  font-weight: 600;
+  margin-bottom: 6rpx;
+}

@@ -1,0 +1,21 @@
+<view class="page-shell">
+  <view class="card auth-card">
+    <view class="section-title">欢迎来到旅迹小程序</view>
+    <view class="muted intro">先用系统现有账号登录。等你有微信小程序正式资质后，再接入微信授权登录。</view>
+
+    <view class="mode-switch">
+      <view class="mode-item {{mode === 'login' ? 'active' : ''}}" bindtap="switchMode" data-mode="login">登录</view>
+      <view class="mode-item {{mode === 'register' ? 'active' : ''}}" bindtap="switchMode" data-mode="register">注册</view>
+    </view>
+
+    <input class="input field" placeholder="用户名" value="{{form.username}}" bindinput="onFieldChange" data-field="username" />
+    <input wx:if="{{mode === 'register'}}" class="input field" placeholder="昵称" value="{{form.nickname}}" bindinput="onFieldChange" data-field="nickname" />
+    <input class="input field" password placeholder="密码" value="{{form.password}}" bindinput="onFieldChange" data-field="password" />
+    <input wx:if="{{mode === 'register'}}" class="input field" password placeholder="确认密码" value="{{form.confirmPassword}}" bindinput="onFieldChange" data-field="confirmPassword" />
+    <textarea wx:if="{{mode === 'register'}}" class="textarea field" placeholder="个人简介（可选）" value="{{form.bio}}" bindinput="onFieldChange" data-field="bio"></textarea>
+
+    <button class="button-primary submit" loading="{{submitting}}" bindtap="submitForm">
+      {{mode === 'login' ? '立即登录' : '创建账号'}}
+    </button>
+  </view>
+</view>

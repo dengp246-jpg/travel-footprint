@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 97.34 98.47" role="img" aria-labelledby="title desc">
+  <title id="title">澳门地图</title>
+  <desc id="desc">用于旅迹系统省份聚焦展示的澳门矢量地图。</desc>
+  <defs>
+    <filter id="outerGlow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="0" stdDeviation="5" flood-color="#8f8ada" flood-opacity="0.55"/>
+    </filter>
+  </defs>
+  <style>
+    .province-shadow { fill: #ffffff; stroke: #8f8ada; stroke-width: 4.8; filter: url(#outerGlow); }
+    .province-line { fill: #ffffff; stroke: #bdbdbd; stroke-width: 1.05; }
+    .province-label { font: 500 18px 'Microsoft YaHei', sans-serif; fill: #434343; text-anchor: middle; dominant-baseline: middle; }
+  </style>
+  <rect width="97.34" height="98.47" fill="#ffffff"/>
+  <path class="province-shadow" d="M 48.88 50.32 L 48.41 50.47 L 48.45 49.69 L 48.21 49.25 L 48.97 49.16 L 49.34 49.63 L 48.88 50.32 Z M 48.6 48.68 L 48.0 48.87 L 48.04 48.2 L 48.04 48.05 L 48.43 48.0 L 48.6 48.68 Z" />
+  <path class="province-line" d="M 48.88 50.32 L 48.41 50.47 L 48.45 49.69 L 48.21 49.25 L 48.97 49.16 L 49.34 49.63 L 48.88 50.32 Z M 48.6 48.68 L 48.0 48.87 L 48.04 48.2 L 48.04 48.05 L 48.43 48.0 L 48.6 48.68 Z" />
+  <text class="province-label" x="48.12" y="48.62">澳门</text>
+</svg>

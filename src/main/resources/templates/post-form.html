@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head(${editing ? '编辑足迹 | 旅迹' : '发布足迹 | 旅迹'})}"></head>
+<body>
+<header th:replace="~{fragments :: nav}"></header>
+<section th:replace="~{fragments :: flash}"></section>
+
+<main class="container form-page">
+    <section class="editor-panel">
+        <div class="section-heading">
+            <div>
+                <span class="eyebrow" th:text="${editing ? '编辑足迹' : '发布新足迹'}">发布新足迹</span>
+                <h1 th:text="${editing ? '完善你的旅行信息，让搜索、地图和互动都更准确。' : '把风景、照片和当下的心情，一起存进旅迹。'}">
+                    把风景、照片和当下的心情，一起存进旅迹。
+                </h1>
+            </div>
+        </div>
+
+        <div class="offline-draft-note">
+            <strong>离线增强已开启</strong>
+            <span>断网时你仍然可以继续填写，系统会自动把草稿保存在本机，恢复联网后再提交。</span>
+        </div>
+
+        <form class="post-form offline-draft-form"
+              th:if="${!editing}"
+              th:action="@{/posts}"
+              method="post"
+              enctype="multipart/form-data"
+              data-draft-key="post-create-draft">
+            <div class="form-grid">
+                <label>
+                    标题
+                    <input type="text" name="title" th:value="${formPost.title}" placeholder="例如：青岛海边的一场日出" required>
+                </label>
+                <label>
+                    目的地
+                    <input type="text" name="location" th:value="${formPost.location}" placeholder="例如：青岛 栈桥 / 杭州 西湖" required>
+                </label>
+                <label>
+                    所在省份
+                    <select name="province" required>
+                        <option value="">请选择省份</option>
+                        <option th:each="item : ${provinces}" th:value="${item}" th:text="${item}"
+                                th:selected="${item == formPost.province}">浙江</option>
+                    </select>
+                </label>
+                <label>
+                    出行日期
+                    <input type="date" name="travelDate"
+                           th:value="${formPost.travelDate != null ? #temporals.format(formPost.travelDate, 'yyyy-MM-dd') : ''}"
+                           required>
+                </label>
+                <label>
+                    分类
+                    <select name="category" required>
+                        <option value="">请选择分类</option>
+                        <option th:each="item : ${categories}" th:value="${item}" th:text="${item}"
+                                th:selected="${item == formPost.category}">自然风光</option>
+                    </select>
+                </label>
+                <label>
+                    标签
+                    <input type="text" name="tags" th:value="${formPost.tags}" placeholder="例如：海边,日出,摄影">
+                </label>
+                <label>
+                    景点照片
+                    <input type="file" name="photo" accept="image/*">
+                </label>
+            </div>
+            <label>
+                旅行感悟
+                <textarea name="content" rows="10" placeholder="记录下这次旅行里最值得分享的故事、风景和你的感受。"
+                          th:text="${formPost.content}" required></textarea>
+            </label>
+            <div class="offline-draft-actions">
+                <span class="draft-status" data-draft-status>草稿会自动保存到本机</span>
+                <button class="secondary-button" type="button" data-clear-draft>清空本地草稿</button>
+                <button class="primary-button" type="submit">发布我的足迹</button>
+            </div>
+        </form>
+
+        <form class="post-form offline-draft-form"
+              th:if="${editing}"
+              th:action="@{/posts/{id}/edit(id=${formPost.id})}"
+              method="post"
+              enctype="multipart/form-data"
+              th:attr="data-draft-key=${'post-edit-draft-' + formPost.id}">
+            <div class="form-grid">
+                <label>
+                    标题
+                    <input type="text" name="title" th:value="${formPost.title}" placeholder="例如：青岛海边的一场日出" required>
+                </label>
+                <label>
+                    目的地
+                    <input type="text" name="location" th:value="${formPost.location}" placeholder="例如：青岛 栈桥 / 杭州 西湖" required>
+                </label>
+                <label>
+                    所在省份
+                    <select name="province" required>
+                        <option value="">请选择省份</option>
+                        <option th:each="item : ${provinces}" th:value="${item}" th:text="${item}"
+                                th:selected="${item == formPost.province}">浙江</option>
+                    </select>
+                </label>
+                <label>
+                    出行日期
+                    <input type="date" name="travelDate"
+                           th:value="${formPost.travelDate != null ? #temporals.format(formPost.travelDate, 'yyyy-MM-dd') : ''}"
+                           required>
+                </label>
+                <label>
+                    分类
+                    <select name="category" required>
+                        <option value="">请选择分类</option>
+                        <option th:each="item : ${categories}" th:value="${item}" th:text="${item}"
+                                th:selected="${item == formPost.category}">自然风光</option>
+                    </select>
+                </label>
+                <label>
+                    标签
+                    <input type="text" name="tags" th:value="${formPost.tags}" placeholder="例如：海边,日出,摄影">
+                </label>
+                <label>
+                    景点照片
+                    <input type="file" name="photo" accept="image/*">
+                </label>
+            </div>
+            <label>
+                旅行感悟
+                <textarea name="content" rows="10" placeholder="记录下这次旅行里最值得分享的故事、风景和你的感受。"
+                          th:text="${formPost.content}" required></textarea>
+            </label>
+            <div class="offline-draft-actions">
+                <span class="draft-status" data-draft-status>草稿会自动保存到本机</span>
+                <button class="secondary-button" type="button" data-clear-draft>清空本地草稿</button>
+                <button class="primary-button" type="submit">保存修改</button>
+            </div>
+        </form>
+    </section>
+
+    <aside class="tips-panel">
+        <span class="eyebrow">填写建议</span>
+        <h2>让你的足迹更容易被看见</h2>
+        <ul class="feature-list">
+            <li>省份会直接用于地图点亮和省份筛选，建议按真实旅行地点选择。</li>
+            <li>地图会根据你选择的省份和填写的目的地自动落点，不需要手动填写经纬度。</li>
+            <li>断网时你仍然可以继续编辑文字草稿，但图片上传和最终提交需要恢复联网。</li>
+            <li>正文可以写风景、交通建议、感受和避坑提醒，图文越完整越容易获得互动。</li>
+        </ul>
+    </aside>
+</main>
+</body>
+</html>

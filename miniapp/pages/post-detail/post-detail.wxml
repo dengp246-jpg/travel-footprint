@@ -1,0 +1,11 @@
+<view class="page-shell">
+  <view wx:if="{{post}}" class="card detail-card">
+    <image wx:if="{{post.photoUrl}}" class="detail-photo" mode="aspectFill" src="{{post.photoUrl}}"></image>
+    <view class="section-title">{{post.title}}</view>
+    <view class="muted detail-meta">{{post.province}} · {{post.location}} · {{post.travelDate}}</view>
+    <view class="tag">{{post.category}}</view>
+    <view wx:if="{{post.tags}}" class="muted detail-tags">标签：{{post.tags}}</view>
+    <view class="detail-content">{{post.content}}</view>
+    <view class="muted detail-stats">点赞 {{post.likeCount}} · 评论 {{post.commentCount}} · 收藏 {{post.favoriteCount}} · 评分 {{post.ratingAverage}}</view>
+  </view>
+</view>

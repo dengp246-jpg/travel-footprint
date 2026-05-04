@@ -1,0 +1,43 @@
+{
+  "pages": [
+    "pages/feed/feed",
+    "pages/map/map",
+    "pages/publish/publish",
+    "pages/mine/mine",
+    "pages/login/login",
+    "pages/post-detail/post-detail"
+  ],
+  "window": {
+    "navigationBarTitleText": "旅迹",
+    "navigationBarBackgroundColor": "#ffffff",
+    "navigationBarTextStyle": "black",
+    "backgroundColor": "#f5f7fb",
+    "backgroundTextStyle": "light"
+  },
+  "tabBar": {
+    "color": "#6b7280",
+    "selectedColor": "#0f766e",
+    "backgroundColor": "#ffffff",
+    "borderStyle": "black",
+    "list": [
+      {
+        "pagePath": "pages/feed/feed",
+        "text": "首页"
+      },
+      {
+        "pagePath": "pages/map/map",
+        "text": "足迹"
+      },
+      {
+        "pagePath": "pages/publish/publish",
+        "text": "发布"
+      },
+      {
+        "pagePath": "pages/mine/mine",
+        "text": "我的"
+      }
+    ]
+  },
+  "sitemapLocation": "sitemap.json",
+  "style": "v2"
+}

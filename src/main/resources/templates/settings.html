@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('资料设置 | 旅迹')}"></head>
+<body>
+<header th:replace="~{fragments :: nav}"></header>
+<section th:replace="~{fragments :: flash}"></section>
+
+<main class="container auth-layout">
+    <section class="auth-panel wide">
+        <div>
+            <span class="eyebrow">资料设置</span>
+            <h1>完善你的头像和个人简介。</h1>
+            <p>更新后会同步显示在主页、评论、消息列表和地图作者信息里。</p>
+        </div>
+        <form class="auth-form" th:action="@{/settings}" method="post" enctype="multipart/form-data">
+            <div class="form-grid">
+                <label>
+                    昵称
+                    <input type="text" name="nickname" th:value="${currentUser.nickname}" required>
+                </label>
+                <label>
+                    头像上传
+                    <input type="file" name="avatar" accept="image/*">
+                </label>
+            </div>
+            <label>
+                个人简介
+                <textarea name="bio" rows="5" th:text="${currentUser.bio}" placeholder="说说你喜欢怎样的旅行方式。"></textarea>
+            </label>
+            <button class="primary-button full-width" type="submit">保存资料</button>
+        </form>
+    </section>
+</main>
+</body>
+</html>

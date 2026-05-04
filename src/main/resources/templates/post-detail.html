@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head(${post.title} + ' | 旅迹')}"></head>
+<body>
+<header th:replace="~{fragments :: nav}"></header>
+<section th:replace="~{fragments :: flash}"></section>
+
+<main class="container detail-layout">
+    <article class="detail-panel">
+        <div class="detail-header">
+            <div>
+                <span class="eyebrow" th:text="${post.location}">地点</span>
+                <h1 th:text="${post.title}">标题</h1>
+                <div class="chip-row">
+                    <span class="chip chip-accent" th:text="${post.category}">分类</span>
+                    <span class="chip" th:if="${post.province != null and !post.province.isBlank()}" th:text="|省份：${post.province}|">省份</span>
+                </div>
+            </div>
+            <div class="detail-meta">
+                <span th:text="|出行日期：${#temporals.format(post.travelDate, 'yyyy-MM-dd')}|">出行日期</span>
+                <a th:href="@{/users/{id}(id=${post.author.id})}" th:text="|作者：${post.author.nickname}|">作者</a>
+            </div>
+        </div>
+
+        <div class="detail-image" th:if="${post.photoPath != null}">
+            <img th:src="@{${post.photoPath}}" th:alt="${post.title}">
+        </div>
+
+        <div class="tag-row" th:if="${post.tags != null and !post.tags.isBlank()}">
+            <span th:each="tag : ${#strings.arraySplit(post.tags, ',')}" th:text="${#strings.trim(tag)}">标签</span>
+        </div>
+
+        <div class="source-card" th:if="${post.sourceUrl != null}">
+            <strong th:text="${post.sourceName != null ? post.sourceName : '公开网页来源'}">公开网页来源</strong>
+            <a class="inline-link" th:href="${post.sourceUrl}" target="_blank" rel="noopener">查看来源页面</a>
+        </div>
+
+        <p class="detail-content" th:text="${post.content}">正文</p>
+
+        <div class="detail-actions">
+            <div class="engagement-row large">
+                <span th:text="|点赞 ${likeCount}|">点赞 0</span>
+                <span th:text="|评论 ${commentCount}|">评论 0</span>
+                <span th:text="|收藏 ${favoriteCount}|">收藏 0</span>
+                <span th:text="|评分 ${#numbers.formatDecimal(ratingAverage, 1, 1)} / 5|">评分 0.0 / 5</span>
+                <span th:text="|共 ${ratingCount} 人评分|">共 0 人评分</span>
+            </div>
+            <div class="action-grid">
+                <form th:action="@{/posts/{id}/like(id=${post.id})}" method="post">
+                    <button class="primary-button" type="submit" th:text="${liked ? '取消点赞' : '点赞支持'}">点赞支持</button>
+                </form>
+                <form th:action="@{/posts/{id}/favorite(id=${post.id})}" method="post">
+                    <button class="secondary-button" type="submit" th:text="${favorited ? '取消收藏' : '收藏景点'}">收藏景点</button>
+                </form>
+                <a class="secondary-button" th:href="@{/users/{id}(id=${post.author.id})}">查看作者主页</a>
+                <a class="ghost-button" th:href="@{/map}">去地图查看</a>
+            </div>
+        </div>
+
+        <section class="rating-panel">
+            <div class="section-heading compact">
+                <div>
+                    <span class="eyebrow">景点评分</span>
+                    <h2>给这条足迹打个分</h2>
+                </div>
+                <span th:text="|我的评分：${myRating > 0 ? myRating : '未评分'}|">我的评分：未评分</span>
+            </div>
+            <form class="rating-form" th:action="@{/posts/{id}/rating(id=${post.id})}" method="post">
+                <button th:each="score : ${#numbers.sequence(1,5)}"
+                        type="submit"
+                        name="score"
+                        th:value="${score}"
+                        th:text="|${score} 分|"
+                        th:classappend="${myRating == score ? ' selected' : ''}">1 分</button>
+            </form>
+        </section>
+
+        <section class="owner-actions" th:if="${ownedByCurrentUser}">
+            <a class="secondary-button" th:href="@{/posts/{id}/edit(id=${post.id})}">编辑足迹</a>
+            <form th:action="@{/posts/{id}/delete(id=${post.id})}" method="post"
+                  onsubmit="return confirm('确认删除这条足迹吗？');">
+                <button class="ghost-button danger" type="submit">删除足迹</button>
+            </form>
+        </section>
+    </article>
+
+    <aside class="comment-panel">
+        <div class="section-heading compact">
+            <div>
+                <span class="eyebrow">互动区</span>
+                <h2>评论与回复</h2>
+            </div>
+        </div>
+
+        <form class="comment-form" th:action="@{/posts/{id}/comments(id=${post.id})}" method="post">
+            <textarea name="content" rows="5" placeholder="写下你的看法、建议或想问的问题。" required></textarea>
+            <button class="primary-button full-width" type="submit">发表评论</button>
+        </form>
+
+        <div class="comment-list">
+            <article class="comment-card" th:each="comment : ${comments}">
+                <div class="comment-topline">
+                    <strong th:text="${comment.author.nickname}">昵称</strong>
+                    <span th:text="${#temporals.format(comment.createdAt, 'yyyy-MM-dd HH:mm')}">时间</span>
+                </div>
+                <p th:text="${comment.content}">评论内容</p>
+
+                <div class="reply-list" th:if="${replyMap[comment.id] != null}">
+                    <article class="reply-card" th:each="reply : ${replyMap[comment.id]}">
+                        <div class="comment-topline">
+                            <strong th:text="${reply.author.nickname}">昵称</strong>
+                            <span th:text="${#temporals.format(reply.createdAt, 'yyyy-MM-dd HH:mm')}">时间</span>
+                        </div>
+                        <p th:text="${reply.content}">回复内容</p>
+                    </article>
+                </div>
+
+                <form class="reply-form" th:action="@{/posts/{id}/comments(id=${post.id})}" method="post">
+                    <input type="hidden" name="parentId" th:value="${comment.id}">
+                    <textarea name="content" rows="2" placeholder="回复这条评论..." required></textarea>
+                    <button class="ghost-button" type="submit">发送回复</button>
+                </form>
+            </article>
+            <div class="empty-state compact" th:if="${#lists.isEmpty(comments)}">
+                还没有评论，来留下第一条互动吧。
+            </div>
+        </div>
+    </aside>
+</main>
+</body>
+</html>

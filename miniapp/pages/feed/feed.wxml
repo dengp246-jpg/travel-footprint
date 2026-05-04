@@ -1,0 +1,30 @@
+<view class="page-shell">
+  <view class="card search-card">
+    <view class="section-title">社区足迹</view>
+    <input class="input field" placeholder="搜索景点、标题或作者" value="{{query}}" bindinput="onQueryInput" />
+    <picker class="picker field" mode="selector" range="{{provinceOptions}}" value="{{provinceIndex}}" bindchange="onProvinceChange">
+      <view>{{provinceOptions[provinceIndex]}}</view>
+    </picker>
+    <button class="button-secondary" bindtap="loadPosts">开始检索</button>
+  </view>
+
+  <view class="post-list">
+    <view class="card post-card" wx:for="{{posts}}" wx:key="id" bindtap="openDetail" data-id="{{item.id}}">
+      <image wx:if="{{item.photoUrl}}" class="post-photo" mode="aspectFill" src="{{item.photoUrl}}"></image>
+      <view class="post-header">
+        <view class="post-title">{{item.title}}</view>
+        <view class="muted post-meta">{{item.province}} · {{item.location}}</view>
+      </view>
+      <view class="post-excerpt">{{item.excerpt}}</view>
+      <view class="post-footer">
+        <view class="tag">{{item.category}}</view>
+        <view class="muted stat-line">点赞 {{item.likeCount}} · 评论 {{item.commentCount}} · 收藏 {{item.favoriteCount}}</view>
+      </view>
+    </view>
+
+    <view wx:if="{{!loading && posts.length === 0}}" class="card empty-card">
+      <view class="section-title">还没有匹配内容</view>
+      <view class="muted">换个关键词或省份试试，或者先去发布一条属于你的足迹。</view>
+    </view>
+  </view>
+</view>

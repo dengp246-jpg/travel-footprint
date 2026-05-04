@@ -1,0 +1,7 @@
+.field {
+  margin-bottom: 20rpx;
+}
+
+.selected-file {
+  margin-bottom: 22rpx;
+}

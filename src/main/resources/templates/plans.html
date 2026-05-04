@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('行程计划 | 旅迹')}"></head>
+<body>
+<header th:replace="~{fragments :: nav}"></header>
+<section th:replace="~{fragments :: flash}"></section>
+
+<main class="container two-column-layout">
+    <section class="editor-panel">
+        <div class="section-heading compact">
+            <div>
+                <span class="eyebrow">我的计划</span>
+                <h2>创建旅行计划</h2>
+            </div>
+        </div>
+        <form class="post-form" th:action="@{/plans}" method="post">
+            <div class="form-grid">
+                <label>
+                    计划标题
+                    <input type="text" name="title" placeholder="例如：五一去青岛看海" required>
+                </label>
+                <label>
+                    目的地
+                    <input type="text" name="destination" placeholder="例如：山东 青岛" required>
+                </label>
+                <label>
+                    开始日期
+                    <input type="date" name="startDate">
+                </label>
+                <label>
+                    结束日期
+                    <input type="date" name="endDate">
+                </label>
+                <label>
+                    预算
+                    <input type="text" name="budget" placeholder="例如：1600">
+                </label>
+                <label>
+                    状态
+                    <select name="status">
+                        <option th:each="status : ${statuses}" th:value="${status}" th:text="${status}">PLANNED</option>
+                    </select>
+                </label>
+            </div>
+            <label>
+                计划说明
+                <textarea name="notes" rows="6" placeholder="写下路线、想去的景点、预算安排或准备事项。"></textarea>
+            </label>
+            <button class="primary-button" type="submit">创建行程计划</button>
+        </form>
+    </section>
+
+    <section class="side-panel">
+        <div class="section-heading compact">
+            <div>
+                <span class="eyebrow">计划列表</span>
+                <h2>当前行程</h2>
+            </div>
+        </div>
+        <div class="empty-state compact" th:if="${#lists.isEmpty(plans)}">你还没有创建行程计划。</div>
+        <div class="plan-list" th:if="${!#lists.isEmpty(plans)}">
+            <article class="plan-card" th:each="plan : ${plans}">
+                <div class="chip-row">
+                    <span class="chip chip-accent" th:text="${plan.status}">PLANNED</span>
+                    <span class="chip" th:text="${plan.destination}">目的地</span>
+                </div>
+                <h3 th:text="${plan.title}">标题</h3>
+                <p th:text="${plan.notes != null and !plan.notes.isBlank() ? plan.notes : '这条计划还没有补充说明。'}">备注</p>
+                <div class="engagement-row">
+                    <span th:text="${plan.startDate != null ? #temporals.format(plan.startDate, 'yyyy-MM-dd') : '开始未定'}">开始日期</span>
+                    <span th:text="${plan.endDate != null ? #temporals.format(plan.endDate, 'yyyy-MM-dd') : '结束未定'}">结束日期</span>
+                    <span th:text="${plan.budget != null ? '预算 ¥' + plan.budget : '预算待定'}">预算</span>
+                </div>
+                <form th:action="@{/plans/{id}/delete(id=${plan.id})}" method="post"
+                      onsubmit="return confirm('确认删除这条计划吗？');">
+                    <button class="ghost-button danger" type="submit">删除计划</button>
+                </form>
+            </article>
+        </div>
+    </section>
+</main>
+</body>
+</html>

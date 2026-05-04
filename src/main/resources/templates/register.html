@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('注册 | 旅迹')}"></head>
+<body>
+<header th:replace="~{fragments :: nav}"></header>
+<section th:replace="~{fragments :: flash}"></section>
+
+<main class="container auth-layout">
+    <section class="auth-panel wide">
+        <div>
+            <span class="eyebrow">创建账号</span>
+            <h1>注册你的旅行档案，开始记录第一条足迹。</h1>
+            <p>建议昵称带一点个人风格，后续会显示在主页、评论和地图里。</p>
+        </div>
+        <form class="auth-form" th:action="@{/register}" method="post">
+            <div class="form-grid">
+                <label>
+                    用户名
+                    <input type="text" name="username" placeholder="例如：xiaoyu" required>
+                </label>
+                <label>
+                    昵称
+                    <input type="text" name="nickname" placeholder="例如：追云小客" required>
+                </label>
+                <label>
+                    登录密码
+                    <input type="password" name="password" placeholder="建议至少 6 位" required>
+                </label>
+                <label>
+                    确认密码
+                    <input type="password" name="confirmPassword" placeholder="再次输入密码" required>
+                </label>
+            </div>
+            <label>
+                个人简介
+                <textarea name="bio" rows="4" placeholder="介绍一下你喜欢的旅行方式、拍照风格或最想去的地方。"></textarea>
+            </label>
+            <button class="primary-button full-width" type="submit">注册并进入系统</button>
+        </form>
+        <p class="auth-switch">已经有账号？<a th:href="@{/login}">直接登录</a></p>
+    </section>
+</main>
+</body>
+</html>

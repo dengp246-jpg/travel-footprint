@@ -1,0 +1,36 @@
+.auth-card {
+  margin-top: 80rpx;
+}
+
+.intro {
+  line-height: 1.7;
+  margin-bottom: 28rpx;
+}
+
+.mode-switch {
+  display: flex;
+  gap: 16rpx;
+  margin-bottom: 28rpx;
+}
+
+.mode-item {
+  flex: 1;
+  text-align: center;
+  padding: 18rpx 0;
+  border-radius: 999rpx;
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.mode-item.active {
+  background: #0f766e;
+  color: #ffffff;
+}
+
+.field {
+  margin-bottom: 20rpx;
+}
+
+.submit {
+  margin-top: 12rpx;
+}

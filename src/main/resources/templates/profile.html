@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head(${profileUser.nickname} + ' 的主页 | 旅迹')}"></head>
+<body>
+<header th:replace="~{fragments :: nav}"></header>
+<section th:replace="~{fragments :: flash}"></section>
+
+<main class="container profile-layout">
+    <section class="profile-banner">
+        <div class="profile-identity">
+            <img class="profile-avatar" th:if="${profileUser.avatarPath != null}" th:src="@{${profileUser.avatarPath}}" alt="avatar">
+            <span class="profile-avatar profile-avatar-fallback" th:if="${profileUser.avatarPath == null}"
+                  th:text="${#strings.substring(profileUser.nickname, 0, 1)}">旅</span>
+            <div>
+                <span class="eyebrow">个人主页</span>
+                <h1 th:text="${profileUser.nickname}">昵称</h1>
+                <p class="profile-username" th:text="|@${profileUser.username}|">@username</p>
+                <p class="profile-bio" th:text="${profileUser.bio != null and !profileUser.bio.isBlank() ? profileUser.bio : '这个旅行者还没有填写简介。'}">简介</p>
+            </div>
+        </div>
+        <div class="profile-side">
+            <div class="profile-stats">
+                <article>
+                    <strong th:text="${#lists.size(posts)}">0</strong>
+                    <span>足迹</span>
+                </article>
+                <article>
+                    <strong th:text="${followerCount}">0</strong>
+                    <span>粉丝</span>
+                </article>
+                <article>
+                    <strong th:text="${followingCount}">0</strong>
+                    <span>关注</span>
+                </article>
+                <article>
+                    <strong th:text="${profileLikes}">0</strong>
+                    <span>获赞</span>
+                </article>
+                <article>
+                    <strong th:text="${profileComments}">0</strong>
+                    <span>评论</span>
+                </article>
+                <article>
+                    <strong th:text="${profileFavorites}">0</strong>
+                    <span>收藏</span>
+                </article>
+            </div>
+            <div class="hero-actions">
+                <a class="secondary-button" th:if="${isSelf}" th:href="@{/settings}">编辑资料</a>
+                <a class="secondary-button" th:if="${!isSelf and currentUser != null}" th:href="@{/messages(userId=${profileUser.id})}">发私信</a>
+                <form th:if="${!isSelf and currentUser != null}" th:action="@{/users/{id}/follow(id=${profileUser.id})}" method="post">
+                    <button class="primary-button" type="submit" th:text="${isFollowing ? '取消关注' : '关注 TA'}">关注 TA</button>
+                </form>
+            </div>
+        </div>
+    </section>
+
+    <section class="section-heading">
+        <div>
+            <span class="eyebrow">旅行档案</span>
+            <h2 th:text="|${profileUser.nickname} 的足迹记录|">足迹记录</h2>
+        </div>
+    </section>
+
+    <section class="filter-panel">
+        <form class="search-form" method="get" th:action="@{/users/{id}(id=${profileUser.id})}">
+            <div class="form-grid">
+                <label>
+                    <span>省份筛选</span>
+                    <select name="province">
+                        <option value="">全部省份</option>
+                        <option th:each="provinceOption : ${provinceOptions}"
+                                th:value="${provinceOption}"
+                                th:text="${provinceOption}"
+                                th:selected="${provinceOption == selectedProvinceFilter}">浙江</option>
+                    </select>
+                </label>
+                <label>
+                    <span>景点检索</span>
+                    <input type="text" name="scenicKeyword" placeholder="输入景点或地点关键词"
+                           th:value="${scenicKeyword}">
+                </label>
+                <label>
+                    <span>发布时间从</span>
+                    <input type="date" name="publishedFrom" th:value="${publishedFrom}">
+                </label>
+                <label>
+                    <span>发布时间至</span>
+                    <input type="date" name="publishedTo" th:value="${publishedTo}">
+                </label>
+            </div>
+            <div class="hero-actions">
+                <button class="primary-button" type="submit">检索内容</button>
+                <a class="secondary-button" th:href="@{/users/{id}(id=${profileUser.id})}">清空条件</a>
+                <span class="chip">当前结果 <strong th:text="${#lists.size(posts)}">0</strong> 条</span>
+            </div>
+        </form>
+    </section>
+
+    <div class="empty-state" th:if="${#lists.isEmpty(posts)}">
+        没有找到符合当前筛选条件的旅行足迹。
+    </div>
+
+    <div class="profile-post-grid">
+        <article class="post-card compact" th:each="post : ${posts}">
+            <div class="post-card-media" th:if="${post.photoPath != null}">
+                <img th:src="@{${post.photoPath}}" th:alt="${post.title}">
+            </div>
+            <div class="post-card-body">
+                <span class="post-location" th:text="${post.location}">地点</span>
+                <div class="chip-row">
+                    <span class="chip chip-accent" th:text="${post.category}">分类</span>
+                    <span class="chip" th:if="${post.province != null and !post.province.isBlank()}">地图足迹</span>
+                    <span class="chip" th:if="${post.province != null and !post.province.isBlank()}" th:text="|省份：${post.province}|">省份：浙江</span>
+                    <span class="chip" th:text="|发布于 ${#temporals.format(post.createdAt, 'yyyy-MM-dd HH:mm')}|">发布于 2026-05-02 12:00</span>
+                </div>
+                <h3 th:text="${post.title}">标题</h3>
+                <p class="post-excerpt" th:text="${post.content}">正文</p>
+                <div class="engagement-row">
+                    <span th:text="|点赞 ${likeCounts[post.id]}|">点赞 0</span>
+                    <span th:text="|评论 ${commentCounts[post.id]}|">评论 0</span>
+                    <span th:text="|收藏 ${favoriteCounts[post.id]}|">收藏 0</span>
+                    <span th:text="|评分 ${#numbers.formatDecimal(ratingAverages[post.id], 1, 1)}|">评分 0.0</span>
+                </div>
+                <div class="post-actions">
+                    <a class="secondary-button" th:href="@{/posts/{id}(id=${post.id})}">查看详情</a>
+                    <span class="liked-text" th:if="${favoritePostIds.contains(post.id)}">已被你收藏</span>
+                </div>
+            </div>
+        </article>
+    </div>
+</main>
+</body>
+</html>

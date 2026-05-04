@@ -1,0 +1,38 @@
+.profile-card {
+  margin-bottom: 24rpx;
+}
+
+.stats-row {
+  display: flex;
+  gap: 16rpx;
+  margin: 24rpx 0;
+}
+
+.stat-box {
+  flex: 1;
+  background: #f8fafc;
+  border-radius: 18rpx;
+  padding: 20rpx;
+  text-align: center;
+}
+
+.stat-number {
+  font-size: 34rpx;
+  font-weight: 700;
+  margin-bottom: 8rpx;
+}
+
+.my-post-item {
+  padding: 18rpx 0;
+  border-bottom: 2rpx solid #f1f5f9;
+}
+
+.my-post-item:last-child {
+  border-bottom: 0;
+}
+
+.my-post-title {
+  font-size: 30rpx;
+  font-weight: 600;
+  margin-bottom: 8rpx;
+}

@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 760" role="img" aria-labelledby="title desc">
+  <title id="title">中国地图底图</title>
+  <desc id="desc">用于旅行足迹系统展示中国范围内景点点位的简化地图底图。</desc>
+  <defs>
+    <linearGradient id="land" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f6d7bb"/>
+      <stop offset="100%" stop-color="#efb783"/>
+    </linearGradient>
+    <linearGradient id="coast" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#d9e9f4"/>
+      <stop offset="100%" stop-color="#b8d2e3"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="18" stdDeviation="16" flood-color="#17324d" flood-opacity="0.16"/>
+    </filter>
+  </defs>
+
+  <rect width="1000" height="760" rx="36" fill="url(#coast)"/>
+
+  <g filter="url(#shadow)">
+    <path
+      d="M118 315
+         L150 250 L208 224 L246 180 L316 160 L382 120 L460 132 L530 108
+         L621 130 L697 112 L770 145 L820 176 L852 226 L902 264 L920 323
+         L900 378 L850 401 L836 452 L783 500 L720 523 L670 570 L603 603
+         L518 620 L448 593 L387 610 L322 584 L270 548 L205 508 L176 459
+         L132 422 L108 368 Z"
+      fill="url(#land)"
+      stroke="#cb8d55"
+      stroke-width="10"
+      stroke-linejoin="round"/>
+
+    <path
+      d="M742 546 L802 566 L842 600 L806 632 L748 618 L720 582 Z"
+      fill="url(#land)"
+      stroke="#cb8d55"
+      stroke-width="8"
+      stroke-linejoin="round"/>
+  </g>
+
+  <g fill="none" stroke="#ffffff" stroke-opacity="0.58" stroke-width="6" stroke-linecap="round">
+    <path d="M196 246 L290 268 L376 242 L460 266 L554 236 L654 258 L758 220"/>
+    <path d="M170 352 L270 332 L362 362 L462 336 L558 362 L668 340 L808 356"/>
+    <path d="M208 454 L290 422 L392 452 L492 430 L584 452 L692 434 L806 452"/>
+    <path d="M350 156 L346 230 L366 300 L354 390 L372 472 L432 570"/>
+    <path d="M516 120 L506 212 L534 310 L530 412 L552 520"/>
+    <path d="M704 138 L688 224 L716 312 L706 398 L716 492"/>
+  </g>
+
+  <g opacity="0.9">
+    <circle cx="878" cy="126" r="12" fill="#ffffff"/>
+    <circle cx="910" cy="148" r="8" fill="#ffffff"/>
+    <circle cx="928" cy="172" r="6" fill="#ffffff"/>
+  </g>
+
+  <g transform="translate(820 560)">
+    <rect x="0" y="0" width="126" height="112" rx="18" fill="#f7efe5" stroke="#d1b396" stroke-width="4"/>
+    <path d="M32 26 L40 36 L34 48 L48 54 L42 68 L56 74" fill="none" stroke="#cb8d55" stroke-width="4" stroke-linecap="round"/>
+    <path d="M64 42 L76 50 L72 62 L88 68" fill="none" stroke="#cb8d55" stroke-width="4" stroke-linecap="round"/>
+    <path d="M44 84 L58 90 L74 86 L90 92" fill="none" stroke="#cb8d55" stroke-width="4" stroke-linecap="round"/>
+    <text x="63" y="18" text-anchor="middle" font-size="12" fill="#56708d" font-family="Microsoft YaHei, sans-serif">南海诸岛示意</text>
+  </g>
+</svg>

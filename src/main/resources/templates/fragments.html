@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head th:fragment="head(title)">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#0f766e">
+    <title th:text="${title}">旅迹</title>
+    <link rel="manifest" th:href="@{/manifest.webmanifest(v='20260502-1')}">
+    <link rel="stylesheet" th:href="@{/css/style.css(v='20260502-1')}">
+    <script defer th:src="@{/js/app-shell.js(v='20260502-1')}"></script>
+</head>
+<body>
+<header th:fragment="nav" class="site-header">
+    <div class="container nav-shell">
+        <a class="brand" th:href="@{/}">
+            <span class="brand-mark">旅迹</span>
+            <span class="brand-subtitle">Travel Footprint</span>
+        </a>
+        <nav class="nav-links">
+            <a th:href="@{/}">首页</a>
+            <a th:href="@{/map}">地图</a>
+            <a th:if="${currentUser != null}" th:href="@{/posts/new}">发布</a>
+            <a th:if="${currentUser != null}" th:href="@{/plans}">计划</a>
+            <a th:if="${currentUser != null}" th:href="@{/favorites}">收藏</a>
+            <a th:if="${currentUser != null}" th:href="@{/messages}">
+                私信
+                <span class="badge" th:if="${unreadMessageCount > 0}" th:text="${unreadMessageCount}">0</span>
+            </a>
+            <a th:if="${currentUser != null}" th:href="@{/notifications}">
+                通知
+                <span class="badge" th:if="${unreadNotificationCount > 0}" th:text="${unreadNotificationCount}">0</span>
+            </a>
+            <a th:if="${currentUser != null}" th:href="@{/settings}">设置</a>
+            <a th:if="${currentUser != null}" th:href="@{/me}" class="nav-user">
+                <img th:if="${currentUser.avatarPath != null}" th:src="@{${currentUser.avatarPath}}" alt="avatar">
+                <span th:if="${currentUser.avatarPath == null}" class="avatar-fallback"
+                      th:text="${#strings.substring(currentUser.nickname, 0, 1)}">旅</span>
+                <span th:text="${currentUser.nickname}">我的主页</span>
+            </a>
+            <a th:if="${currentUser == null}" th:href="@{/login}">登录</a>
+            <a th:if="${currentUser == null}" th:href="@{/register}" class="nav-accent">注册</a>
+            <form th:if="${currentUser != null}" th:action="@{/logout}" method="post">
+                <button class="text-button" type="submit">退出</button>
+            </form>
+        </nav>
+    </div>
+</header>
+
+<section th:fragment="flash" class="container flash-stack">
+    <div class="flash flash-success" th:if="${successMessage}" th:text="${successMessage}"></div>
+    <div class="flash flash-error" th:if="${errorMessage}" th:text="${errorMessage}"></div>
+</section>
+</body>
+</html>

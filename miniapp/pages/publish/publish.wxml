@@ -1,0 +1,23 @@
+<view class="page-shell">
+  <view class="card">
+    <view class="section-title">发布旅行足迹</view>
+    <input class="input field" placeholder="标题" value="{{form.title}}" bindinput="onFieldChange" data-field="title" />
+    <picker class="picker field" mode="selector" range="{{provinceOptions}}" value="{{provinceIndex}}" bindchange="onProvinceChange">
+      <view>{{provinceOptions[provinceIndex]}}</view>
+    </picker>
+    <input class="input field" placeholder="景点 / 目的地" value="{{form.location}}" bindinput="onFieldChange" data-field="location" />
+    <input class="input field" placeholder="分类，如自然风光" value="{{form.category}}" bindinput="onFieldChange" data-field="category" />
+    <input class="input field" placeholder="标签，多个标签用逗号分隔" value="{{form.tags}}" bindinput="onFieldChange" data-field="tags" />
+    <picker class="picker field" mode="date" value="{{form.travelDate}}" bindchange="onDateChange">
+      <view>{{form.travelDate || '选择出行日期'}}</view>
+    </picker>
+    <textarea class="textarea field" placeholder="写下这段旅程的感悟" value="{{form.content}}" bindinput="onFieldChange" data-field="content"></textarea>
+
+    <button class="button-secondary field" bindtap="chooseImage">
+      {{photoPath ? '重新选择照片' : '选择景点照片'}}
+    </button>
+    <view wx:if="{{photoPath}}" class="muted selected-file">已选择图片：{{photoName}}</view>
+
+    <button class="button-primary" loading="{{submitting}}" bindtap="submitPost">发布足迹</button>
+  </view>
+</view>

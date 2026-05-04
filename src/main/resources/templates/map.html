@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('旅行地图 | 旅迹')}"></head>
+<body>
+<header th:replace="~{fragments :: nav}"></header>
+<section th:replace="~{fragments :: flash}"></section>
+
+<main class="container page-shell">
+    <section class="section-heading">
+        <div>
+            <span class="eyebrow">中国旅行地图</span>
+            <h1 th:text="${isPersonalMode ? '只看你的足迹分布' : '查看全站公开地点分布'}">查看全站公开地点分布</h1>
+            <p th:text="${isPersonalMode ? '个人地图只展示你自己的发布内容。' : '公共地图展示所有公开发布且已成功上图的地点。'}">
+                公共地图展示所有公开发布且已成功上图的地点。
+            </p>
+        </div>
+        <div class="chip-row">
+            <span class="chip chip-accent" th:text="|上图地点 ${totalMappedPosts}|">上图地点 0</span>
+            <span class="chip" th:text="|范围：${mapOwnerLabel}|">范围：全部足迹</span>
+            <span class="chip" th:text="${selectedProvince != null ? '省份：' + selectedProvince : '省份：全国'}">省份：全国</span>
+        </div>
+    </section>
+
+    <section class="map-panel china-map-panel">
+        <div class="map-mode-shell">
+            <div class="map-mode-header">
+                <div>
+                    <span class="card-label">地图模式</span>
+                    <h2>切换查看范围</h2>
+                    <p>系统会记住你上一次查看的是公共地图还是个人地图。</p>
+                </div>
+                <span class="map-mode-current" th:text="${isPersonalMode ? '当前：个人地图' : '当前：公共地图'}">当前：公共地图</span>
+            </div>
+
+            <div class="map-mode-switch">
+                <a class="map-mode-chip"
+                   th:classappend="${!isPersonalMode ? ' active' : ''}"
+                   th:href="@{/map(mode='public', province=${selectedProvince})}">
+                    <span class="map-mode-badge">公共</span>
+                    <strong>公共地图</strong>
+                    <small>查看所有公开发布内容在地图上的整体分布。</small>
+                    <span class="map-mode-meta" th:text="|可见地点 ${allMappedPosts}|">可见地点 0</span>
+                </a>
+
+                <a class="map-mode-chip"
+                   th:classappend="${isPersonalMode ? ' active' : ''} + ${!personalModeAvailable ? ' disabled' : ''}"
+                   th:href="${personalModeAvailable} ? @{/map(mode='personal', province=${selectedProvince})} : @{/login}">
+                    <span class="map-mode-badge map-mode-badge-personal">个人</span>
+                    <strong>个人地图</strong>
+                    <small th:text="${personalModeAvailable ? '只看你自己发布的足迹。' : '登录后可查看只属于你的地图。'}">只看你自己发布的足迹。</small>
+                    <span class="map-mode-meta"
+                          th:text="${personalModeAvailable ? '我的足迹 ' + sourcePostCount + ' 条' : '登录后解锁'}">我的足迹 0 条</span>
+                </a>
+            </div>
+        </div>
+
+        <article class="empty-state compact" th:if="${personalModeFallback}">
+            当前未登录，系统已自动切回公共地图。登录后可继续查看个人地图。
+        </article>
+
+        <div class="map-insight-grid">
+            <article class="map-stat-card">
+                <span class="card-label" th:text="${isPersonalMode ? '我的足迹' : '上图地点'}">上图地点</span>
+                <strong class="map-insight-number" th:text="${isPersonalMode ? sourcePostCount : allMappedPosts}">0</strong>
+                <p th:text="${isPersonalMode ? '只统计你已经发布的内容。' : '当前可在地图上显示的公开地点总数。'}">当前可在地图上显示的公开地点总数。</p>
+            </article>
+
+            <article class="map-stat-card">
+                <span class="card-label">覆盖省份</span>
+                <strong class="map-insight-number" th:text="${coveredProvinceCount}">0</strong>
+                <p th:text="${isPersonalMode ? '已被你点亮的省份数量。' : '已被足迹覆盖的省份数量。'}">已被足迹覆盖的省份数量。</p>
+            </article>
+        </div>
+
+        <article class="map-ranking-card" th:unless="${isPersonalMode}">
+            <div class="map-ranking-head">
+                <div>
+                    <span class="card-label">热门省份</span>
+                    <h2>公共地图榜单</h2>
+                </div>
+                <span class="chip chip-accent">按地点数排序</span>
+            </div>
+            <div class="empty-state compact" th:if="${#lists.isEmpty(provinceRanking)}">当前还没有足够数据生成榜单。</div>
+            <div class="map-ranking-list" th:unless="${#lists.isEmpty(provinceRanking)}">
+                <article class="map-ranking-item" th:each="entry, iter : ${provinceRanking}">
+                    <div>
+                        <span class="ranking-index" th:text="${iter.count}">1</span>
+                        <strong th:text="${entry.name}">浙江</strong>
+                    </div>
+                    <span class="map-ranking-meta" th:text="|${entry.count} 个地点|">0 个地点</span>
+                </article>
+            </div>
+        </article>
+
+        <div class="map-summary">
+            <div>
+                <strong th:text="${isPersonalMode ? '个人地图已开启' : '公共地图已开启'}">公共地图已开启</strong>
+                <p th:text="${isPersonalMode ? '地图会优先根据你发布时选择的省份和填写的目的地自动落点。' : '地图会优先根据发布时选择的省份和目的地自动落点。'}">
+                    地图会优先根据发布时选择的省份和目的地自动落点。
+                </p>
+            </div>
+            <div class="map-legend">
+                <span><i></i> 足迹点位</span>
+                <span><b></b> 中国地图</span>
+            </div>
+        </div>
+
+        <div class="map-focus-bar" th:unless="${#lists.isEmpty(markers)}">
+            <div>
+                <strong>省份聚焦</strong>
+                <p>点击任意足迹点后，地图会切换成该省的独立地图，并只显示这个省的全部足迹点。</p>
+            </div>
+            <button type="button" class="secondary-button map-focus-reset" data-map-reset hidden>返回全国视图</button>
+        </div>
+
+        <div class="province-filter-bar">
+            <a class="province-filter-chip"
+               th:classappend="${selectedProvince == null ? ' active' : ''}"
+               th:href="@{/map(mode=${mapMode})}">
+                全国
+                <strong th:text="${allMappedPosts}">0</strong>
+            </a>
+            <a class="province-filter-chip"
+               th:each="provinceName : ${provinceNames}"
+               th:if="${provinceCounts[provinceName] != null and provinceCounts[provinceName] > 0}"
+               th:classappend="${provinceName == selectedProvince ? ' active' : ''}"
+               th:href="@{/map(mode=${mapMode}, province=${provinceName})}">
+                <span th:text="${provinceName}">浙江</span>
+                <strong th:text="${provinceCounts[provinceName]}">0</strong>
+            </a>
+        </div>
+
+        <article class="empty-state" th:if="${#lists.isEmpty(markers)}">
+            <strong th:text="${isPersonalMode ? '你的个人地图还是空的' : '当前筛选下没有可显示地点'}">当前筛选下没有可显示地点</strong>
+            <p th:text="${isPersonalMode ? '先去发布一条带有省份和目的地的足迹。' : '可以尝试切换省份，或者先发布一条带有省份和目的地的足迹。'}">
+                可以尝试切换省份，或者先发布一条带有省份和目的地的足迹。
+            </p>
+        </article>
+
+        <div class="china-map-stage" th:unless="${#lists.isEmpty(markers)}">
+            <div class="china-map-photo-frame"
+                 data-map-frame
+                 th:attr="data-selected-province=${selectedProvince},data-map-mode=${mapMode},data-province-meta=@{/images/provinces/metadata.json}">
+                <div class="china-map-scene" data-map-scene>
+                    <img class="china-map-photo"
+                         th:src="@{/images/china-map-generated.svg}"
+                         src="/images/china-map-generated.svg"
+                         data-national-src="/images/china-map-generated.svg"
+                         alt="中国地图底图">
+                    <div class="china-map-position-layer">
+                        <div class="china-map-overlay">
+                        <details class="map-pin"
+                                 th:each="marker : ${markers}"
+                                 th:style="|left:${marker.left}%; top:${marker.top}%;|"
+                                 th:attr="data-province=${marker.province},
+                                          data-group-key=${marker.province + '|' + marker.location},
+                                          data-base-left=${marker.left},
+                                          data-base-top=${marker.top},
+                                          data-title=${marker.title},
+                                          data-location=${marker.location},
+                                          data-author=${marker.author},
+                                          data-post-url=@{/posts/{id}(id=${marker.postId})}">
+                            <summary class="map-pin-trigger" th:title="${marker.title}">
+                                <span></span>
+                            </summary>
+                            <div class="map-pin-card">
+                                <strong th:text="${marker.title}">景点标题</strong>
+                                <small th:text="|${marker.province} · ${marker.location} · ${marker.author}|">省份 · 地点 · 作者</small>
+                                <a class="map-pin-link" th:href="@{/posts/{id}(id=${marker.postId})}">查看足迹</a>
+                            </div>
+                        </details>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="section-heading top-gap">
+        <div>
+            <span class="eyebrow">未上图内容</span>
+            <h2 th:text="${isPersonalMode ? '以下是你暂未显示在地图上的足迹' : '以下是暂未显示在地图上的足迹'}">以下是暂未显示在地图上的足迹</h2>
+        </div>
+    </section>
+
+    <div class="map-status-grid">
+        <article class="empty-state">
+            <strong>已识别内容</strong>
+            <p th:text="|当前共有 ${resolvedProvincePosts} 条内容能根据省份或目的地识别到地图。|">当前共有 0 条内容能根据省份或目的地识别到地图。</p>
+        </article>
+        <article class="empty-state">
+            <strong>自动落点说明</strong>
+            <p>系统优先使用发布时选择的省份和填写的目的地自动落点，不再要求手动填写经纬度。</p>
+        </article>
+    </div>
+
+    <div class="empty-state" th:if="${#lists.isEmpty(unmappedPosts)}">
+        当前可见足迹都已经正常显示在地图中。
+    </div>
+
+    <div class="profile-post-grid" th:if="${!#lists.isEmpty(unmappedPosts)}">
+        <article class="post-card compact" th:each="post : ${unmappedPosts}">
+            <div class="post-card-body">
+                <span class="post-location" th:text="${post.location}">地点</span>
+                <h3 th:text="${post.title}">标题</h3>
+                <p class="post-excerpt" th:text="${post.content}">正文</p>
+                <div class="chip-row">
+                    <span class="chip" th:text="${post.province != null ? '省份：' + post.province : '省份未填写'}">省份未填写</span>
+                </div>
+                <a class="secondary-button" th:href="@{/posts/{id}(id=${post.id})}">查看详情</a>
+            </div>
+        </article>
+    </div>
+
+</main>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const mapFrame = document.querySelector('[data-map-frame]');
+        const mapScene = document.querySelector('[data-map-scene]');
+        const mapImage = document.querySelector('.china-map-photo');
+        const resetButton = document.querySelector('[data-map-reset]');
+        const markers = Array.from(document.querySelectorAll('.map-pin'));
+        const NATIONAL_MAP_WIDTH = 1600;
+        const NATIONAL_MAP_HEIGHT = 1200;
+        let focusedProvince = null;
+        const nationalSrc = mapImage?.dataset.nationalSrc || mapImage?.getAttribute('src');
+        let provinceMeta = {};
+
+        const clamp = function (value, min, max) {
+            return Math.min(Math.max(value, min), max);
+        };
+
+        const escapeHtml = function (value) {
+            return String(value || '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        };
+
+        const renderMarkerCard = function (marker) {
+            const card = marker.querySelector('.map-pin-card');
+            if (!card) {
+                return;
+            }
+            const groupKey = marker.dataset.groupKey || '';
+            const sameGroupMarkers = markers.filter(function (candidate) {
+                return (candidate.dataset.groupKey || '') === groupKey;
+            });
+            const sortedMarkers = sameGroupMarkers.slice().sort(function (first, second) {
+                return (first.dataset.title || '').localeCompare(second.dataset.title || '', 'zh-CN');
+            });
+            const province = escapeHtml(marker.dataset.province || '');
+            const location = escapeHtml(marker.dataset.location || '');
+            const groupCount = sortedMarkers.length;
+            const entriesHtml = sortedMarkers.map(function (entry) {
+                return [
+                    '<article class="map-pin-entry">',
+                    '<strong>' + escapeHtml(entry.dataset.title || '未命名足迹') + '</strong>',
+                    '<small>' + province + ' · ' + location + ' · ' + escapeHtml(entry.dataset.author || '未知作者') + '</small>',
+                    '<a class="map-pin-link" href="' + escapeHtml(entry.dataset.postUrl || '#') + '">查看足迹</a>',
+                    '</article>'
+                ].join('');
+            }).join('');
+
+            card.innerHTML = [
+                '<div class="map-pin-card-head">',
+                '<div>',
+                '<strong>' + location + '</strong>',
+                '<small>' + province + ' · ' + location + '</small>',
+                '</div>',
+                (groupCount > 1 ? '<span class="map-pin-count">共 ' + groupCount + ' 条</span>' : ''),
+                '</div>',
+                '<div class="map-pin-entry-list">' + entriesHtml + '</div>'
+            ].join('');
+        };
+
+        const distance = function (first, second) {
+            const dx = first.left - second.left;
+            const dy = first.top - second.top;
+            return Math.sqrt(dx * dx + dy * dy);
+        };
+
+        const spreadProvinceMarkers = function (positions) {
+            const groups = [];
+            positions.forEach(function (position) {
+                let group = groups.find(function (candidate) {
+                    return distance(candidate.center, position) < 6;
+                });
+                if (!group) {
+                    group = { center: { left: position.left, top: position.top }, items: [] };
+                    groups.push(group);
+                }
+                group.items.push(position);
+                group.center.left = group.items.reduce(function (sum, item) { return sum + item.left; }, 0) / group.items.length;
+                group.center.top = group.items.reduce(function (sum, item) { return sum + item.top; }, 0) / group.items.length;
+            });
+
+            groups.forEach(function (group) {
+                if (group.items.length === 1) {
+                    return;
+                }
+                const radius = Math.min(7.5, 2.2 + group.items.length * 0.9);
+                group.items.forEach(function (item, index) {
+                    const angle = (Math.PI * 2 * index) / group.items.length;
+                    item.left = clamp(group.center.left + Math.cos(angle) * radius, 8, 92);
+                    item.top = clamp(group.center.top + Math.sin(angle) * radius, 10, 90);
+                });
+            });
+        };
+
+        const collapseSameLocationMarkers = function (positions) {
+            const grouped = new Map();
+            positions.forEach(function (position) {
+                const key = position.marker.dataset.groupKey || '';
+                if (!grouped.has(key)) {
+                    grouped.set(key, []);
+                }
+                grouped.get(key).push(position);
+            });
+
+            grouped.forEach(function (items) {
+                if (!items.length) {
+                    return;
+                }
+                const anchor = items[0];
+                items.forEach(function (item, index) {
+                    item.left = anchor.left;
+                    item.top = anchor.top;
+                    item.marker.classList.toggle('is-group-shadow', index > 0);
+                });
+            });
+        };
+
+        const applyProvinceFocus = function (province, sourceMarker) {
+            if (!mapFrame || !mapScene || !mapImage || !province || !provinceMeta[province]) {
+                return;
+            }
+
+            const meta = provinceMeta[province];
+            const provinceMarkers = markers.filter(function (marker) {
+                return marker.dataset.province === province;
+            });
+            if (!provinceMarkers.length) {
+                return;
+            }
+
+            focusedProvince = province;
+            mapFrame.dataset.focusProvince = province;
+            mapScene.style.transformOrigin = '50% 50%';
+            mapScene.style.transform = 'scale(1)';
+            mapImage.src = meta.assetPath;
+
+            const positions = provinceMarkers.map(function (marker) {
+                const baseLeft = parseFloat(marker.dataset.baseLeft || '50');
+                const baseTop = parseFloat(marker.dataset.baseTop || '50');
+                const baseLeftPx = (baseLeft / 100) * NATIONAL_MAP_WIDTH;
+                const baseTopPx = (baseTop / 100) * NATIONAL_MAP_HEIGHT;
+                const paddingPx = parseFloat(meta.paddingPx || '0');
+                const widthPx = parseFloat(meta.widthPx || '1');
+                const heightPx = parseFloat(meta.heightPx || '1');
+                const assetWidthPx = parseFloat(meta.assetWidthPx || String(widthPx + paddingPx * 2));
+                const assetHeightPx = parseFloat(meta.assetHeightPx || String(heightPx + paddingPx * 2));
+                return {
+                    marker: marker,
+                    left: clamp((((baseLeftPx - meta.leftPx) + paddingPx) / assetWidthPx) * 100, 8, 92),
+                    top: clamp((((baseTopPx - meta.topPx) + paddingPx) / assetHeightPx) * 100, 10, 90)
+                };
+            });
+            collapseSameLocationMarkers(positions);
+            spreadProvinceMarkers(positions);
+            collapseSameLocationMarkers(positions);
+
+            const pinScale = clamp(1.32 - Math.max(0, provinceMarkers.length - 4) * 0.08, 0.72, 1.22);
+            markers.forEach(function (marker) {
+                const sameProvince = marker.dataset.province === province;
+                marker.classList.toggle('is-muted', !sameProvince);
+                marker.classList.toggle('is-province-active', sameProvince);
+                marker.style.setProperty('--pin-scale', sameProvince ? pinScale.toFixed(2) : '1');
+                if (!sameProvince) {
+                    marker.open = false;
+                }
+            });
+
+            positions.forEach(function (item) {
+                item.marker.style.left = item.left.toFixed(2) + '%';
+                item.marker.style.top = item.top.toFixed(2) + '%';
+            });
+
+            if (resetButton) {
+                resetButton.hidden = false;
+            }
+        };
+
+        const clearProvinceFocus = function () {
+            focusedProvince = null;
+            if (mapFrame) {
+                delete mapFrame.dataset.focusProvince;
+            }
+            if (mapScene) {
+                mapScene.style.transformOrigin = '50% 50%';
+                mapScene.style.transform = 'scale(1)';
+            }
+            if (mapImage && nationalSrc) {
+                mapImage.src = nationalSrc;
+            }
+            markers.forEach(function (marker) {
+                marker.classList.remove('is-muted');
+                marker.classList.remove('is-province-active');
+                marker.classList.remove('is-group-shadow');
+                marker.style.left = (marker.dataset.baseLeft || '50') + '%';
+                marker.style.top = (marker.dataset.baseTop || '50') + '%';
+                marker.style.setProperty('--pin-scale', '1');
+                marker.open = false;
+            });
+            if (resetButton) {
+                resetButton.hidden = true;
+            }
+        };
+
+        markers.forEach(function (marker) {
+            renderMarkerCard(marker);
+            const trigger = marker.querySelector('.map-pin-trigger');
+            trigger?.addEventListener('click', function () {
+                const province = marker.dataset.province;
+                if (province && province !== focusedProvince) {
+                    applyProvinceFocus(province, marker);
+                }
+            });
+
+            marker.addEventListener('toggle', function () {
+                if (!marker.open) {
+                    return;
+                }
+                markers.forEach(function (other) {
+                    if (other !== marker) {
+                        other.open = false;
+                    }
+                });
+            });
+        });
+        resetButton?.addEventListener('click', function () {
+            const selectedProvince = mapFrame?.dataset.selectedProvince;
+            const mapMode = mapFrame?.dataset.mapMode || 'public';
+            if (selectedProvince) {
+                window.location.href = '/map?mode=' + encodeURIComponent(mapMode);
+                return;
+            }
+            clearProvinceFocus();
+        });
+
+        fetch((mapFrame?.dataset.provinceMeta || '/images/provinces/metadata.json') + '?v=20260501-1', {
+            cache: 'no-store'
+        }).then(function (response) {
+            return response.json();
+        }).then(function (payload) {
+            provinceMeta = payload || {};
+            const initialProvince = mapFrame?.dataset.selectedProvince;
+            if (initialProvince) {
+                applyProvinceFocus(initialProvince);
+            }
+        }).catch(function () {
+            provinceMeta = {};
+        });
+
+        document.addEventListener('click', function (event) {
+            if (event.target.closest('.map-pin')) {
+                return;
+            }
+            if (!event.target.closest('[data-map-reset]')) {
+                markers.forEach(function (marker) {
+                    marker.open = false;
+                });
+            }
+        });
+    });
+</script>
+</body>
+</html>

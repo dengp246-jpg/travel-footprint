@@ -1,0 +1,9 @@
+{
+  "name": "旅迹 Travel Footprint",
+  "short_name": "旅迹",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f4efe6",
+  "theme_color": "#d4662a",
+  "description": "支持离线浏览部分页面和本地草稿保存的旅游足迹系统。"
+}

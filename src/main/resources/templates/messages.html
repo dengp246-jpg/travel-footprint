@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('私信中心 | 旅迹')}"></head>
+<body>
+<header th:replace="~{fragments :: nav}"></header>
+<section th:replace="~{fragments :: flash}"></section>
+
+<main class="container two-column-layout">
+    <section class="side-panel">
+        <div class="section-heading compact">
+            <div>
+                <span class="eyebrow">对话列表</span>
+                <h2>最近私信</h2>
+            </div>
+        </div>
+        <div class="user-list">
+            <a class="user-card selectable"
+               th:each="contact : ${contacts}"
+               th:href="@{/messages(userId=${contact.id})}"
+               th:classappend="${selectedUser != null and selectedUser.id == contact.id ? ' active' : ''}">
+                <div class="user-mini">
+                    <img th:if="${contact.avatarPath != null}" th:src="@{${contact.avatarPath}}" alt="avatar">
+                    <span th:if="${contact.avatarPath == null}" class="avatar-fallback"
+                          th:text="${#strings.substring(contact.nickname, 0, 1)}">旅</span>
+                    <div>
+                        <strong th:text="${contact.nickname}">昵称</strong>
+                        <p th:text="${unreadByPartner[contact.id] != null ? '未读 ' + unreadByPartner[contact.id] + ' 条' : '点击查看对话'}">点击查看对话</p>
+                    </div>
+                </div>
+            </a>
+        </div>
+
+        <div class="section-heading compact top-gap">
+            <div>
+                <span class="eyebrow">发起新对话</span>
+                <h2>全部用户</h2>
+            </div>
+        </div>
+        <div class="user-list compact-list">
+            <a class="user-card selectable" th:each="user : ${allUsers}" th:href="@{/messages(userId=${user.id})}">
+                <div class="user-mini">
+                    <img th:if="${user.avatarPath != null}" th:src="@{${user.avatarPath}}" alt="avatar">
+                    <span th:if="${user.avatarPath == null}" class="avatar-fallback"
+                          th:text="${#strings.substring(user.nickname, 0, 1)}">旅</span>
+                    <div>
+                        <strong th:text="${user.nickname}">昵称</strong>
+                        <p th:text="${user.bio != null and !user.bio.isBlank() ? user.bio : '这个用户还没有填写简介。'}">简介</p>
+                    </div>
+                </div>
+            </a>
+        </div>
+    </section>
+
+    <section class="detail-panel">
+        <div class="section-heading compact">
+            <div>
+                <span class="eyebrow">当前对话</span>
+                <h2 th:text="${selectedUser != null ? '和 ' + selectedUser.nickname + ' 的私信' : '选择一个用户开始聊天'}">选择一个用户开始聊天</h2>
+            </div>
+        </div>
+
+        <div class="message-thread" th:if="${selectedUser != null}">
+            <article class="message-bubble"
+                     th:each="message : ${thread}"
+                     th:classappend="${message.sender.id == currentUser.id ? ' self' : ' other'}">
+                <p th:text="${message.content}">消息内容</p>
+                <span th:text="${#temporals.format(message.createdAt, 'yyyy-MM-dd HH:mm')}">时间</span>
+            </article>
+        </div>
+
+        <div class="empty-state" th:if="${selectedUser == null}">
+            从左侧选择一个用户，就可以开始发送私信。
+        </div>
+
+        <form class="comment-form" th:if="${selectedUser != null}" th:action="@{/messages/{id}(id=${selectedUser.id})}" method="post">
+            <textarea name="content" rows="4" placeholder="输入你想发送的内容..." required></textarea>
+            <button class="primary-button" type="submit">发送私信</button>
+        </form>
+    </section>
+</main>
+</body>
+</html>

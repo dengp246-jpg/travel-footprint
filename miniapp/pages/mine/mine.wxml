@@ -1,0 +1,36 @@
+<view class="page-shell">
+  <view wx:if="{{user}}" class="card profile-card">
+    <view class="section-title">{{user.nickname}}</view>
+    <view class="muted">{{user.bio || '这个用户还没有填写简介。'}}</view>
+    <view class="stats-row">
+      <view class="stat-box">
+        <view class="stat-number">{{user.postCount}}</view>
+        <view class="muted">足迹</view>
+      </view>
+      <view class="stat-box">
+        <view class="stat-number">{{user.followingCount}}</view>
+        <view class="muted">关注</view>
+      </view>
+      <view class="stat-box">
+        <view class="stat-number">{{user.followerCount}}</view>
+        <view class="muted">粉丝</view>
+      </view>
+    </view>
+    <button class="button-secondary" bindtap="logout">退出登录</button>
+  </view>
+
+  <view wx:else class="card profile-card">
+    <view class="section-title">还没有登录</view>
+    <view class="muted">登录后可以查看你的足迹、发布内容，并切换到个人足迹分布。</view>
+    <button class="button-primary" bindtap="goLogin">去登录</button>
+  </view>
+
+  <view class="card post-card">
+    <view class="section-title">我发布的足迹</view>
+    <view wx:if="{{posts.length === 0}}" class="muted">这里还没有内容，先去记录第一段旅程吧。</view>
+    <view wx:for="{{posts}}" wx:key="id" class="my-post-item" bindtap="openDetail" data-id="{{item.id}}">
+      <view class="my-post-title">{{item.title}}</view>
+      <view class="muted">{{item.province}} · {{item.location}} · {{item.travelDate}}</view>
+    </view>
+  </view>
+</view>

@@ -386,24 +386,21 @@ python scripts/generate_china_map_svg.py
 - The current account flow intentionally reuses the website account system. Real `wx.login` + OpenID binding requires a formal appid and backend secret configuration.
 - See `miniapp/README.md` for import, debugging, preview, and release preparation.
 
-## Render Deployment
+## Back4app Free Container Deployment
 
-- The project now includes `render.yaml` and `Dockerfile` for Render deployment.
+- The project includes a `Dockerfile` tuned for Back4app's 256 MB free container.
 - Local development still uses H2 by default.
-- Render deployment uses PostgreSQL through the `DATABASE_URL` environment variable and converts it to a JDBC URL automatically at startup.
-- Uploaded files should be stored on the Render disk mounted at `/app/uploads`.
-- Recommended Render setup in this repository:
-  - Web service: Docker runtime
-  - Web service plan: Render `free`
+- Cloud deployment uses PostgreSQL through the `DATABASE_URL` environment variable and converts it to a JDBC URL automatically at startup.
+- Recommended Back4app setup in this repository:
+  - Container plan: Back4app `Free` ($0, no credit card required)
   - PostgreSQL: external Neon Free connection supplied as `DATABASE_URL`
   - Uploaded images: stored in PostgreSQL with `APP_UPLOAD_STORAGE_MODE=database`
   - Persistent disk: none
 - Basic deployment flow:
-  - create a standalone GitHub repository for this project
-  - push the current project code to that repository
-  - create a new Render Blueprint from the GitHub repository
-  - create a Neon Free PostgreSQL project and paste its connection string into the Render `DATABASE_URL` environment variable
-  - Render will read `render.yaml` and provision only the free web service
+  - connect Back4app Containers to `dengp246-jpg/travel-footprint`
+  - deploy the `main` branch with the repository-root `Dockerfile`
+  - create a Neon Free PostgreSQL project and paste its connection string into the Back4app `DATABASE_URL` environment variable
+  - select the Back4app Free container and use `/health` as its health check
 
 ## Production Hardening and Final Acceptance
 
@@ -428,7 +425,7 @@ $env:APP_ADMIN_BOOTSTRAP_PASSWORD="replace-with-a-strong-unique-password"
 mvn spring-boot:run
 ```
 
-- `render.yaml` activates the production profile automatically and generates `APP_ADMIN_BOOTSTRAP_PASSWORD`. Retrieve that generated value from the Render environment dashboard for the first `admin` login, then change the password from account settings.
+- The Docker image activates the production profile automatically. Set a strong `APP_ADMIN_BOOTSTRAP_PASSWORD` in the Back4app environment page for the first `admin` login, then change the password from account settings.
 - An existing administrator is never silently assigned the bootstrap password, and a deliberately disabled administrator is no longer re-enabled during startup.
 
 ### Final self-check and D-drive backup
@@ -471,13 +468,13 @@ When the backend and APK have both been built, a phone can download the package 
 
 ### Android App without a running computer
 
-The APK is a network client, so the backend must run somewhere even when the development computer is off. Deploy the included free Render Docker service, connect it to Neon Free PostgreSQL, verify its HTTPS URL, and then build an APK with that URL embedded:
+The APK is a network client, so the backend must run somewhere even when the development computer is off. Deploy the included Docker image on the Back4app Free container, connect it to Neon Free PostgreSQL, verify its HTTPS URL, and then build an APK with that URL embedded:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\scripts\verify-cloud-deployment.ps1 `
-  -ServerUrl "https://travel-footprint-xxxx.onrender.com"
+  -ServerUrl "https://your-back4app-domain"
 powershell -ExecutionPolicy Bypass -File .\scripts\build-android-cloud.ps1 `
-  -ServerUrl "https://travel-footprint-xxxx.onrender.com"
+  -ServerUrl "https://your-back4app-domain"
 ```
 
 The resulting `outputs/travel-footprint-android-cloud.apk` opens the cloud service immediately and no longer depends on the computer or local Wi-Fi. The build script also refreshes `distribution/travel-footprint-android.apk`; after the updated image is deployed, Android users can open `https://<your-service>/download/android` on the phone and download it directly. See `docs/CLOUD-APP-DEPLOYMENT.md` for deployment, costs, initial credentials, and local-data migration notes.

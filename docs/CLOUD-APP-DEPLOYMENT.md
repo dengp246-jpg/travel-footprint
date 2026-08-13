@@ -1,81 +1,92 @@
-# 旅迹 App 脱离电脑运行
+# 旅迹 App 脱离电脑运行：Back4app 免费部署
 
-当前 Android App 是联网客户端。要让电脑关机后手机仍能登录、发布、查看地图与报告，需要把 Spring Boot 后端、数据库和上传文件放到公网云服务。
+## 最终架构
 
-## 推荐架构
+- Android APK：安装在手机，连接公网 HTTPS 地址。
+- Spring Boot：Back4app Containers 免费容器。
+- 数据库与图片：现有 Neon Free PostgreSQL；图片使用数据库存储模式。
+- 本地电脑：只用于开发和更新，关机后不影响手机使用。
 
-- Android APK：安装在手机，固定连接 HTTPS 云端地址
-- Spring Boot：Render Free Docker Web Service
-- 业务数据：Neon Free PostgreSQL
-- 上传图片：随业务数据保存到 Neon PostgreSQL，不使用付费磁盘
-- 本机电脑：只用于继续开发，不再参与 App 日常运行
+Back4app 官方免费容器目前为 0.25 CPU、256 MB RAM、100 GB 流量，支持 GitHub、Dockerfile 和 Java，并明确说明免费方案不要求信用卡。项目的 Dockerfile 已加入 256 MB 容器所需的 JVM 内存限制。
 
-## 第一次部署
+## 在 Back4app 创建免费容器
 
-1. 把当前完整代码推送到 GitHub 仓库。
-2. 登录 Render，选择 `New +` → `Blueprint`。
-3. 连接 GitHub 仓库 `dengp246-jpg/travel-footprint`。
-4. Render 会读取仓库根目录的 `render.yaml`，准备以下资源：
-   - `travel-footprint` Free Web Service
-3. 在 Neon 免费账户中创建 PostgreSQL 项目，复制连接串。
-4. 回到 Render 的 `travel-footprint` 环境变量页面，将 Neon 连接串填入 `DATABASE_URL`。
-5. 确认 `APP_UPLOAD_STORAGE_MODE=database`，然后开始部署。
-5. 确认数据库显示 `Free`；Web Service 与上传磁盘仍按 `render.yaml` 使用付费常驻方案，然后由账号所有者确认创建。
-6. 等待部署显示 `Live`，复制 HTTPS 服务地址，例如：
+1. 打开 <https://www.back4app.com/>，使用 GitHub 登录。
+2. 进入控制台，选择 `Build new app`。
+3. 选择 `Containers as a Service` 或 `Container`，不要选择需要购买的付费套餐。
+4. 授权 GitHub，并选择仓库 `dengp246-jpg/travel-footprint`。
+5. 填写部署信息：
 
-   ```text
-   https://travel-footprint-xxxx.onrender.com
-   ```
+   | 项目 | 填写内容 |
+   | --- | --- |
+   | App name | `travel-footprint` |
+   | Branch | `main` |
+   | Root directory | `/` 或留空 |
+   | Dockerfile | `Dockerfile` |
+   | Plan | `Free · $0` |
+   | Health check path | `/health` |
+   | Auto deploy | 开启 |
 
-7. 在 D 盘项目根目录验证云服务：
+6. 在 Environment Variables 中逐项添加：
 
-   ```powershell
-   powershell -ExecutionPolicy Bypass -File .\scripts\verify-cloud-deployment.ps1 `
-     -ServerUrl "https://travel-footprint-xxxx.onrender.com"
-   ```
+   | 变量名 | 值 |
+   | --- | --- |
+   | `DATABASE_URL` | Neon 控制台中复制的完整连接串 |
+   | `APP_ADMIN_BOOTSTRAP_PASSWORD` | 自己设置的高强度初始管理员密码 |
+   | `SPRING_PROFILES_ACTIVE` | `prod` |
+   | `APP_UPLOAD_STORAGE_MODE` | `database` |
+   | `APP_DEMO_SEED_ENABLED` | `false` |
+   | `APP_UPLOAD_MAX_IMAGE_SIZE_BYTES` | `2097152` |
 
-8. 构建固定云端地址的安装包：
+   `DATABASE_URL` 和管理员密码属于秘密，只填写在 Back4app 环境变量页面，不要发到聊天、截图或提交进 GitHub。
 
-   ```powershell
-   powershell -ExecutionPolicy Bypass -File .\scripts\build-android-cloud.ps1 `
-     -ServerUrl "https://travel-footprint-xxxx.onrender.com"
-   ```
+7. 点击 `Create App`，等待状态变成 `Available` 或部署变成 `Ready`。
+8. 从 `Actions` 中打开平台分配的 HTTPS URL。先访问 `/health`，应看到应用、数据库和图片存储均为可用状态。
 
-9. 将 `outputs/travel-footprint-android-cloud.apk` 发送到手机安装。安装后会直接打开云端旅迹，不需要电脑 IP。
+## 验证并生成固定云地址 APK
 
-## 生产账号
+在 D 盘 PowerShell 中执行，域名替换为 Back4app 提供的实际 HTTPS 地址：
 
-生产模式默认不会创建 `lin / 123456` 等演示用户。首次部署后：
+```powershell
+Set-Location "D:\codex project\shujujiegoukeshe"
 
-- 在 Render 服务的 Environment 页面找到自动生成的 `APP_ADMIN_BOOTSTRAP_PASSWORD`。
-- 用 `admin` 和该密码登录，然后立即修改密码。
-- 普通用户可通过注册页面自行创建。
+powershell -ExecutionPolicy Bypass -File .\scripts\verify-cloud-deployment.ps1 `
+  -ServerUrl "https://你的-back4app-域名"
 
-## 数据说明
-
-- 本机 `data/` 中的 H2 数据不会自动上传到 PostgreSQL。
-- 云端部署后会从空数据库开始，原本电脑内的账号、足迹和计划不会自动出现。
-- 如需保留旧数据，需要单独执行 H2 → PostgreSQL 数据迁移。
-- 手机使用的图片必须保存在持久磁盘或对象存储；否则云服务重启后图片会丢失。
-
-## 完全免费方案限制
-
-当前 `render.yaml` 不会创建任何付费资源：Web Service 使用 Render Free，数据库使用外部 Neon Free，图片直接存进 PostgreSQL，因此不需要 Render Persistent Disk。
-
-- Render Free 服务连续 15 分钟无访问会休眠；下次打开时通常需要等待约一分钟唤醒。
-- Neon Free 当前每项目提供 0.5 GB 数据库存储和每月免费计算额度。图片也占用这部分容量，建议上传前压缩，并仅用于课程展示或小规模使用。
-- 免费额度、休眠策略可能由服务商调整，正式长期运营前需要重新核对。
-
-## 手机直接下载 APK
-
-部署镜像会把 `distribution/travel-footprint-android.apk` 放入免费云服务器。部署成功后，可直接在手机浏览器打开：
-
-```text
-https://你的服务地址/download/android
+powershell -ExecutionPolicy Bypass -File .\scripts\build-android-cloud.ps1 `
+  -ServerUrl "https://你的-back4app-域名"
 ```
 
-也可以登录网页，在设置页点击“下载 APK”。下载完成后允许浏览器安装未知来源应用，即可继续安装。通用安装包首次启动时填写当前网站的 HTTPS 地址；执行 `scripts/build-android-cloud.ps1` 并重新部署后，下载到的云端专用版会自动连接本站。
+生成文件：
 
-## 后续更新
+```text
+D:\codex project\shujujiegoukeshe\outputs\travel-footprint-android-cloud.apk
+```
 
-`render.yaml` 已开启自动部署。代码推送到 GitHub 后，Render 会自动重新构建服务；正常网页功能更新通常不需要重新安装 APK。只有云端域名、Android 原生容器或签名发生变化时才需要重新生成 APK。
+把 APK 发到手机安装。此版本会直接连接 Back4app 公网服务，不再要求电脑 Wi-Fi 地址或模拟器地址。
+
+## 手机直接下载安装
+
+云端专用 APK 构建完成并推送到 GitHub、等待 Back4app 自动重新部署后，在手机浏览器打开：
+
+```text
+https://你的-back4app-域名/download/android
+```
+
+Android 若提示阻止安装，请只为当前浏览器临时允许“安装未知应用”。
+
+## 账号与数据
+
+- 第一次部署可用 `admin` 和环境变量中的 `APP_ADMIN_BOOTSTRAP_PASSWORD` 登录，登录后立即修改密码。
+- 普通用户可以自行注册。
+- 本地 H2 数据不会自动迁入 Neon；云端第一次启动使用空数据库。
+- 图片保存到 Neon，因此容器重启不会造成图片丢失。
+- 免费容器资源有限，图片限制为 2 MB 更稳定；适合课程设计、演示和小规模使用。
+
+## 更新项目
+
+代码推送到 GitHub `main` 后，Back4app 会自动重新构建。普通网页功能更新不需要重新安装 APK；只有公网域名、Android 原生代码或签名变化时才需要重新生成 APK。
+
+## 备用方案
+
+如果 Back4app 账号所在地区暂时无法创建免费容器，可使用 Azure for Students。它不要求信用卡，但需要有效学校邮箱或学生身份认证，因此不作为当前首选。

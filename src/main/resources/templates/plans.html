@@ -5,7 +5,46 @@
 <header th:replace="~{fragments :: nav}"></header>
 <section th:replace="~{fragments :: flash}"></section>
 
-<main class="container two-column-layout">
+<main class="container plan-page-shell">
+    <section class="plan-collaboration-hero">
+        <div>
+            <span class="eyebrow">TRIP TOGETHER</span>
+            <h1>一起计划，也一起抵达</h1>
+            <p>邀请同行者共同记录足迹和账本；出发前 7 天，系统会自动生成行程提醒。</p>
+        </div>
+        <div class="plan-collaboration-stats">
+            <article><strong th:text="${#lists.size(plans)}">0</strong><span>可见计划</span></article>
+            <article><strong th:text="${#lists.size(pendingInvitations)}">0</strong><span>待处理邀请</span></article>
+            <article><strong th:text="${#lists.size(upcomingPlans)}">0</strong><span>即将出发</span></article>
+        </div>
+    </section>
+
+    <section class="plan-alert-grid" th:if="${!#lists.isEmpty(pendingInvitations) or !#lists.isEmpty(upcomingPlans)}">
+        <article class="plan-invitation-panel" th:if="${!#lists.isEmpty(pendingInvitations)}">
+            <span class="eyebrow">同行邀请</span>
+            <div class="plan-invitation-item" th:each="invite : ${pendingInvitations}">
+                <div><strong th:text="${invite.tripPlan.title}">计划标题</strong>
+                    <p th:text="|${invite.invitedBy.nickname} 邀请你前往 ${invite.tripPlan.destination}|">邀请说明</p></div>
+                <div class="compact-action-row">
+                    <form th:action="@{/plans/invitations/{id}/respond(id=${invite.id})}" method="post">
+                        <input type="hidden" name="accept" value="true"><button class="primary-button" type="submit">接受</button>
+                    </form>
+                    <form th:action="@{/plans/invitations/{id}/respond(id=${invite.id})}" method="post">
+                        <input type="hidden" name="accept" value="false"><button class="ghost-button" type="submit">婉拒</button>
+                    </form>
+                </div>
+            </div>
+        </article>
+        <article class="plan-reminder-panel" th:if="${!#lists.isEmpty(upcomingPlans)}">
+            <span class="eyebrow">即将出发</span>
+            <a th:each="item : ${upcomingPlans}" th:href="|#plan-${item.plan.id}|">
+                <strong th:text="${item.plan.title}">行程</strong>
+                <span th:text="${item.daysUntilStart == 0 ? '今天出发' : item.daysUntilStart + ' 天后出发'}">即将出发</span>
+            </a>
+        </article>
+    </section>
+
+    <div class="two-column-layout plan-main-layout">
     <section class="editor-panel">
         <div class="section-heading compact">
             <div>
@@ -59,25 +98,69 @@
         </div>
         <div class="empty-state compact" th:if="${#lists.isEmpty(plans)}">你还没有创建行程计划。</div>
         <div class="plan-list" th:if="${!#lists.isEmpty(plans)}">
-            <article class="plan-card" th:each="plan : ${plans}">
+            <article class="plan-card" th:each="plan : ${plans}" th:id="|plan-${plan.id}|">
                 <div class="chip-row">
                     <span class="chip chip-accent" th:text="${plan.status}">PLANNED</span>
                     <span class="chip" th:text="${plan.destination}">目的地</span>
+                    <span class="chip" th:text="${ownedPlans[plan.id] ? '我创建的' : '同行计划'}">计划归属</span>
                 </div>
                 <h3 th:text="${plan.title}">标题</h3>
+                <p class="plan-owner-line" th:if="${!ownedPlans[plan.id]}" th:text="|由 ${plan.owner.nickname} 创建|">创建者</p>
                 <p th:text="${plan.notes != null and !plan.notes.isBlank() ? plan.notes : '这条计划还没有补充说明。'}">备注</p>
                 <div class="engagement-row">
                     <span th:text="${plan.startDate != null ? #temporals.format(plan.startDate, 'yyyy-MM-dd') : '开始未定'}">开始日期</span>
                     <span th:text="${plan.endDate != null ? #temporals.format(plan.endDate, 'yyyy-MM-dd') : '结束未定'}">结束日期</span>
                     <span th:text="${plan.budget != null ? '预算 ¥' + plan.budget : '预算待定'}">预算</span>
+                    <span th:text="|已支出 ¥${planSpent[plan.id]}|">已支出 ¥0</span>
                 </div>
+                <section class="plan-progress" th:with="progress=${planProgress[plan.id]}">
+                    <div><span>行程完成度</span><strong th:text="|${progress.percent}%|">0%</strong></div>
+                    <i><b th:style="|width:${progress.percent}%|"></b></i>
+                    <small th:text="|已关联 ${progress.postCount} 条足迹 · ${progress.completedDays} 个旅行日|">暂无足迹</small>
+                </section>
+                <section class="plan-companion-list">
+                    <div class="section-inline-heading"><strong>同行成员</strong><span th:text="|${#lists.size(planMembers[plan.id]) + 1} 人|">1 人</span></div>
+                    <div class="companion-chip-row">
+                        <span class="companion-chip owner"><b th:text="${#strings.substring(plan.owner.nickname, 0, 1)}">旅</b><i th:text="${plan.owner.nickname}">创建者</i></span>
+                        <span class="companion-chip" th:each="member : ${planMembers[plan.id]}">
+                            <b th:text="${#strings.substring(member.user.nickname, 0, 1)}">同</b><i th:text="${member.user.nickname}">同行者</i>
+                            <form th:if="${ownedPlans[plan.id]}" th:action="@{/plans/members/{id}/remove(id=${member.id})}" method="post">
+                                <button type="submit" title="移除同行者">×</button>
+                            </form>
+                        </span>
+                    </div>
+                    <div class="pending-companion-row" th:if="${ownedPlans[plan.id] and !#lists.isEmpty(planInvitations[plan.id])}">
+                        <span th:each="invite : ${planInvitations[plan.id]}" th:if="${invite.status.name() == 'PENDING'}"
+                              th:text="|等待 ${invite.user.nickname} 确认|">等待确认</span>
+                    </div>
+                </section>
+                <div class="plan-linked-posts" th:if="${!#lists.isEmpty(planPosts[plan.id])}">
+                    <a th:each="post : ${planPosts[plan.id]}" th:href="@{/posts/{id}(id=${post.id})}">
+                        <time th:text="${#temporals.format(post.travelDate, 'MM.dd')}">08.08</time>
+                        <span th:text="${post.title}">足迹标题</span>
+                    </a>
+                </div>
+                <a class="primary-button plan-workspace-link" th:href="@{/plans/{id}(id=${plan.id})}">打开行程工作台</a>
+                <a class="secondary-button" th:href="@{/posts/new(planId=${plan.id})}">为此行程记录足迹</a>
+                <form class="plan-invite-form" th:if="${ownedPlans[plan.id]}" th:action="@{/plans/{id}/invite(id=${plan.id})}" method="post">
+                    <label>邀请同行者<input name="username" placeholder="输入对方用户名，例如 yue" required></label>
+                    <button class="secondary-button" type="submit">发送邀请</button>
+                </form>
+                <form th:if="${!ownedPlans[plan.id]}" th:each="membership : ${planMembers[plan.id]}"
+                      th:unless="${membership.user.id != currentUser.id}"
+                      th:action="@{/plans/members/{id}/remove(id=${membership.id})}" method="post"
+                      onsubmit="return confirm('确认退出这个同行计划吗？');">
+                    <button class="ghost-button" type="submit">退出同行计划</button>
+                </form>
                 <form th:action="@{/plans/{id}/delete(id=${plan.id})}" method="post"
+                      th:if="${ownedPlans[plan.id]}"
                       onsubmit="return confirm('确认删除这条计划吗？');">
                     <button class="ghost-button danger" type="submit">删除计划</button>
                 </form>
             </article>
         </div>
     </section>
+</div>
 </main>
 </body>
 </html>

@@ -15,11 +15,13 @@
         <form class="auth-form" th:action="@{/login}" method="post">
             <label>
                 用户名
-                <input type="text" name="username" placeholder="请输入用户名" required>
+                <input type="text" name="username" maxlength="50" autocomplete="username"
+                       placeholder="请输入用户名" required>
             </label>
             <label>
                 密码
-                <input type="password" name="password" placeholder="请输入密码" required>
+                <input type="password" name="password" maxlength="72" autocomplete="current-password"
+                       placeholder="请输入密码" required>
             </label>
             <button class="primary-button full-width" type="submit">登录</button>
         </form>

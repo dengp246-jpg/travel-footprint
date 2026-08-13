@@ -12,6 +12,9 @@
             <h1>最近互动提醒</h1>
             <p>这里集中显示点赞、评论、关注等与你有关的动态。</p>
         </div>
+        <form th:if="${unreadCount > 0}" th:action="@{/notifications/read-all}" method="post">
+            <button class="secondary-button" type="submit" th:text="|全部标为已读（${unreadCount}）|">全部标为已读</button>
+        </form>
     </section>
 
     <div class="empty-state" th:if="${#lists.isEmpty(notifications)}">
@@ -19,10 +22,11 @@
     </div>
 
     <div class="notification-list" th:if="${!#lists.isEmpty(notifications)}">
-        <a class="notification-card" th:each="item : ${notifications}" th:href="${item.linkPath != null ? item.linkPath : '/'}">
+        <a class="notification-card" th:classappend="${item.readAt == null ? ' unread' : ''}"
+           th:each="item : ${notifications}" th:href="@{/notifications/{id}/open(id=${item.id})}">
             <div>
                 <strong th:text="${item.message}">通知文案</strong>
-                <p th:text="${item.type}">类型</p>
+                <p><span th:text="${item.type.label}">类型</span><i th:if="${item.readAt == null}">未读</i></p>
             </div>
             <span th:text="${#temporals.format(item.createdAt, 'yyyy-MM-dd HH:mm')}">时间</span>
         </a>

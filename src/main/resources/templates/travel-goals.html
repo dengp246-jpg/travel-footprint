@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('旅行目标 | 旅迹')}"></head>
+<body class="goal-page"><header th:replace="~{fragments :: nav}"></header><section th:replace="~{fragments :: flash}"></section>
+<main class="container goal-shell">
+    <section class="goal-hero"><div><span class="eyebrow">TRAVEL GOALS</span><h1>把想去的远方，变成看得见的进度</h1><p>目标进度会根据足迹、旅行日期和行程状态自动更新。</p></div></section>
+    <section class="goal-layout">
+        <article class="goal-form-card"><span class="eyebrow">NEW GOAL</span><h2>创建旅行目标</h2>
+            <form class="post-form" th:action="@{/goals}" method="post">
+                <label>目标名称<input name="title" maxlength="100" placeholder="例如：今年点亮 8 个省份" required></label>
+                <div class="form-grid"><label>目标类型<select name="type"><option th:each="type : ${goalTypes}" th:value="${type}" th:text="${type.label}">点亮省份</option></select></label>
+                    <label>目标数值<input type="number" name="targetValue" min="1" max="10000" value="5" required></label>
+                    <label>目标年份<input type="number" name="targetYear" min="2000" th:max="${currentYear + 5}" th:value="${currentYear}" required></label></div>
+                <button class="primary-button" type="submit">创建目标</button>
+            </form></article>
+        <section class="goal-list">
+            <article th:each="item : ${goals}" th:classappend="${item.completed} ? ' completed'">
+                <header><div><span th:text="|${item.goal.targetYear} · ${item.goal.type.label}|">年度目标</span><h2 th:text="${item.goal.title}">目标</h2></div><b th:text="|${item.percent}%|">0%</b></header>
+                <div class="goal-progress"><i><b th:style="|width:${item.percent}%|"></b></i></div>
+                <p th:if="${!item.completed}" th:text="|当前 ${item.current}，还差 ${item.remaining} 即可完成。|">目标进度</p>
+                <p th:if="${item.completed}">目标已完成，继续保持这份探索的热情。</p>
+                <footer><strong th:text="|${item.current} / ${item.goal.targetValue}|">0/5</strong>
+                    <form th:action="@{/goals/{id}/delete(id=${item.goal.id})}" method="post" onsubmit="return confirm('确认删除这个目标吗？');"><button class="text-button" type="submit">删除</button></form></footer>
+            </article>
+            <div class="empty-state" th:if="${#lists.isEmpty(goals)}">还没有旅行目标，从一个容易实现的小目标开始吧。</div>
+        </section>
+    </section>
+</main></body></html>

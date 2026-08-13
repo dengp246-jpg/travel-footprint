@@ -1,36 +1,14 @@
-.auth-card {
-  margin-top: 80rpx;
-}
-
-.intro {
-  line-height: 1.7;
-  margin-bottom: 28rpx;
-}
-
-.mode-switch {
-  display: flex;
-  gap: 16rpx;
-  margin-bottom: 28rpx;
-}
-
-.mode-item {
-  flex: 1;
-  text-align: center;
-  padding: 18rpx 0;
-  border-radius: 999rpx;
-  background: #f1f5f9;
-  color: #475569;
-}
-
-.mode-item.active {
-  background: #0f766e;
-  color: #ffffff;
-}
-
-.field {
-  margin-bottom: 20rpx;
-}
-
-.submit {
-  margin-top: 12rpx;
-}
+.auth-page { padding-top: 42rpx; }
+.brand-mark { display: flex; align-items: center; justify-content: center; width: 82rpx; height: 82rpx; border-radius: 25rpx; background: #176557; color: #fff; font-size: 27rpx; font-weight: 760; box-shadow: 0 15rpx 30rpx rgba(23,101,87,.2); }
+.auth-hero { padding-top: 32rpx; }
+.auth-card { padding: 32rpx; }
+.mode-switch { display: flex; gap: 8rpx; margin-bottom: 30rpx; padding: 7rpx; border-radius: 18rpx; background: #eeede8; }
+.mode-item { flex: 1; padding: 17rpx 0; border-radius: 13rpx; color: #747c77; text-align: center; font-weight: 620; }
+.mode-item.active { background: #fff; color: #176557; box-shadow: 0 6rpx 18rpx rgba(33,48,42,.08); }
+.field { margin-bottom: 22rpx; }
+.bio { min-height: 160rpx; }
+.submit { margin-top: 10rpx; }
+.server-entry { display: flex; align-items: center; justify-content: space-between; margin-top: 28rpx; padding-top: 24rpx; border-top: 2rpx solid #ecebe6; }
+.server-label { color: #7b827e; font-size: 21rpx; }
+.server-url { overflow: hidden; max-width: 520rpx; margin-top: 5rpx; color: #45514c; font-size: 22rpx; text-overflow: ellipsis; white-space: nowrap; }
+.server-arrow { color: #a0a7a3; font-size: 38rpx; }

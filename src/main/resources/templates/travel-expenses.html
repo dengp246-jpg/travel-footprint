@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('旅行账本 | 旅迹')}"></head>
+<body class="expense-page">
+<header th:replace="~{fragments :: nav}"></header>
+<section th:replace="~{fragments :: flash}"></section>
+
+<main class="container expense-shell">
+    <section class="expense-hero">
+        <div><span class="eyebrow">TRAVEL LEDGER</span><h1>旅行账本</h1><p>看见每一笔支出，也看见旅程真正的成本。</p></div>
+        <div><small th:text="${expenseView.title}">本月</small><strong th:text="|¥ ${#numbers.formatDecimal(expenseView.total, 1, 2)}|">¥ 0.00</strong>
+            <span th:text="|共 ${expenseView.count} 笔|">共 0 笔</span></div>
+    </section>
+
+    <section class="expense-month-nav">
+        <a th:href="@{/expenses(month=${expenseView.previousMonth})}">← 上个月</a>
+        <h2 th:text="${expenseView.title}">2026年8月</h2>
+        <a th:href="@{/expenses(month=${expenseView.nextMonth})}">下个月 →</a>
+    </section>
+
+    <section class="expense-layout">
+        <article class="expense-form-card">
+            <span class="eyebrow">NEW EXPENSE</span><h2>记一笔旅行支出</h2>
+            <form class="post-form" th:action="@{/expenses}" method="post">
+                <div class="form-grid">
+                    <label>金额（元）<input type="number" name="amount" min="0.01" max="999999999.99" step="0.01" placeholder="0.00" required></label>
+                    <label>消费日期<input type="date" name="occurredOn" th:value="${today}" required></label>
+                    <label>支出分类<select name="category" required>
+                        <option th:each="category : ${expenseCategories}" th:value="${category}" th:text="${category.label}">交通</option>
+                    </select></label>
+                    <label>关联行程<select name="tripPlanId"><option value="">不关联</option>
+                        <option th:each="plan : ${availablePlans}" th:value="${plan.id}" th:text="${plan.title}">行程</option>
+                    </select></label>
+                    <label class="expense-post-select">关联足迹<select name="travelPostId"><option value="">不关联</option>
+                        <option th:each="post : ${availablePosts}" th:value="${post.id}" th:text="|${#temporals.format(post.travelDate, 'MM-dd')} · ${post.title}|">足迹</option>
+                    </select></label>
+                </div>
+                <label>备注<input type="text" name="note" maxlength="240" placeholder="例如：杭州东站到西湖的地铁和公交"></label>
+                <button class="primary-button" type="submit">保存支出</button>
+            </form>
+        </article>
+
+        <article class="expense-analysis-card">
+            <span class="eyebrow">BREAKDOWN</span><h2>本月消费构成</h2>
+            <div class="expense-category-list" th:if="${!#lists.isEmpty(expenseView.categories)}">
+                <div th:each="item : ${expenseView.categories}">
+                    <header><span th:text="${item.category.label}">交通</span><strong th:text="|¥ ${#numbers.formatDecimal(item.amount, 1, 2)}|">¥ 0</strong></header>
+                    <i><b th:style="|width:${item.percentage}%|"></b></i><small th:text="|${item.percentage}%|">0%</small>
+                </div>
+            </div>
+            <div class="empty-state compact" th:if="${#lists.isEmpty(expenseView.categories)}">本月还没有支出数据。</div>
+        </article>
+    </section>
+
+    <section class="expense-list-card">
+        <div class="section-heading compact"><div><span class="eyebrow">DETAILS</span><h2>支出明细</h2></div></div>
+        <div class="expense-list" th:if="${!#lists.isEmpty(expenseView.expenses)}">
+            <article th:each="expense : ${expenseView.expenses}">
+                <time th:text="${#temporals.format(expense.occurredOn, 'MM.dd')}">08.08</time>
+                <span class="expense-category-icon" th:text="${#strings.substring(expense.category.label, 0, 1)}">交</span>
+                <div><strong th:text="${expense.note != null and !expense.note.isBlank() ? expense.note : expense.category.label}">交通</strong>
+                    <small>
+                        <span th:text="${expense.category.label}">分类</span>
+                        <span th:if="${expense.tripPlan != null}" th:text="| · ${expense.tripPlan.title}|">行程</span>
+                        <a th:if="${expense.travelPost != null}" th:href="@{/posts/{id}(id=${expense.travelPost.id})}"
+                           th:text="| · ${expense.travelPost.title}|">足迹</a>
+                    </small></div>
+                <b th:text="|− ¥ ${#numbers.formatDecimal(expense.amount, 1, 2)}|">− ¥ 0.00</b>
+                <form th:action="@{/expenses/{id}/delete(id=${expense.id})}" method="post" onsubmit="return confirm('确认删除这笔支出吗？');">
+                    <button class="text-button" type="submit">删除</button>
+                </form>
+            </article>
+        </div>
+        <div class="empty-state" th:if="${#lists.isEmpty(expenseView.expenses)}">这个月还没有旅行支出，记下第一笔吧。</div>
+    </section>
+</main>
+</body>
+</html>

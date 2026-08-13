@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('全局搜索 | 旅迹')}"></head>
+<body class="global-search-page"><header th:replace="~{fragments :: nav}"></header><section th:replace="~{fragments :: flash}"></section>
+<main class="container global-search-shell">
+    <section class="global-search-hero"><span class="eyebrow">EXPLORE EVERYTHING</span><h1>搜索你的下一段旅程</h1><p>同时查找公开足迹、本地点位，以及只有你和同行成员可以看到的旅行计划。</p><form action="/search" method="get"><span>⌕</span><input name="q" th:value="${search.query}" placeholder="输入地点、主题、足迹标题或计划名称" autofocus><button class="primary-button" type="submit">全局搜索</button></form></section>
+
+    <div class="search-empty-guide" th:if="${search.query.isBlank()}"><h2>不知道从哪里开始？</h2><p>试试这些旅行灵感</p><div><a th:href="@{/search(q='西湖')}">西湖</a><a th:href="@{/search(q='古镇')}">古镇</a><a th:href="@{/search(q='徒步')}">徒步</a><a th:href="@{/search(q='海岛')}">海岛</a><a th:href="@{/search(q='美食')}">美食</a></div></div>
+
+    <section th:unless="${search.query.isBlank()}">
+        <div class="search-result-heading"><div><span>搜索结果</span><h2 th:text="|“${search.query}”共找到 ${search.totalCount} 项|">搜索结果</h2></div><a th:href="@{/search}">清空搜索</a></div>
+        <nav class="search-type-tabs"><a th:href="@{/search(q=${search.query},type='all')}" th:classappend="${search.selectedType == 'all' ? ' active' : ''}">全部 <b th:text="${search.totalCount}">0</b></a><a th:href="@{/search(q=${search.query},type='posts')}" th:classappend="${search.selectedType == 'posts' ? ' active' : ''}">足迹 <b th:text="${#lists.size(search.posts)}">0</b></a><a th:href="@{/search(q=${search.query},type='plans')}" th:classappend="${search.selectedType == 'plans' ? ' active' : ''}">我的计划 <b th:text="${#lists.size(search.plans)}">0</b></a><a th:href="@{/search(q=${search.query},type='places')}" th:classappend="${search.selectedType == 'places' ? ' active' : ''}">地点 <b th:text="${#lists.size(search.places)}">0</b></a></nav>
+
+        <div class="global-result-sections">
+            <section th:if="${(search.selectedType == 'all' or search.selectedType == 'posts') and !#lists.isEmpty(search.posts)}"><div class="section-title-row"><h2>旅行足迹</h2><span>按相关性与发布时间展示</span></div><div class="search-post-grid"><a th:each="result : ${search.posts}" th:href="@{/posts/{id}(id=${result.post.id})}"><div class="search-result-icon">足迹</div><div><span th:text="|${result.post.category == null ? '旅行灵感' : result.post.category} · ${result.displayLocation}|">分类</span><h3 th:text="${result.post.title}">标题</h3><p th:text="${#strings.abbreviate(result.post.content, 110)}">内容</p><small th:text="|${result.post.author.nickname} · ${#temporals.format(result.post.travelDate, 'yyyy.MM.dd')}|">作者</small></div></a></div></section>
+            <section th:if="${(search.selectedType == 'all' or search.selectedType == 'plans') and !#lists.isEmpty(search.plans)}"><div class="section-title-row"><h2>我的旅行计划</h2><span>仅搜索你有权查看的计划</span></div><div class="search-plan-grid"><a th:each="plan : ${search.plans}" th:href="@{/plans/{id}(id=${plan.id})}"><span th:text="${plan.status}">PLANNED</span><h3 th:text="${plan.title}">计划</h3><p th:text="|⌖ ${plan.destination}|">目的地</p><small th:text="${plan.startDate == null ? '日期待定' : #temporals.format(plan.startDate, 'yyyy.MM.dd') + ' 出发'}">日期</small></a></div></section>
+            <section th:if="${(search.selectedType == 'all' or search.selectedType == 'places') and !#lists.isEmpty(search.places)}"><div class="section-title-row"><h2>地点目录</h2><span>来自本地地图点位</span></div><div class="search-place-grid"><a th:each="place : ${search.places}" th:href="@{/map(q=${place.location})}"><span>⌖</span><div><strong th:text="${place.location}">地点</strong><small th:text="${place.province}">省份</small></div><b>在地图查看 →</b></a></div></section>
+            <div class="empty-state" th:if="${search.totalCount == 0}">没有找到匹配内容。可以缩短关键词，或前往<a th:href="@{/guides}">目的地攻略</a>继续探索。</div>
+        </div>
+    </section>
+</main></body></html>

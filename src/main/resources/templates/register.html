@@ -16,24 +16,28 @@
             <div class="form-grid">
                 <label>
                     用户名
-                    <input type="text" name="username" placeholder="例如：xiaoyu" required>
+                    <input type="text" name="username" maxlength="50" autocomplete="username"
+                           placeholder="例如：xiaoyu" required>
                 </label>
                 <label>
                     昵称
-                    <input type="text" name="nickname" placeholder="例如：追云小客" required>
+                    <input type="text" name="nickname" maxlength="50" placeholder="例如：追云小客" required>
                 </label>
                 <label>
                     登录密码
-                    <input type="password" name="password" placeholder="建议至少 6 位" required>
+                    <input type="password" name="password" minlength="6" maxlength="72"
+                           autocomplete="new-password" placeholder="建议至少 6 位" required>
                 </label>
                 <label>
                     确认密码
-                    <input type="password" name="confirmPassword" placeholder="再次输入密码" required>
+                    <input type="password" name="confirmPassword" minlength="6" maxlength="72"
+                           autocomplete="new-password" placeholder="再次输入密码" required>
                 </label>
             </div>
             <label>
                 个人简介
-                <textarea name="bio" rows="4" placeholder="介绍一下你喜欢的旅行方式、拍照风格或最想去的地方。"></textarea>
+                <textarea name="bio" rows="4" maxlength="500"
+                          placeholder="介绍一下你喜欢的旅行方式、拍照风格或最想去的地方。"></textarea>
             </label>
             <button class="primary-button full-width" type="submit">注册并进入系统</button>
         </form>

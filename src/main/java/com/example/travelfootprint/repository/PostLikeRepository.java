@@ -4,6 +4,8 @@ import com.example.travelfootprint.model.PostLike;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 public interface PostLikeRepository extends JpaRepository<PostLike, Long> {
 
@@ -16,4 +18,7 @@ public interface PostLikeRepository extends JpaRepository<PostLike, Long> {
     boolean existsByPostIdAndUserId(Long postId, Long userId);
 
     void deleteByPostId(Long postId);
+
+    @Query("select item.post.id, count(item) from PostLike item where item.post.id in :postIds group by item.post.id")
+    List<Object[]> countGroupedByPostIds(@Param("postIds") List<Long> postIds);
 }

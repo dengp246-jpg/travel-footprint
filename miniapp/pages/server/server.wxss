@@ -1,0 +1,19 @@
+.connection-card, .guide-card { margin-bottom: 22rpx; }
+.card-copy { margin: 12rpx 0 24rpx; line-height: 1.7; }
+.url-input { margin-bottom: 18rpx; font-family: monospace; font-size: 25rpx; }
+.status-line { display: flex; align-items: center; gap: 12rpx; margin-bottom: 22rpx; padding: 16rpx 18rpx; border-radius: 15rpx; background: #f4f3ef; color: #6f7772; font-size: 23rpx; }
+.status-dot { width: 14rpx; height: 14rpx; border-radius: 50%; background: #9da39f; }
+.status-testing .status-dot { background: #b1784e; }
+.status-success { background: #e9f3ee; color: #176557; }
+.status-success .status-dot { background: #176557; }
+.status-error { background: #fff0ed; color: #a44535; }
+.status-error .status-dot { background: #a44535; }
+.guide-item { display: flex; gap: 20rpx; padding: 22rpx 0; border-top: 2rpx solid #efeee9; }
+.guide-index { color: #ad7a53; font-size: 22rpx; font-weight: 720; letter-spacing: 2rpx; }
+.guide-title { font-weight: 650; }
+.guide-copy { margin-top: 7rpx; font-size: 23rpx; line-height: 1.6; }
+.quick-actions { display: flex; gap: 12rpx; margin-top: 18rpx; }
+.quick-actions button { flex: 1; margin: 0; }
+.notice-card { padding: 26rpx; border: 2rpx solid #ead8c8; border-radius: 24rpx; background: #fff8f0; }
+.notice-title { color: #945e35; font-weight: 680; }
+.notice-copy { margin-top: 10rpx; color: #806d5f; font-size: 23rpx; line-height: 1.7; }

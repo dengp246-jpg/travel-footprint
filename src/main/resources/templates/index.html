@@ -9,40 +9,78 @@
     <section class="hero-panel">
         <div class="hero-copy">
             <span class="eyebrow">旅行记录系统</span>
-            <h1>把旅行中的地点、照片和感受清楚地整理下来。</h1>
-            <p>这里可以发布足迹、查看地图、收藏景点、安排计划，也可以一键补充百度来源的景点描述数据。</p>
+            <h1>把旅行中的地点、照片和感受，整理成更清晰的个人旅行档案。</h1>
+            <p>现在首页会把社区分享和导入资料分开展示，地点名称也会统一规范，检索、地图和榜单都更容易对齐。</p>
             <div class="hero-actions">
                 <a class="primary-button" th:if="${currentUser != null}" th:href="@{/posts/new}">发布足迹</a>
                 <a class="primary-button" th:if="${currentUser == null}" th:href="@{/register}">立即注册</a>
                 <a class="secondary-button" th:href="@{/map}">查看地图</a>
                 <a class="secondary-button" th:if="${currentUser != null}" th:href="@{/plans}">行程计划</a>
-                <form th:if="${currentUser != null}" th:action="@{/imports/baidu-scenic-descriptions}" method="post">
-                    <button class="ghost-button" type="submit">导入景点资料</button>
-                </form>
+                <a class="secondary-button" th:if="${currentUser != null and currentUser.admin}" th:href="@{/admin}">进入审核台</a>
             </div>
         </div>
         <div class="hero-card-grid">
             <article class="glass-card">
-                <p class="card-label">用户</p>
+                <p class="card-label">活跃用户</p>
                 <strong th:text="${totalUsers}">0</strong>
             </article>
             <article class="glass-card">
-                <p class="card-label">足迹</p>
+                <p class="card-label">公开足迹</p>
                 <strong th:text="${totalPosts}">0</strong>
             </article>
             <article class="glass-card">
-                <p class="card-label">评论</p>
+                <p class="card-label">公开评论</p>
                 <strong th:text="${totalComments}">0</strong>
             </article>
             <article class="glass-card">
-                <p class="card-label">收藏</p>
+                <p class="card-label">景点收藏</p>
                 <strong th:text="${totalFavorites}">0</strong>
+            </article>
+        </div>
+    </section>
+
+    <section class="quick-action-panel">
+        <div class="section-heading compact">
+            <div>
+                <span class="eyebrow">快捷入口</span>
+                <h2>常用操作</h2>
+            </div>
+            <span class="chip" th:text="|当前结果 ${totalResults} 条|">当前结果 0 条</span>
+        </div>
+        <div class="quick-action-grid">
+            <article class="quick-action-card">
+                <span class="card-label">创作</span>
+                <strong>发布你的旅行足迹</strong>
+                <p>地点会自动做标准化处理，方便后续搜索和地图落点。</p>
+                <a class="inline-link" th:href="${currentUser != null} ? @{/posts/new} : @{/login}">去发布</a>
+            </article>
+            <article class="quick-action-card">
+                <span class="card-label">资料</span>
+                <strong>补充景点描述数据</strong>
+                <p>导入内容会进入资料分区，不再和社区原创混在一起。</p>
+                <form th:if="${currentUser != null}" th:action="@{/imports/baidu-scenic-descriptions}" method="post">
+                    <button class="ghost-button" type="submit">导入景点资料</button>
+                </form>
+                <a class="inline-link" th:if="${currentUser == null}" th:href="@{/login}">登录后使用</a>
+            </article>
+            <article class="quick-action-card">
+                <span class="card-label">发现</span>
+                <strong>查看足迹地图分布</strong>
+                <p>公共地图默认只展示审核通过并已上图的内容。</p>
+                <a class="inline-link" th:href="@{/map}">打开地图</a>
+            </article>
+            <article class="quick-action-card" th:if="${currentUser != null and currentUser.admin}">
+                <span class="card-label">审核</span>
+                <strong>管理员待处理队列</strong>
+                <p th:text="|待审核足迹 ${pendingPostCount} 条，待审核评论 ${pendingCommentCount} 条。|">待审核足迹 0 条，待审核评论 0 条。</p>
+                <a class="inline-link" th:href="@{/admin}">进入审核台</a>
             </article>
         </div>
     </section>
 
     <section class="filter-panel">
         <form class="search-form" th:action="@{/}" method="get">
+            <input type="hidden" name="contentType" th:value="${contentType}">
             <div class="form-grid">
                 <label>
                     关键词
@@ -68,7 +106,10 @@
                     </select>
                 </label>
             </div>
-            <button class="primary-button" type="submit">搜索</button>
+            <div class="hero-actions">
+                <button class="primary-button" type="submit">搜索</button>
+                <a class="secondary-button" th:href="@{/}">清空条件</a>
+            </div>
         </form>
     </section>
 
@@ -80,6 +121,35 @@
                     <h2>最新分享</h2>
                 </div>
                 <a class="inline-link" th:if="${currentUser != null}" th:href="@{/favorites}">查看我的收藏</a>
+            </div>
+
+            <div class="feed-switch">
+                <a class="feed-switch-chip"
+                   th:classappend="${contentType == 'all' ? ' active' : ''}"
+                   th:href="@{/(q=${query},category=${selectedCategory},location=${locationQuery},scope=${scope},contentType='all',page=1)}">
+                    全部内容
+                    <strong th:text="${totalResults}">0</strong>
+                </a>
+                <a class="feed-switch-chip"
+                   th:classappend="${contentType == 'community' ? ' active' : ''}"
+                   th:href="@{/(q=${query},category=${selectedCategory},location=${locationQuery},scope=${scope},contentType='community',page=1)}">
+                    用户原创
+                    <strong th:text="${communityCount}">0</strong>
+                </a>
+                <a class="feed-switch-chip"
+                   th:classappend="${contentType == 'reference' ? ' active' : ''}"
+                   th:href="@{/(q=${query},category=${selectedCategory},location=${locationQuery},scope=${scope},contentType='reference',page=1)}">
+                    景点资料
+                    <strong th:text="${referenceCount}">0</strong>
+                </a>
+            </div>
+
+            <div class="feed-summary-bar">
+                <span class="chip">第 <strong th:text="${currentPage}">1</strong> 页</span>
+                <span class="chip">共 <strong th:text="${totalPages}">1</strong> 页</span>
+                <span class="chip">当前分区：
+                    <strong th:text="${contentType == 'community' ? '用户原创' : (contentType == 'reference' ? '景点资料' : '全部内容')}">全部内容</strong>
+                </span>
             </div>
 
             <div class="empty-state" th:if="${#lists.isEmpty(posts)}">
@@ -98,6 +168,7 @@
                     <div class="chip-row">
                         <span class="chip chip-accent" th:text="${post.category}">分类</span>
                         <span class="chip" th:if="${post.province != null and !post.province.isBlank()}">已上地图</span>
+                        <span class="chip" th:if="${post.sourceUrl == null}">用户原创</span>
                         <span class="chip" th:if="${post.sourceUrl != null}">导入资料</span>
                     </div>
                     <h3 th:text="${post.title}">标题</h3>
@@ -123,9 +194,49 @@
                     </div>
                 </div>
             </article>
+
+            <nav class="pagination-bar" th:if="${totalPages > 1}">
+                <a class="pagination-chip"
+                   th:classappend="${!hasPreviousPage ? ' disabled' : ''}"
+                   th:href="${hasPreviousPage} ? @{/(q=${query},category=${selectedCategory},location=${locationQuery},scope=${scope},contentType=${contentType},page=${currentPage - 1})} : '#'">
+                    上一页
+                </a>
+                <span class="pagination-chip active" th:text="|第 ${currentPage} / ${totalPages} 页|">第 1 / 1 页</span>
+                <a class="pagination-chip"
+                   th:classappend="${!hasNextPage ? ' disabled' : ''}"
+                   th:href="${hasNextPage} ? @{/(q=${query},category=${selectedCategory},location=${locationQuery},scope=${scope},contentType=${contentType},page=${currentPage + 1})} : '#'">
+                    下一页
+                </a>
+            </nav>
         </div>
 
         <aside class="sidebar-column">
+            <section class="side-panel" th:if="${currentUser != null and currentUser.admin}">
+                <div class="section-heading compact">
+                    <div>
+                        <span class="eyebrow">审核提醒</span>
+                        <h2>管理员队列</h2>
+                    </div>
+                </div>
+                <div class="ranking-list">
+                    <div class="ranking-item">
+                        <div>
+                            <span class="ranking-index">1</span>
+                            <strong>待审核足迹</strong>
+                        </div>
+                        <span th:text="|${pendingPostCount} 条|">0 条</span>
+                    </div>
+                    <div class="ranking-item">
+                        <div>
+                            <span class="ranking-index">2</span>
+                            <strong>待审核评论</strong>
+                        </div>
+                        <span th:text="|${pendingCommentCount} 条|">0 条</span>
+                    </div>
+                </div>
+                <a class="secondary-button full-width" th:href="@{/admin}">前往审核台</a>
+            </section>
+
             <section class="side-panel">
                 <div class="section-heading compact">
                     <div>

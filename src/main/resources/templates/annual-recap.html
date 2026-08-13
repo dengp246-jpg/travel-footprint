@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('年度旅行回忆 | 旅迹')}"></head>
+<body class="recap-page">
+<header th:replace="~{fragments :: nav}"></header>
+<main class="recap-shell">
+    <section class="recap-slide recap-cover">
+        <div class="recap-year-picker">
+            <a th:each="year : ${availableYears}" th:href="@{/recap(year=${year})}" th:text="${year}"
+               th:classappend="${year == selectedYear} ? ' active'">2026</a>
+        </div>
+        <span>YOUR YEAR IN TRAVEL</span>
+        <h1><b th:text="${selectedYear}">2026</b><small>年度旅行回忆</small></h1>
+        <p th:text="|${currentUser.nickname}，这一年的每一次出发，都已经被旅迹珍藏。|">年度回忆</p>
+        <a href="#recap-overview">开始回顾 ↓</a>
+    </section>
+
+    <section class="recap-slide recap-overview" id="recap-overview">
+        <div><span>这一年，你留下了</span><strong th:text="${recap.postCount}">0</strong><b>条旅行足迹</b></div>
+        <div class="recap-stat-cloud">
+            <article><strong th:text="${recap.travelDays}">0</strong><span>旅行日</span></article>
+            <article><strong th:text="${recap.locationCount}">0</strong><span>目的地</span></article>
+            <article><strong th:text="${recap.provinceCount}">0</strong><span>点亮省份</span></article>
+            <article><strong th:text="|${recap.coveragePercent}%|">0%</strong><span>全国覆盖</span></article>
+        </div>
+    </section>
+
+    <section class="recap-slide recap-rhythm">
+        <div class="recap-copy"><span>TRAVEL RHYTHM</span><h2>你的年度旅行节奏</h2><p th:text="${recap.insight}">年度洞察</p></div>
+        <div class="recap-months">
+            <article th:each="bucket : ${recap.activity}" th:classappend="${bucket.count > 0} ? ' active'">
+                <i th:style="|--recap-level:${bucket.intensity}|"></i><span th:text="${bucket.label}">1月</span><b th:text="${bucket.count}">0</b>
+            </article>
+        </div>
+    </section>
+
+    <section class="recap-slide recap-map-slide">
+        <div class="recap-copy"><span>PLACES YOU TOUCHED</span><h2>这一年走过的地方</h2>
+            <p th:text="|共抵达 ${recap.locationCount} 个目的地，点亮 ${recap.provinceCount} 个省份。|">地图总结</p></div>
+        <div class="recap-map">
+            <img th:src="@{/images/china-map-generated.svg}" alt="年度足迹地图">
+            <svg viewBox="0 0 100 100" preserveAspectRatio="none"><polyline th:if="${#lists.size(recap.mapPoints) > 1}" th:attr="points=${recap.routePolyline}"></polyline></svg>
+            <i th:each="point : ${recap.mapPoints}" th:style="|left:${point.left}%;top:${point.top}%|" th:title="${point.location}"></i>
+        </div>
+    </section>
+
+    <section class="recap-slide recap-favorites">
+        <div class="recap-copy"><span>YOUR TRAVEL DNA</span><h2>你的旅行关键词</h2></div>
+        <div class="recap-favorite-grid">
+            <article><small>最常到访</small><strong th:text="${#lists.isEmpty(recap.provinces) ? '等待出发' : recap.provinces[0].name}">浙江</strong>
+                <span th:if="${!#lists.isEmpty(recap.provinces)}" th:text="|${recap.provinces[0].count} 条足迹|">1条</span></article>
+            <article><small>旅行主题</small><strong th:text="${#lists.isEmpty(recap.categories) ? '自由探索' : recap.categories[0].name}">城市漫游</strong>
+                <span th:if="${!#lists.isEmpty(recap.categories)}" th:text="|占全年 ${recap.categories[0].percentage}%|">50%</span></article>
+            <article><small>旅行支出</small><strong th:text="|¥${#numbers.formatDecimal(recap.expenseTotal, 1, 0)}|">¥0</strong>
+                <span th:text="|${recap.expenseCount} 笔记录|">0笔</span></article>
+        </div>
+    </section>
+
+    <section class="recap-slide recap-memories" th:if="${!#lists.isEmpty(recap.featuredPhotos)}">
+        <div class="recap-copy"><span>BEST MEMORIES</span><h2>这一年的高光画面</h2></div>
+        <div class="recap-photo-grid"><a th:each="post : ${recap.featuredPhotos}" th:href="@{/posts/{id}(id=${post.id})}">
+            <img th:src="@{${post.photoPath}}" th:alt="${post.title}"><span th:text="${post.title}">足迹</span></a></div>
+    </section>
+
+    <section class="recap-slide recap-ending">
+        <span>THE JOURNEY CONTINUES</span><h2 th:text="|${selectedYear}，谢谢你认真走过。|">谢谢你认真走过</h2>
+        <p>下一段旅程，也会成为未来值得反复打开的回忆。</p>
+        <div><a class="primary-button" th:href="@{/reports(period='year',date=${recapDate})}">查看完整年报</a>
+            <button class="secondary-button" type="button" onclick="window.print()">保存年度回忆</button></div>
+    </section>
+</main>
+</body>
+</html>

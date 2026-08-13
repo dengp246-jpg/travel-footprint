@@ -1,23 +1,46 @@
 <view class="page-shell">
-  <view class="card">
-    <view class="section-title">发布旅行足迹</view>
-    <input class="input field" placeholder="标题" value="{{form.title}}" bindinput="onFieldChange" data-field="title" />
-    <picker class="picker field" mode="selector" range="{{provinceOptions}}" value="{{provinceIndex}}" bindchange="onProvinceChange">
-      <view>{{provinceOptions[provinceIndex]}}</view>
-    </picker>
-    <input class="input field" placeholder="景点 / 目的地" value="{{form.location}}" bindinput="onFieldChange" data-field="location" />
-    <input class="input field" placeholder="分类，如自然风光" value="{{form.category}}" bindinput="onFieldChange" data-field="category" />
-    <input class="input field" placeholder="标签，多个标签用逗号分隔" value="{{form.tags}}" bindinput="onFieldChange" data-field="tags" />
-    <picker class="picker field" mode="date" value="{{form.travelDate}}" bindchange="onDateChange">
-      <view>{{form.travelDate || '选择出行日期'}}</view>
-    </picker>
-    <textarea class="textarea field" placeholder="写下这段旅程的感悟" value="{{form.content}}" bindinput="onFieldChange" data-field="content"></textarea>
+  <view class="page-hero">
+    <view class="eyebrow">NEW FOOTPRINT</view>
+    <view class="page-title">记录这一程</view>
+    <view class="page-subtitle">不必写得完美，只要它仍然让你想起当时的风景。</view>
+  </view>
 
-    <button class="button-secondary field" bindtap="chooseImage">
-      {{photoPath ? '重新选择照片' : '选择景点照片'}}
-    </button>
-    <view wx:if="{{photoPath}}" class="muted selected-file">已选择图片：{{photoName}}</view>
+  <view class="card form-card">
+    <view class="form-section">
+      <view class="section-head"><view class="section-title">旅行信息</view><view class="step-index">01</view></view>
+      <view class="field"><text class="field-label">足迹标题</text><input class="input" maxlength="100" placeholder="给这段旅程一个名字" value="{{form.title}}" bindinput="onFieldChange" data-field="title" /></view>
+      <view class="field-grid">
+        <view class="field half-field"><text class="field-label">省份</text><picker mode="selector" range="{{provinceOptions}}" value="{{provinceIndex}}" bindchange="onProvinceChange"><view class="picker">{{provinceOptions[provinceIndex] || '请选择'}}</view></picker></view>
+        <view class="field half-field"><text class="field-label">旅行类型</text><picker mode="selector" range="{{categoryOptions}}" value="{{categoryIndex}}" bindchange="onCategoryChange"><view class="picker">{{categoryOptions[categoryIndex] || '请选择'}}</view></picker></view>
+      </view>
+      <view class="field"><text class="field-label">地点</text><view class="location-line"><input class="input location-input" maxlength="100" placeholder="景点或目的地" value="{{form.location}}" bindinput="onFieldChange" data-field="location" /><button class="button-secondary location-button" bindtap="chooseLocation">地图选点</button></view><view wx:if="{{form.latitude}}" class="field-help accurate-location">已记录精确点位，地图展示会更准确。</view></view>
+      <view class="field"><text class="field-label">出行日期</text><picker mode="date" value="{{form.travelDate}}" bindchange="onDateChange"><view class="picker">{{form.travelDate || '选择日期'}}</view></picker></view>
+      <view class="field"><text class="field-label">旅行标签</text><input class="input" maxlength="100" placeholder="例如：日落、古镇、周末" value="{{form.tags}}" bindinput="onFieldChange" data-field="tags" /></view>
+    </view>
 
-    <button class="button-primary" loading="{{submitting}}" bindtap="submitPost">发布足迹</button>
+    <view class="divider"></view>
+
+    <view class="form-section">
+      <view class="section-head"><view class="section-title">旅途故事</view><view class="step-index">02</view></view>
+      <textarea class="textarea" maxlength="4000" placeholder="写下途中让你停下脚步的瞬间…" value="{{form.content}}" bindinput="onFieldChange" data-field="content"></textarea>
+      <view class="content-count">{{form.content.length || 0}} / 4000</view>
+    </view>
+
+    <view class="divider"></view>
+
+    <view class="form-section">
+      <view class="section-head"><view class="section-title">封面照片</view><view class="step-index">03</view></view>
+      <view wx:if="{{photoPath}}" class="photo-preview-wrap">
+        <image class="photo-preview" mode="aspectFill" src="{{photoPath}}"></image>
+        <view class="photo-meta"><text>{{photoName}}</text><text class="remove-photo" bindtap="removeImage">移除</text></view>
+      </view>
+      <view wx:else class="photo-picker" bindtap="chooseImage">
+        <view class="photo-plus">＋</view>
+        <view class="photo-title">添加一张旅途照片</view>
+        <view class="muted photo-note">建议使用横向图片，最大 10MB</view>
+      </view>
+    </view>
+
+    <button class="button-primary submit-button" loading="{{submitting}}" disabled="{{submitting}}" bindtap="submitPost">{{submitting ? '正在保存…' : '发布这条足迹'}}</button>
   </view>
 </view>

@@ -1,0 +1,31 @@
+<view class="page-shell">
+  <view class="page-hero">
+    <view class="eyebrow">CONNECTION</view>
+    <view class="page-title">连接到旅迹</view>
+    <view class="page-subtitle">小程序界面运行在微信中，旅行数据仍安全保存在你的 Spring Boot 服务器。</view>
+  </view>
+
+  <view class="card connection-card">
+    <view class="section-title">服务器地址</view>
+    <view class="muted card-copy">开发者工具使用 127.0.0.1；真机调试时，手机与电脑需连接同一网络，并填写电脑局域网 IP。</view>
+    <input class="input url-input" placeholder="http://192.168.1.20:8080" value="{{baseUrl}}" bindinput="onInput" />
+    <view class="status-line status-{{status}}">
+      <view class="status-dot"></view>
+      <text>{{statusText}}</text>
+    </view>
+    <button class="button-primary" loading="{{testing}}" bindtap="saveAndTest">保存并检测连接</button>
+  </view>
+
+  <view class="card guide-card">
+    <view class="section-head"><view class="section-title">连接方法</view><view class="section-note">3 STEPS</view></view>
+    <view class="guide-item"><view class="guide-index">01</view><view><view class="guide-title">启动电脑端服务</view><view class="muted guide-copy">在项目目录运行 mvn spring-boot:run。</view></view></view>
+    <view class="guide-item"><view class="guide-index">02</view><view><view class="guide-title">确认局域网地址</view><view class="muted guide-copy">真机填写类似 http://192.168.1.20:8080 的地址。</view></view></view>
+    <view class="guide-item"><view class="guide-index">03</view><view><view class="guide-title">完成连接检测</view><view class="muted guide-copy">检测成功后，登录、地图、发布和报告即可同步。</view></view></view>
+    <view class="quick-actions"><button class="button-ghost button-small" bindtap="useLocalhost">使用本机地址</button><button class="button-secondary button-small" bindtap="copyExample">复制示例</button></view>
+  </view>
+
+  <view class="notice-card">
+    <view class="notice-title">正式发布提示</view>
+    <view class="notice-copy">上传微信审核前，需要把后端部署到 HTTPS 域名，并在微信公众平台配置 request 与 uploadFile 合法域名。本页的 HTTP 局域网方式只用于开发和真机调试。</view>
+  </view>
+</view>

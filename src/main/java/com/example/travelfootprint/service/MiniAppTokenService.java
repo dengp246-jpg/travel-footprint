@@ -32,7 +32,11 @@ public class MiniAppTokenService {
         if (userId == null) {
             return Optional.empty();
         }
-        return userRepository.findById(userId);
+        Optional<User> user = userRepository.findById(userId).filter(User::isEnabled);
+        if (user.isEmpty()) {
+            tokenToUserId.remove(token.trim());
+        }
+        return user;
     }
 
     public void revoke(String token) {

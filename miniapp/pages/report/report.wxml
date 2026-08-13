@@ -1,0 +1,76 @@
+<view class="page-shell report-page">
+  <view class="page-hero">
+    <view class="eyebrow">TRAVEL INTELLIGENCE</view>
+    <view class="page-title">旅行报告</view>
+    <view class="page-subtitle">按周、月与年回看旅途，让散落的记录成为清晰的成长轨迹。</view>
+  </view>
+
+  <view class="period-switch">
+    <view class="period-item {{period === item.value ? 'active' : ''}}" wx:for="{{periods}}" wx:key="value" bindtap="selectPeriod" data-period="{{item.value}}">{{item.label}}</view>
+  </view>
+
+  <view wx:if="{{loading && !report}}" class="card loading-state">正在整理你的旅途数据…</view>
+
+  <block wx:if="{{report}}">
+    <view class="report-cover">
+      <view class="cover-kicker">{{report.periodLabel}} · JOURNEY</view>
+      <view class="cover-title">{{report.title}}</view>
+      <view class="cover-insight">{{report.insight}}</view>
+      <view class="cover-nav">
+        <view class="nav-period" bindtap="previousPeriod">← 上一期</view>
+        <view class="nav-period {{report.hasNext ? '' : 'disabled'}}" bindtap="nextPeriod">下一期 →</view>
+      </view>
+    </view>
+
+    <view class="metric-grid">
+      <view class="card metric-card"><view class="metric-value">{{report.postCount}}</view><view class="metric-label">足迹</view></view>
+      <view class="card metric-card"><view class="metric-value">{{report.travelDays}}</view><view class="metric-label">旅行日</view></view>
+      <view class="card metric-card"><view class="metric-value">{{report.provinceCount}}</view><view class="metric-label">省份</view></view>
+      <view class="card metric-card"><view class="metric-value">{{report.locationCount}}</view><view class="metric-label">地点</view></view>
+    </view>
+
+    <view class="card data-card">
+      <view class="section-head"><view class="section-title">足迹活跃度</view><view class="section-note">{{report.startDate}} — {{report.endDate}}</view></view>
+      <scroll-view class="activity-scroll" scroll-x enhanced show-scrollbar="{{false}}">
+        <view class="activity-row">
+          <view class="activity-item" wx:for="{{report.activity}}" wx:key="label">
+            <view class="activity-block" style="opacity: {{item.intensity}};"></view>
+            <view class="activity-count">{{item.count}}</view>
+            <view class="activity-label">{{item.label}}</view>
+          </view>
+        </view>
+      </scroll-view>
+    </view>
+
+    <view class="card data-card">
+      <view class="section-head"><view class="section-title">目的地分布</view><view class="section-note">覆盖全国 {{report.coveragePercent}}%</view></view>
+      <view wx:for="{{report.provinces}}" wx:key="name" class="distribution-item">
+        <view class="distribution-head"><text>{{item.name}}</text><text>{{item.count}} 条 · {{item.percentage}}%</text></view>
+        <view class="distribution-track"><view class="distribution-fill" style="width: {{item.width}}%;"></view></view>
+      </view>
+      <view wx:if="{{report.provinces.length === 0}}" class="muted no-data">本期还没有目的地数据。</view>
+    </view>
+
+    <view class="card data-card">
+      <view class="section-head"><view class="section-title">旅行画像</view><view class="section-note">支出 ¥{{report.expenseTotal}}</view></view>
+      <view wx:for="{{report.categories}}" wx:key="name" class="category-line">
+        <view class="category-name">{{item.name}}</view>
+        <view class="category-value">{{item.count}} 条</view>
+        <view class="category-percent">{{item.percentage}}%</view>
+      </view>
+      <view wx:if="{{report.categories.length === 0}}" class="muted no-data">本期还没有旅行类型数据。</view>
+    </view>
+
+    <view class="timeline-section">
+      <view class="section-head"><view class="section-title">本期回忆</view><view class="section-note">{{report.photoCount}} 张照片</view></view>
+      <view class="card timeline-card" wx:for="{{report.timeline}}" wx:key="id" bindtap="openPost" data-id="{{item.id}}">
+        <view class="timeline-date">{{item.travelDate}}</view>
+        <view class="timeline-copy"><view class="timeline-title">{{item.title}}</view><view class="muted timeline-location">{{item.province}} · {{item.location}}</view></view>
+        <view class="timeline-arrow">›</view>
+      </view>
+      <view wx:if="{{report.timeline.length === 0}}" class="card empty-state">
+        <view class="empty-symbol">报</view><view class="empty-title">本期还是空白</view><view class="empty-copy">去记录一段旅程，报告会自动更新。</view>
+      </view>
+    </view>
+  </block>
+</view>

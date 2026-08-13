@@ -112,6 +112,9 @@
                     <span class="chip chip-accent" th:text="${post.category}">分类</span>
                     <span class="chip" th:if="${post.province != null and !post.province.isBlank()}">地图足迹</span>
                     <span class="chip" th:if="${post.province != null and !post.province.isBlank()}" th:text="|省份：${post.province}|">省份：浙江</span>
+                    <span class="chip moderation-chip"
+                          th:if="${showModerationStatus and post.reviewStatus.name() != 'APPROVED'}"
+                          th:text="|状态：${post.reviewStatus.label}|">状态：待审核</span>
                     <span class="chip" th:text="|发布于 ${#temporals.format(post.createdAt, 'yyyy-MM-dd HH:mm')}|">发布于 2026-05-02 12:00</span>
                 </div>
                 <h3 th:text="${post.title}">标题</h3>

@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head(${plan.title + ' | 行程工作台'})}"></head>
+<body class="trip-workspace-page"><header th:replace="~{fragments :: nav}"></header><section th:replace="~{fragments :: flash}"></section>
+<main class="container trip-workspace-shell">
+    <a class="workspace-back" th:href="@{/plans}">← 返回全部计划</a>
+    <section class="workspace-hero">
+        <div class="workspace-hero-copy"><span class="eyebrow">TRIP COMMAND CENTER</span><div class="chip-row"><span class="chip chip-accent" th:text="${plan.status}">PLANNED</span><span class="chip" th:text="${isOwner ? '我创建的' : '同行计划'}">计划</span></div>
+            <h1 th:text="${plan.title}">旅行计划</h1><p th:text="${plan.destination}">目的地</p>
+            <div class="workspace-date-line"><span th:text="${plan.startDate != null ? #temporals.format(plan.startDate, 'yyyy.MM.dd') : '日期待定'}">开始</span><i>→</i><span th:text="${plan.endDate != null ? #temporals.format(plan.endDate, 'yyyy.MM.dd') : '日期待定'}">结束</span><b th:if="${dayCount > 0}" th:text="|${dayCount} 天|">4 天</b></div>
+        </div>
+        <div class="workspace-hero-stats"><article><strong th:text="${#lists.size(activities)}">0</strong><span>每日安排</span></article><article><strong th:text="|${readiness.score}%|">0%</strong><span>旅行准备度</span></article><article><strong th:text="|¥${spent}|">¥0</strong><span>同行支出</span></article></div>
+    </section>
+
+    <nav class="workspace-anchor-nav"><a href="#smart-itinerary">智能建议</a><a href="#daily-itinerary">每日行程</a><a href="#trip-checklist">准备清单</a><a href="#trip-memories">足迹与账本</a><a href="#share-plan">导出与分享</a></nav>
+
+    <section class="workspace-section smart-itinerary-section" id="smart-itinerary">
+        <div class="workspace-section-heading"><div><span class="eyebrow">LOCAL SMART PLANNER</span><h2>智能行程建议</h2><p>根据目的地、本地地点目录和已审核公开足迹生成；勾选后才会加入行程。</p></div><a class="text-link" th:href="@{/guides(q=${plan.destination})}">查看目的地攻略 →</a></div>
+        <div class="smart-planner-layout">
+            <article class="readiness-card"><div class="readiness-score" th:style="|--score:${readiness.score * 3.6}deg|"><span><strong th:text="${readiness.score}">0</strong><small>/ 100</small></span></div><div><span class="chip chip-accent" th:text="${readiness.level}">继续完善</span><h3>旅行准备度</h3><p th:text="${readiness.timing}">距离出发还有 10 天</p><ul><li th:each="item : ${readiness.improvements}" th:text="${item}">改进建议</li><li th:if="${#lists.isEmpty(readiness.improvements)}">关键准备已完成，出发前做最后核对即可。</li></ul></div></article>
+            <form class="suggestion-picker" th:action="@{/plans/{id}/suggestions/apply(id=${plan.id})}" method="post"><div class="suggestion-toolbar"><div><strong>为你找到 <span th:text="${#lists.size(smartSuggestions)}">0</span> 条可用建议</strong><small>不会覆盖已有安排，重复地点会自动过滤</small></div><button class="primary-button" type="submit" th:disabled="${#lists.isEmpty(smartSuggestions)}">采用所选建议</button></div>
+                <div class="suggestion-grid"><label th:each="suggestion : ${smartSuggestions}" class="suggestion-card"><input type="checkbox" name="suggestionKeys" th:value="${suggestion.key}"><span class="suggestion-check">✓</span><time><b th:text="${#temporals.format(suggestion.date, 'MM.dd')}">08.08</b><small th:text="${#temporals.format(suggestion.time, 'HH:mm')}">09:00</small></time><div><span th:text="${suggestion.reason}">地点目录</span><h3 th:text="${suggestion.title}">探索地点</h3><p th:text="|⌖ ${suggestion.location}|">地点</p><small th:text="${suggestion.note}">说明</small></div></label><div class="empty-state" th:if="${#lists.isEmpty(smartSuggestions)}">当前地点建议都已加入行程。你仍可以手动添加安排，或前往目的地攻略寻找更多灵感。</div></div>
+            </form>
+        </div>
+    </section>
+
+    <section class="workspace-section" id="daily-itinerary">
+        <div class="workspace-section-heading"><div><span class="eyebrow">DAILY ITINERARY</span><h2>每日行程安排</h2><p>同行成员都可以新增、完成或调整执行状态。</p></div><strong th:text="|${activityCompleted} / ${#lists.size(activities)} 已完成|">0/0</strong></div>
+        <div class="workspace-split-layout">
+            <article class="workspace-form-card"><h3>添加一项安排</h3><form class="post-form" th:action="@{/plans/{id}/activities(id=${plan.id})}" method="post">
+                <div class="form-grid"><label>日期<input type="date" name="activityDate" th:value="${defaultActivityDate}" th:min="${plan.startDate}" th:max="${plan.endDate}" required></label><label>开始时间<input type="time" name="startTime"></label></div>
+                <label>安排内容<input name="title" maxlength="100" placeholder="例如：西湖边骑行" required></label><label>地点<input name="location" maxlength="100" placeholder="例如：断桥残雪"></label><label>补充说明<textarea name="notes" rows="3" maxlength="500" placeholder="集合方式、预约信息或注意事项"></textarea></label><button class="primary-button" type="submit">加入每日行程</button>
+            </form></article>
+            <div class="itinerary-board">
+                <div class="empty-state" th:if="${#maps.isEmpty(activityGroups)}">还没有每日安排，先添加第一个值得期待的时刻。</div>
+                <section class="itinerary-day" th:each="entry, stat : ${activityGroups}"><header><span th:text="|DAY ${stat.count}|">DAY 1</span><strong th:text="${#temporals.format(entry.key, 'MM月dd日 EEEE')}">日期</strong></header>
+                    <article class="itinerary-item" th:each="activity : ${entry.value}" th:classappend="${activity.completed ? ' completed' : ''}">
+                        <time th:text="${activity.startTime != null ? #temporals.format(activity.startTime, 'HH:mm') : '全天'}">09:00</time><div><strong th:text="${activity.title}">安排</strong><p th:if="${activity.location != null and !activity.location.isBlank()}" th:text="|📍 ${activity.location}|">地点</p><small th:if="${activity.notes != null and !activity.notes.isBlank()}" th:text="${activity.notes}">说明</small><i th:text="|由 ${activity.createdBy.nickname} 添加|">创建者</i></div>
+                        <div class="item-actions"><form th:action="@{/plans/{planId}/activities/{activityId}/toggle(planId=${plan.id},activityId=${activity.id})}" method="post"><button class="icon-action" type="submit" th:title="${activity.completed ? '恢复未完成' : '标记完成'}" th:text="${activity.completed ? '✓' : '○'}">○</button></form><form th:action="@{/plans/{planId}/activities/{activityId}/delete(planId=${plan.id},activityId=${activity.id})}" method="post"><button class="icon-action danger" type="submit" title="删除">×</button></form></div>
+                    </article>
+                </section>
+            </div>
+        </div>
+    </section>
+
+    <section class="workspace-section" id="trip-checklist">
+        <div class="workspace-section-heading"><div><span class="eyebrow">READY TO GO</span><h2>旅行准备清单</h2><p>把证件、交通、住宿和行李分配给同行成员。</p></div><strong th:text="|${checklistCompleted} / ${#lists.size(checklist)} 已完成|">0/0</strong></div>
+        <div class="checklist-progress"><i><b th:style="|width:${checklistPercent}%|"></b></i><span th:text="|${checklistPercent}%|">0%</span></div>
+        <form class="checklist-quick-form" th:action="@{/plans/{id}/checklist(id=${plan.id})}" method="post"><input name="title" maxlength="140" placeholder="添加准备事项，例如：确认酒店入住信息" required><select name="category"><option th:each="category : ${checklistCategories}" th:value="${category}" th:text="${category.label}">分类</option></select><select name="assigneeId"><option value="">暂不分配</option><option th:each="participant : ${participants}" th:value="${participant.id}" th:text="${participant.nickname}">成员</option></select><button class="primary-button" type="submit">添加</button></form>
+        <div class="workspace-checklist-grid"><article th:each="item : ${checklist}" th:classappend="${item.completed ? ' completed' : ''}"><form th:action="@{/plans/{planId}/checklist/{itemId}/toggle(planId=${plan.id},itemId=${item.id})}" method="post"><button type="submit" th:text="${item.completed ? '✓' : ''}">✓</button></form><div><span th:text="${item.category.label}">分类</span><strong th:text="${item.title}">事项</strong><small th:text="${item.assignee != null ? '负责人：' + item.assignee.nickname : '暂未分配'}">负责人</small></div><form th:action="@{/plans/{planId}/checklist/{itemId}/delete(planId=${plan.id},itemId=${item.id})}" method="post"><button class="text-button" type="submit">移除</button></form></article><div class="empty-state" th:if="${#lists.isEmpty(checklist)}">准备清单还是空的，先添加一件出发前必须完成的事。</div></div>
+    </section>
+
+    <section class="workspace-section" id="trip-memories"><div class="workspace-section-heading"><div><span class="eyebrow">MEMORIES & COST</span><h2>足迹与同行账本</h2></div><div class="compact-action-row"><a class="secondary-button" th:href="@{/posts/new(planId=${plan.id})}">记录足迹</a><a class="secondary-button" th:href="@{/expenses}">记录支出</a></div></div>
+        <div class="workspace-memory-grid"><article><h3>关联足迹</h3><div class="empty-state compact" th:if="${#lists.isEmpty(posts)}">旅程开始后，同行足迹会汇集在这里。</div><a th:each="post : ${posts}" th:href="@{/posts/{id}(id=${post.id})}"><time th:text="${#temporals.format(post.travelDate, 'MM.dd')}">08.08</time><span><strong th:text="${post.title}">足迹</strong><small th:text="${post.author.nickname}">作者</small></span></a></article>
+            <article><h3>同行支出</h3><strong class="workspace-spent" th:text="|¥${spent}|">¥0</strong><div class="empty-state compact" th:if="${#lists.isEmpty(expenses)}">还没有与此计划关联的账本记录。</div><div class="workspace-expense" th:each="expense : ${expenses}"><span th:text="${expense.category.label}">分类</span><strong th:text="|¥${expense.amount}|">¥0</strong><small th:text="${expense.owner.nickname}">记录人</small></div></article></div>
+    </section>
+
+    <section class="workspace-section workspace-share-section" id="share-plan"><div><span class="eyebrow">EXPORT & SHARE</span><h2>导出与安全分享</h2><p>日历文件包含计划安排；只读分享页仅展示日期、目的地和每日行程，不公开预算、清单、备注或成员账号。</p></div><div class="workspace-share-actions"><a class="secondary-button" th:href="@{/plans/{id}/calendar.ics(id=${plan.id})}">下载日历 .ics</a><form th:if="${isOwner}" th:action="@{/plans/{id}/share(id=${plan.id})}" method="post"><input type="hidden" name="enabled" th:value="${!plan.shareEnabled}"><button class="primary-button" type="submit" th:text="${plan.shareEnabled ? '关闭只读分享' : '开启只读分享'}">开启分享</button></form></div>
+        <div class="share-link-box" th:if="${isOwner and plan.shareEnabled}"><input readonly th:value="|/shared/plans/${plan.shareToken}|" data-share-link><button class="secondary-button" type="button" th:attr="data-copy-value=|/shared/plans/${plan.shareToken}|">复制链接</button><a th:href="@{/shared/plans/{token}(token=${plan.shareToken})}" target="_blank">预览分享页 ↗</a></div>
+    </section>
+
+    <details class="workspace-settings" th:if="${isOwner}"><summary>编辑计划基础信息</summary><form class="post-form" th:action="@{/plans/{id}/update(id=${plan.id})}" method="post"><div class="form-grid"><label>标题<input name="title" th:value="${plan.title}" maxlength="100" required></label><label>目的地<input name="destination" th:value="${plan.destination}" maxlength="100" required></label><label>开始日期<input type="date" name="startDate" th:value="${plan.startDate}"></label><label>结束日期<input type="date" name="endDate" th:value="${plan.endDate}"></label><label>预算<input type="number" name="budget" min="0" step="0.01" th:value="${plan.budget}"></label><label>状态<select name="status"><option th:each="status : ${planStatuses}" th:value="${status}" th:text="${status}" th:selected="${status == plan.status}">状态</option></select></label></div><label>计划说明<textarea name="notes" maxlength="1200" rows="4" th:text="${plan.notes}"></textarea></label><button class="primary-button" type="submit">保存计划信息</button></form></details>
+</main>
+</body></html>

@@ -1,36 +1,52 @@
-<view class="page-shell">
-  <view wx:if="{{user}}" class="card profile-card">
-    <view class="section-title">{{user.nickname}}</view>
-    <view class="muted">{{user.bio || '这个用户还没有填写简介。'}}</view>
-    <view class="stats-row">
-      <view class="stat-box">
-        <view class="stat-number">{{user.postCount}}</view>
-        <view class="muted">足迹</view>
+<view class="page-shell mine-page">
+  <view wx:if="{{user}}">
+    <view class="profile-cover">
+      <view class="profile-top">
+        <image wx:if="{{user.avatarUrl}}" class="profile-avatar-image" mode="aspectFill" src="{{user.avatarUrl}}"></image>
+        <view wx:else class="profile-avatar">{{user.initial}}</view>
+        <view class="profile-copy">
+          <view class="profile-kicker">MY TRAVEL ARCHIVE</view>
+          <view class="profile-name">{{user.nickname}}</view>
+          <view class="profile-username">@{{user.username}}</view>
+        </view>
       </view>
-      <view class="stat-box">
-        <view class="stat-number">{{user.followingCount}}</view>
-        <view class="muted">关注</view>
-      </view>
-      <view class="stat-box">
-        <view class="stat-number">{{user.followerCount}}</view>
-        <view class="muted">粉丝</view>
+      <view class="profile-bio">{{user.bio || '世界很大，下一站仍在路上。'}}</view>
+      <view class="profile-stats">
+        <view><text>{{user.postCount}}</text><label>足迹</label></view>
+        <view><text>{{user.followingCount}}</text><label>关注</label></view>
+        <view><text>{{user.followerCount}}</text><label>粉丝</label></view>
       </view>
     </view>
-    <button class="button-secondary" bindtap="logout">退出登录</button>
-  </view>
 
-  <view wx:else class="card profile-card">
-    <view class="section-title">还没有登录</view>
-    <view class="muted">登录后可以查看你的足迹、发布内容，并切换到个人足迹分布。</view>
-    <button class="button-primary" bindtap="goLogin">去登录</button>
-  </view>
-
-  <view class="card post-card">
-    <view class="section-title">我发布的足迹</view>
-    <view wx:if="{{posts.length === 0}}" class="muted">这里还没有内容，先去记录第一段旅程吧。</view>
-    <view wx:for="{{posts}}" wx:key="id" class="my-post-item" bindtap="openDetail" data-id="{{item.id}}">
-      <view class="my-post-title">{{item.title}}</view>
-      <view class="muted">{{item.province}} · {{item.location}} · {{item.travelDate}}</view>
+    <view class="quick-grid">
+      <view class="card quick-card" bindtap="goMap"><view class="quick-symbol">图</view><view class="quick-title">个人地图</view><view class="muted quick-note">查看旅行轨迹</view></view>
+      <view class="card quick-card" bindtap="goPlans"><view class="quick-symbol warm-symbol">行</view><view class="quick-title">行程计划</view><view class="muted quick-note">准备下一次出发</view></view>
+      <view class="card quick-card" bindtap="goReport"><view class="quick-symbol blue-symbol">报</view><view class="quick-title">旅行报告</view><view class="muted quick-note">周、月与年度回顾</view></view>
+      <view class="card quick-card" bindtap="goServer"><view class="quick-symbol gray-symbol">连</view><view class="quick-title">连接设置</view><view class="muted quick-note">管理服务器地址</view></view>
     </view>
+
+    <view class="section-head archive-head"><view class="section-title">我的足迹</view><view class="section-note">{{posts.length}} 条记录</view></view>
+    <view class="card my-post" wx:for="{{posts}}" wx:key="id" bindtap="openDetail" data-id="{{item.id}}">
+      <view class="post-date"><text>{{item.dateLabel}}</text><label>{{item.province}}</label></view>
+      <view class="post-copy"><view class="post-title">{{item.title}}</view><view class="muted post-location">{{item.location}} · {{item.category}}</view></view>
+      <view class="post-arrow">›</view>
+    </view>
+    <view wx:if="{{posts.length === 0}}" class="card empty-state"><view class="empty-symbol">迹</view><view class="empty-title">还没有留下足迹</view><view class="empty-copy">去发布页记录第一段旅程吧。</view></view>
+
+    <view class="account-card card">
+      <view class="account-server"><view><view class="account-label">数据服务器</view><view class="account-url">{{baseUrl}}</view></view><view class="online-dot"></view></view>
+      <button class="button-danger logout-button" bindtap="logout">退出当前账号</button>
+    </view>
+  </view>
+
+  <view wx:else>
+    <view class="guest-cover">
+      <view class="guest-mark">TF</view>
+      <view class="eyebrow guest-eyebrow">YOUR JOURNEY AWAITS</view>
+      <view class="guest-title">登录，继续你的旅行档案。</view>
+      <view class="guest-copy">同步网页端足迹、地图、计划和旅行报告。</view>
+      <button class="guest-button" bindtap="goLogin">登录 / 注册</button>
+    </view>
+    <view class="card guest-server" bindtap="goServer"><view><view class="section-title">连接设置</view><view class="muted server-copy">{{baseUrl}}</view></view><view class="post-arrow">›</view></view>
   </view>
 </view>

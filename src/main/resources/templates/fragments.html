@@ -3,25 +3,36 @@
 <head th:fragment="head(title)">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="theme-color" content="#0f766e">
+    <meta name="theme-color" content="#176557">
     <title th:text="${title}">旅迹</title>
-    <link rel="manifest" th:href="@{/manifest.webmanifest(v='20260502-1')}">
-    <link rel="stylesheet" th:href="@{/css/style.css(v='20260502-1')}">
-    <script defer th:src="@{/js/app-shell.js(v='20260502-1')}"></script>
+    <link rel="manifest" th:href="@{/manifest.webmanifest(v='20260808-2')}">
+    <link rel="icon" type="image/svg+xml" th:href="@{/images/app-icon.svg(v='20260809-1')}">
+    <link rel="stylesheet" th:href="@{/css/style.css(v='20260808-16')}">
+    <link rel="stylesheet" th:href="@{/css/premium.css(v='20260809-1')}">
+    <script defer th:src="@{/js/app-shell.js(v='20260809-1')}"></script>
 </head>
 <body>
 <header th:fragment="nav" class="site-header">
     <div class="container nav-shell">
         <a class="brand" th:href="@{/}">
-            <span class="brand-mark">旅迹</span>
-            <span class="brand-subtitle">Travel Footprint</span>
+            <span class="brand-emblem" aria-hidden="true">TF</span>
+            <span class="brand-copy">
+                <span class="brand-mark">旅迹</span>
+                <span class="brand-subtitle">Travel Footprint</span>
+            </span>
         </a>
-        <nav class="nav-links">
+        <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="primary-navigation"
+                data-nav-toggle>
+            <span aria-hidden="true">☰</span>
+            <span>菜单</span>
+        </button>
+        <nav class="nav-links" id="primary-navigation" data-primary-navigation>
             <a th:href="@{/}">首页</a>
             <a th:href="@{/map}">地图</a>
+            <a th:href="@{/search}" aria-label="全局搜索">搜索</a>
             <a th:if="${currentUser != null}" th:href="@{/posts/new}">发布</a>
             <a th:if="${currentUser != null}" th:href="@{/plans}">计划</a>
-            <a th:if="${currentUser != null}" th:href="@{/favorites}">收藏</a>
+            <a th:if="${currentUser != null}" th:href="@{/reports}">报告</a>
             <a th:if="${currentUser != null}" th:href="@{/messages}">
                 私信
                 <span class="badge" th:if="${unreadMessageCount > 0}" th:text="${unreadMessageCount}">0</span>
@@ -30,7 +41,22 @@
                 通知
                 <span class="badge" th:if="${unreadNotificationCount > 0}" th:text="${unreadNotificationCount}">0</span>
             </a>
-            <a th:if="${currentUser != null}" th:href="@{/settings}">设置</a>
+            <a th:if="${currentUser != null and currentUser.admin}" th:href="@{/admin}">审核台</a>
+            <details class="nav-more" th:if="${currentUser != null}">
+                <summary>更多</summary>
+                <div>
+                    <a th:href="@{/guides}">目的地攻略</a>
+                    <a th:href="@{/recommendations}">为你推荐</a>
+                    <a th:href="@{/insights}">高级洞察</a>
+                    <a th:href="@{/discover}">旅行同好</a>
+                    <a th:href="@{/wishlist}">想去清单</a>
+                    <a th:href="@{/calendar}">旅行日历</a>
+                    <a th:href="@{/expenses}">旅行账本</a>
+                    <a th:href="@{/goals}">旅行目标</a>
+                    <a th:href="@{/favorites}">我的收藏</a>
+                    <a th:href="@{/settings}">资料与数据</a>
+                </div>
+            </details>
             <a th:if="${currentUser != null}" th:href="@{/me}" class="nav-user">
                 <img th:if="${currentUser.avatarPath != null}" th:src="@{${currentUser.avatarPath}}" alt="avatar">
                 <span th:if="${currentUser.avatarPath == null}" class="avatar-fallback"

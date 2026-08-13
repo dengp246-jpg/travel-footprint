@@ -28,10 +28,14 @@ public class DataImportController {
             return "redirect:/login";
         }
 
-        ImportResult result = importService.importBaiduScenicDescriptions();
-        redirectAttributes.addFlashAttribute(
-                "successMessage",
-                "百度景点描述导入完成：新增 " + result.importedCount() + " 条，跳过 " + result.skippedCount() + " 条。");
+        try {
+            ImportResult result = importService.importBaiduScenicDescriptions();
+            redirectAttributes.addFlashAttribute(
+                    "successMessage",
+                    "百度景点描述导入完成：新增 " + result.importedCount() + " 条，跳过 " + result.skippedCount() + " 条。");
+        } catch (IllegalStateException exception) {
+            redirectAttributes.addFlashAttribute("errorMessage", exception.getMessage());
+        }
         return "redirect:/";
     }
 }

@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('旅行报告 | 旅迹')}"></head>
+<body class="report-page">
+<header th:replace="~{fragments :: nav}"></header>
+<section th:replace="~{fragments :: flash}"></section>
+
+<main class="container report-shell">
+    <section class="report-hero">
+        <div class="report-hero-copy">
+            <span class="report-kicker" th:text="${report.kicker}">MONTHLY JOURNEY</span>
+            <h1><span th:text="${currentUser.nickname}">旅行者</span>的旅行<span th:text="${report.period.label}">月报</span></h1>
+            <p th:text="${report.title}">2026年8月</p>
+        </div>
+        <div class="report-actions">
+            <a class="report-action-button" th:if="${report.period.value == 'year'}" th:href="@{/recap(year=${report.startDate.year})}">年度回忆</a>
+            <button type="button" class="report-action-button" data-report-share>分享报告</button>
+            <button type="button" class="report-action-button" data-report-print>打印 / 保存</button>
+        </div>
+        <div class="report-orbit report-orbit-one" aria-hidden="true"></div>
+        <div class="report-orbit report-orbit-two" aria-hidden="true"></div>
+    </section>
+
+    <nav class="report-period-tabs" aria-label="报告类型">
+        <a th:each="item : ${reportPeriods}"
+           th:href="@{/reports(period=${item.value},date=${report.startDate})}"
+           th:classappend="${item == report.period} ? ' active'"
+           th:text="${item.label}">月报</a>
+    </nav>
+
+    <section class="report-period-nav" aria-label="报告周期">
+        <a th:href="@{/reports(period=${report.period.value},date=${report.previousDate})}" aria-label="上一期">← 上一期</a>
+        <strong th:text="${report.title}">报告周期</strong>
+        <a th:if="${report.hasNext}"
+           th:href="@{/reports(period=${report.period.value},date=${report.nextDate})}" aria-label="下一期">下一期 →</a>
+        <span th:unless="${report.hasNext}" aria-disabled="true">已是最新</span>
+    </section>
+
+    <section class="report-metrics" aria-label="本期数据概览">
+        <article><span>足迹</span><strong th:text="${report.postCount}">0</strong><small>篇旅行记录</small></article>
+        <article><span>地点</span><strong th:text="${report.locationCount}">0</strong><small>个独特目的地</small></article>
+        <article><span>省份</span><strong th:text="${report.provinceCount}">0</strong><small th:text="|全国覆盖 ${report.coveragePercent}%|">全国覆盖 0%</small></article>
+        <article><span>旅行日</span><strong th:text="${report.travelDays}">0</strong><small th:text="|收藏 ${report.photoCount} 张照片|">收藏 0 张照片</small></article>
+        <article><span>旅行支出</span><strong class="report-expense-value" th:text="|¥${#numbers.formatDecimal(report.expenseTotal, 1, 0)}|">¥0</strong>
+            <small th:text="|${report.expenseCount} 笔账本记录|">0 笔账本记录</small></article>
+    </section>
+
+    <section class="report-comparison-card">
+        <div class="report-section-heading">
+            <div><span class="eyebrow">PERIOD COMPARISON</span><h2>与上一期相比</h2></div>
+            <span th:text="|上一期：${previousReport.title}|">上一期</span>
+        </div>
+        <div class="report-comparison-grid">
+            <article th:each="item : ${comparisonItems}" th:classappend="${item.direction > 0 ? ' up' : (item.direction < 0 ? ' down' : ' even')}">
+                <span th:text="${item.label}">足迹</span><strong th:text="${item.current}">0条</strong>
+                <small><b th:text="${item.delta}">+0条</b><span th:text="| · 上期 ${item.previous}|">上期</span></small>
+            </article>
+        </div>
+    </section>
+
+    <section class="report-insight">
+        <div>
+            <span class="eyebrow">旅迹洞察</span>
+            <h2>这一期，你走出了怎样的轨迹？</h2>
+        </div>
+        <p th:text="${report.insight}">本期旅行洞察。</p>
+    </section>
+
+    <section class="report-grid report-grid-main">
+        <article class="report-card report-activity-card">
+            <div class="report-section-heading">
+                <div><span class="eyebrow">ACTIVITY</span><h2>旅行活跃度</h2></div>
+                <span th:text="|${report.travelDays} 个旅行日|">0 个旅行日</span>
+            </div>
+            <div class="report-activity" th:classappend="| report-activity-${report.period.value}|">
+                <div class="report-activity-item" th:each="bucket : ${report.activity}"
+                     th:style="'--report-level:' + ${bucket.intensity}">
+                    <span class="report-activity-cell" th:title="|${bucket.label}：${bucket.count} 条|">
+                        <b th:if="${bucket.count > 0}" th:text="${bucket.count}">1</b>
+                    </span>
+                    <small th:text="${bucket.label}">1</small>
+                </div>
+            </div>
+        </article>
+
+        <article class="report-card report-map-card">
+            <div class="report-section-heading">
+                <div><span class="eyebrow">FOOTPRINT MAP</span><h2>本期足迹地图</h2></div>
+                <a th:href="@{/map(mode='personal')}">打开个人地图 →</a>
+            </div>
+            <div class="report-map" th:classappend="${#lists.isEmpty(report.mapPoints)} ? ' is-empty'">
+                <img th:src="@{/images/china-map-generated.svg}" alt="中国地图">
+                <svg class="report-map-route" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+                    <polyline th:if="${#lists.size(report.mapPoints) > 1}" th:attr="points=${report.routePolyline}"></polyline>
+                </svg>
+                <a class="report-map-point" th:each="point, status : ${report.mapPoints}"
+                   th:href="@{/posts/{id}(id=${point.postId})}"
+                   th:style="|left:${point.left}%;top:${point.top}%|"
+                   th:title="|${point.travelDate} · ${point.location}|">
+                    <i></i><span th:text="${status.count}">1</span>
+                </a>
+                <div class="report-map-empty" th:if="${#lists.isEmpty(report.mapPoints)}">本期暂无可定位的足迹</div>
+            </div>
+        </article>
+    </section>
+
+    <section class="report-grid report-grid-distribution">
+        <article class="report-card">
+            <div class="report-section-heading">
+                <div><span class="eyebrow">TRAVEL STYLE</span><h2>旅行主题</h2></div>
+            </div>
+            <div class="report-ranking" th:if="${!#lists.isEmpty(report.categories)}">
+                <div th:each="item : ${report.categories}">
+                    <span th:text="${item.name}">自然风光</span>
+                    <i><b th:style="|width:${item.width}%|"></b></i>
+                    <strong th:text="|${item.count} 条|">1 条</strong>
+                </div>
+            </div>
+            <p class="report-card-empty" th:if="${#lists.isEmpty(report.categories)}">发布足迹后，这里会总结你的旅行偏好。</p>
+        </article>
+        <article class="report-card">
+            <div class="report-section-heading">
+                <div><span class="eyebrow">DESTINATIONS</span><h2>省份分布</h2></div>
+            </div>
+            <div class="report-ranking" th:if="${!#lists.isEmpty(report.provinces)}">
+                <div th:each="item : ${report.provinces}">
+                    <span th:text="${item.name}">湖南</span>
+                    <i><b th:style="|width:${item.width}%|"></b></i>
+                    <strong th:text="|${item.percentage}%|">50%</strong>
+                </div>
+            </div>
+            <p class="report-card-empty" th:if="${#lists.isEmpty(report.provinces)}">完善足迹地点后，这里会展示你的目的地分布。</p>
+        </article>
+    </section>
+
+    <section class="report-card report-gallery-card" th:if="${!#lists.isEmpty(report.featuredPhotos)}">
+        <div class="report-section-heading">
+            <div><span class="eyebrow">MEMORIES</span><h2>本期影像</h2></div>
+            <span th:text="|${report.photoCount} 张照片|">0 张照片</span>
+        </div>
+        <div class="report-gallery">
+            <a th:each="post : ${report.featuredPhotos}" th:href="@{/posts/{id}(id=${post.id})}">
+                <img th:src="@{${post.photoPath}}" th:alt="${post.title}">
+                <span><b th:text="${post.title}">旅行标题</b><small th:text="${post.location}">地点</small></span>
+            </a>
+        </div>
+    </section>
+
+    <section class="report-card report-timeline-card" th:if="${!#lists.isEmpty(report.timeline)}">
+        <div class="report-section-heading">
+            <div><span class="eyebrow">TIMELINE</span><h2>旅行时间线</h2></div>
+        </div>
+        <div class="report-timeline">
+            <a th:each="post : ${report.timeline}" th:href="@{/posts/{id}(id=${post.id})}">
+                <time th:text="${#temporals.format(post.travelDate, 'MM.dd')}">08.01</time>
+                <i></i>
+                <span><b th:text="${post.title}">旅行标题</b><small
+                        th:text="|${post.location} · ${post.category != null and !post.category.isBlank() ? post.category : '未分类'}|">地点 · 分类</small></span>
+            </a>
+        </div>
+    </section>
+
+    <section class="report-empty-state" th:if="${report.postCount == 0}">
+        <span aria-hidden="true">✦</span>
+        <h2>这一期还没有旅行记录</h2>
+        <p>发布一条带旅行日期的足迹，报告就会自动生成。</p>
+        <a class="primary-button" th:href="@{/posts/new}">记录一段旅程</a>
+    </section>
+</main>
+
+<div class="report-share-toast" role="status" aria-live="polite" data-report-toast></div>
+<script>
+    (() => {
+        const shareButton = document.querySelector('[data-report-share]');
+        const printButton = document.querySelector('[data-report-print]');
+        const toast = document.querySelector('[data-report-toast]');
+        const showToast = (message) => {
+            if (!toast) return;
+            toast.textContent = message;
+            toast.classList.add('is-visible');
+            window.setTimeout(() => toast.classList.remove('is-visible'), 2200);
+        };
+        shareButton?.addEventListener('click', async () => {
+            const shareData = {title: document.title, text: '看看我的旅迹旅行报告', url: window.location.href};
+            try {
+                if (navigator.share) {
+                    await navigator.share(shareData);
+                } else {
+                    await navigator.clipboard.writeText(window.location.href);
+                    showToast('报告链接已复制');
+                }
+            } catch (error) {
+                if (error?.name !== 'AbortError') showToast('暂时无法分享，请复制浏览器地址');
+            }
+        });
+        printButton?.addEventListener('click', () => window.print());
+    })();
+</script>
+</body>
+</html>

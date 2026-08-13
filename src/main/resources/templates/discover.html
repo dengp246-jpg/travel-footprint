@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('发现旅行同好 | 旅迹')}"></head>
+<body class="discover-page">
+<header th:replace="~{fragments :: nav}"></header>
+<section th:replace="~{fragments :: flash}"></section>
+
+<main class="container discover-shell">
+    <section class="discover-hero">
+        <div><span class="eyebrow">TRAVEL COMPANIONS</span><h1>在相似的远方，遇见同行的人</h1>
+            <p>系统根据你们共同去过的省份、旅行主题和公开足迹生成匹配建议，不读取私信或私密足迹。</p></div>
+        <div class="discover-stats">
+            <article><strong th:text="${discovery.followingCount}">0</strong><span>正在关注</span></article>
+            <article><strong th:text="${discovery.provinceInterestCount}">0</strong><span>兴趣省份</span></article>
+            <article><strong th:text="${discovery.categoryInterestCount}">0</strong><span>旅行主题</span></article>
+        </div>
+    </section>
+
+    <section class="discover-section">
+        <div class="section-heading compact"><div><span class="eyebrow">MATCH FOR YOU</span><h2>旅行同好推荐</h2></div>
+            <p>匹配度只用于排序，不会公开你的个人画像。</p></div>
+        <div class="companion-match-grid">
+            <article class="companion-match-card" th:each="match : ${discovery.matches}">
+                <div class="companion-match-top">
+                    <a class="user-mini" th:href="@{/users/{id}(id=${match.user.id})}">
+                        <img th:if="${match.user.avatarPath != null}" th:src="@{${match.user.avatarPath}}" alt="avatar">
+                        <span th:if="${match.user.avatarPath == null}" class="avatar-fallback"
+                              th:text="${#strings.substring(match.user.nickname, 0, 1)}">旅</span>
+                        <span><strong th:text="${match.user.nickname}">旅行者</strong><small th:text="|@${match.user.username}|">@user</small></span>
+                    </a>
+                    <div class="match-ring" th:style="|--match:${match.matchPercent * 3.6}deg|"><strong th:text="|${match.matchPercent}%|">80%</strong></div>
+                </div>
+                <p th:text="${match.reason}">共同旅行兴趣</p>
+                <footer><span th:text="|${match.postCount} 条公开足迹|">0 条足迹</span>
+                    <form th:action="@{/users/{id}/follow(id=${match.user.id})}" method="post">
+                        <button class="secondary-button" type="submit" th:text="${match.following ? '取消关注' : '关注'}">关注</button>
+                    </form></footer>
+            </article>
+        </div>
+    </section>
+
+    <section class="discover-section following-activity-section">
+        <div class="section-heading compact"><div><span class="eyebrow">FOLLOWING NOW</span><h2>关注的人最近去了哪里</h2></div>
+            <a th:href="@{/(scope='following')}">查看完整关注流 →</a></div>
+        <div class="empty-state" th:if="${#lists.isEmpty(discovery.followingPosts)}">关注旅行同好后，他们的新足迹会出现在这里。</div>
+        <div class="following-activity-grid" th:if="${!#lists.isEmpty(discovery.followingPosts)}">
+            <a th:each="post : ${discovery.followingPosts}" th:href="@{/posts/{id}(id=${post.id})}">
+                <img th:if="${post.photoPath != null}" th:src="@{${post.photoPath}}" alt="旅行照片">
+                <span class="activity-photo-fallback" th:if="${post.photoPath == null}" th:text="${post.province}">旅迹</span>
+                <div><small th:text="${post.author.nickname}">作者</small><strong th:text="${post.title}">标题</strong>
+                    <p><span th:text="${post.location}">地点</span><i th:text="|♡ ${likeCounts[post.id]} · 评论 ${commentCounts[post.id]}|">互动</i></p></div>
+            </a>
+        </div>
+    </section>
+</main>
+</body>
+</html>

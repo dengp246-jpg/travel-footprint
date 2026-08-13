@@ -1,0 +1,64 @@
+<view class="page-shell">
+  <view class="page-hero plan-hero">
+    <view class="eyebrow">JOURNEY PLANNER</view>
+    <view class="page-title">下一站，先有计划。</view>
+    <view class="page-subtitle">把目的地、日期与预算放在一起，让期待变得清晰。</view>
+    <view class="hero-actions">
+      <button class="button-primary hero-button" bindtap="toggleForm">{{showForm ? '收起表单' : '新建计划'}}</button>
+      <button class="button-ghost hero-button" bindtap="openReport">旅行报告</button>
+    </view>
+  </view>
+
+  <view wx:if="{{showForm}}" class="card create-card">
+    <view class="section-head"><view class="section-title">创建行程</view><view class="section-note">所有信息稍后仍可在网页端完善</view></view>
+    <view class="field"><text class="field-label">计划名称</text><input class="input" maxlength="100" placeholder="例如：秋日江南之旅" value="{{form.title}}" bindinput="onFieldChange" data-field="title" /></view>
+    <view class="field"><text class="field-label">目的地</text><input class="input" maxlength="100" placeholder="城市、地区或线路" value="{{form.destination}}" bindinput="onFieldChange" data-field="destination" /></view>
+    <view class="date-grid">
+      <view class="field date-field"><text class="field-label">开始日期</text><picker mode="date" value="{{form.startDate}}" bindchange="onStartDateChange"><view class="picker">{{form.startDate || '待定'}}</view></picker></view>
+      <view class="field date-field"><text class="field-label">结束日期</text><picker mode="date" value="{{form.endDate}}" bindchange="onEndDateChange"><view class="picker">{{form.endDate || '待定'}}</view></picker></view>
+    </view>
+    <view class="date-grid">
+      <view class="field date-field"><text class="field-label">旅行状态</text><picker mode="selector" range="{{statusOptions}}" range-key="label" value="{{statusIndex}}" bindchange="onStatusChange"><view class="picker">{{statusOptions[statusIndex].label}}</view></picker></view>
+      <view class="field date-field"><text class="field-label">预算（元）</text><input class="input" type="digit" placeholder="选填" value="{{form.budget}}" bindinput="onFieldChange" data-field="budget" /></view>
+    </view>
+    <view class="field"><text class="field-label">备注</text><textarea class="textarea notes" maxlength="1200" placeholder="交通、住宿、同行提醒…" value="{{form.notes}}" bindinput="onFieldChange" data-field="notes"></textarea></view>
+    <button class="button-primary" loading="{{submitting}}" bindtap="createPlan">保存计划</button>
+  </view>
+
+  <view wx:if="{{!loggedIn}}" class="card empty-state login-state">
+    <view class="empty-symbol">行</view>
+    <view class="empty-title">登录后管理行程</view>
+    <view class="empty-copy">计划会与网页端同步，可以继续添加清单、预算与同行者。</view>
+    <button class="button-primary login-button" bindtap="goLogin">立即登录</button>
+  </view>
+
+  <view wx:else class="plan-list">
+    <view class="list-heading"><view class="section-title">我的计划</view><view class="section-note">{{plans.length}} 个行程</view></view>
+    <view class="card plan-card" wx:for="{{plans}}" wx:key="id">
+      <view class="plan-top">
+        <view class="plan-index">{{index < 9 ? '0' + (index + 1) : index + 1}}</view>
+        <view class="plan-main">
+          <view class="plan-status status-{{item.status}}">{{item.statusLabel}}</view>
+          <view class="plan-title">{{item.title}}</view>
+          <view class="plan-destination">⌖ {{item.destination}}</view>
+        </view>
+      </view>
+      <view class="plan-meta">
+        <view><text class="meta-label">日期</text><text>{{item.dateRange}}</text></view>
+        <view><text class="meta-label">预算</text><text>{{item.budgetLabel}}</text></view>
+      </view>
+      <view class="progress-head"><text>行程进度</text><text>{{item.progress}}%</text></view>
+      <view class="progress-track"><view class="progress-fill" style="width: {{item.progress}}%;"></view></view>
+      <view class="plan-foot">
+        <text class="muted">{{item.postCount}} 条足迹 · {{item.completedDays}} 个旅行日</text>
+        <text class="delete-link" bindtap="deletePlan" data-id="{{item.id}}" data-title="{{item.title}}">删除</text>
+      </view>
+    </view>
+
+    <view wx:if="{{!loading && plans.length === 0}}" class="card empty-state">
+      <view class="empty-symbol">＋</view>
+      <view class="empty-title">还没有行程计划</view>
+      <view class="empty-copy">从一个想去的地方开始，创建你的下一段旅途。</view>
+    </view>
+  </view>
+</view>

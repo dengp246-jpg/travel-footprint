@@ -16,11 +16,17 @@
 - 足迹管理
   - 编辑自己的足迹
   - 删除自己的足迹
+- 内容审核
+  - 新发布的普通用户足迹进入管理员审核队列
+  - 新评论进入管理员审核队列
+  - 管理员可在后台审核帖子、评论并启用/停用用户
 - 搜索与筛选
   - 按关键词搜索标题、地点、正文、作者
   - 按分类筛选
   - 按地点筛选
   - 按“全部动态 / 仅关注的人”切换信息流
+  - 首页支持“全部内容 / 用户原创 / 景点资料”分区切换
+  - 首页信息流支持分页浏览
 - 社交互动
   - 点赞
   - 收藏景点足迹
@@ -32,6 +38,13 @@
 - 旅行辅助功能
   - 景点评分
   - 旅行地图展示
+  - 全国地图按实际地点显示与定位针完全重合的热度光晕，省份总量在侧栏排行展示
+  - 个人地图按照足迹发布时间绘制旅行路线
+  - 地图支持浏览器全屏与 `Esc` 退出，不支持原生全屏时自动使用沉浸模式
+  - 个人地图支持按足迹发布时间播放时间轴，并逐段绘制旅行路线
+  - 全国地图会自动聚合省内相邻地点，点击聚合点可进入省域视图
+  - 发布与编辑足迹时提供离线地点建议，可自动填写省份、经纬度并预览地图落点
+  - 地图点位支持故事预览抽屉，可直接查看照片、摘要和详情入口
   - 行程计划管理
 - 公开网页数据导入
   - 可从公开 Wikipedia 景点页面抓取基础景点信息
@@ -74,7 +87,7 @@ mvn -v
 如果还没有安装 JDK 17，请先安装，并设置环境变量：
 
 ```text
-JAVA_HOME=C:\Program Files\Eclipse Adoptium\jdk-17
+JAVA_HOME=D:\software\jdk-17
 Path 增加：%JAVA_HOME%\bin
 ```
 
@@ -190,6 +203,7 @@ mvn test
 - `lin / 123456`
 - `yue / 123456`
 - `qing / 123456`
+- `admin / 123456`
 
 ## 目录结构
 
@@ -213,6 +227,18 @@ src/main/resources
 - H2 数据库文件保存在项目根目录的 `data/`
 - 运行日志保存在项目根目录的 `run/`
 - 以上目录均已加入 `.gitignore`
+- 默认图片上传限制为 5MB，仅接受真实内容与声明类型一致的 JPG、PNG、GIF、WebP 文件
+- 可以通过环境变量 `APP_UPLOAD_MAX_IMAGE_SIZE_BYTES` 调整服务端图片大小限制
+- 项目默认使用相对路径，因此从 `D:\codex project\shujujiegoukeshe` 启动时，数据库、上传和日志都会保存在 D 盘
+
+## 网页端优化说明
+
+- 手机端导航会在 720px 以下折叠为菜单按钮，表单与内容卡片切换为单列布局
+- 发布页提供字符计数、图片预览、文件大小提示、内联错误提示和防重复提交
+- 普通用户修改已公开足迹后，内容会重新进入管理员审核队列
+- 网页端与微信小程序端共享停用用户、内容审核和公开可见性规则
+- 浏览器修改请求启用统一 CSRF 防护，小程序 API 与 H2 控制台使用独立接口规则
+- 首页点赞、评论、收藏和评分数据使用批量聚合查询，减少信息流加载时的数据库访问次数
 
 ## 后续可扩展方向
 
@@ -232,6 +258,81 @@ src/main/resources
 ```bash
 python scripts/generate_china_map_svg.py
 ```
+
+## Interactive Map Explorer
+
+- The public and personal maps support keyword, travel-year, category, province, photo-only, and result-order filters.
+- Map markers are linked with the footprint cards below the map: selecting either side highlights and locates the other.
+- Multiple posts at the same city or attraction share one visible marker and remain available from the marker popup.
+- Map results support remembered card/list layouts, and the current filtered view can be copied as a shareable link.
+- The immersive atlas uses a dark local SVG map, glowing markers, and a synchronized travel-intelligence sidebar without external map services. Publication-time-ordered routes appear only on the personal map; the public map shows distribution points without connecting different users.
+- Province-aware landmark validation prevents a place name from being plotted into a province that conflicts with the selected province. Valid stored coordinates take priority, and a province heat layer visualizes footprint density.
+- The map summary shows visible posts, covered provinces, and distinct mapped locations.
+- All map assets and generated province SVG files remain inside this D-drive project; no external map API key is required.
+
+## Travel Reports
+
+- Log in and open `报告` in the main navigation to view an automatically generated personal travel report.
+- Reports support weekly, monthly, and yearly views, and use each footprint's travel date for period grouping.
+- Each report includes travel totals, active days, province coverage, theme and destination rankings, a period footprint map, photos, and a chronological timeline.
+- Use `上一期` and `下一期` to browse historical periods. The current report can also be shared or printed/saved as PDF from the browser.
+- Travel expenses recorded in the ledger are summarized in matching weekly, monthly, and yearly reports.
+
+## Photo Albums, Calendar, and Travel Ledger
+
+- A footprint can contain up to nine JPG, PNG, GIF, or WebP images. In the post editor, drag selected photos to reorder them and choose the cover before publishing.
+- Existing single-photo posts remain compatible. Album covers can be changed later from the footprint detail page.
+- Footprints can be linked to one of the current user's trip plans. The plan page shows linked footprints, completed travel days, progress, and linked spending.
+- Open `日历` after logging in to browse personal footprints by their actual travel date and move between months.
+- Open `账本` to record categorized travel expenses, optionally linked to a trip plan or footprint. Monthly totals and category distribution are calculated automatically.
+- Database tables and columns for these features are created by the existing `spring.jpa.hibernate.ddl-auto=update` setting; no separate migration command is required for local development.
+
+## Recap, Privacy, Goals, and Data Export
+
+- Weekly, monthly, and yearly reports compare footprint, travel-day, province, and expense totals with the previous matching period.
+- Open `/recap` after logging in for an immersive annual journey recap with yearly rhythm, map, preferences, spending, and photo highlights.
+- The map supports province selection followed by a second-level city/location drilldown while preserving the other active filters.
+- Each footprint can be public, visible only to followers, or private. A separate map-privacy option replaces the exact public point and location text with a province-level approximate position.
+- Open `目标` to create yearly goals for footprints, covered provinces, travel days, or completed trip plans. Progress updates automatically from existing data.
+- The settings page can export the signed-in user's profile, footprints, albums, plans, expenses, and goals as UTF-8 JSON. Password hashes are never included.
+
+## Travel Companions, Collaborative Plans, and Account Security
+
+- Open `/discover` after logging in to see travel-companion recommendations based on shared public provinces and travel categories. Private footprints and messages are never used for matching.
+- A plan owner can invite another enabled user by username. The recipient can accept or decline the invitation from the plan page.
+- Accepted companions can associate their own footprints and ledger entries with the shared plan. Only the plan owner can invite members, remove members, or delete the plan; companions may leave it themselves.
+- Plans starting within seven days appear in the upcoming panel and create a one-time notification for every owner or accepted companion.
+- Notifications remain unread until opened, support individual read state, and can also be marked as read in one action.
+- The settings page supports password changes with current-password verification and session-ID renewal. The last login and password-change times are displayed for the account owner.
+- The PWA install prompt is exposed from settings when supported. The service worker deliberately excludes messages, notifications, settings, exports, admin pages, APIs, and the H2 console from offline page caching.
+- Existing H2 file databases are migrated at startup so new notification categories remain compatible without deleting historical data.
+
+## Destination Wishlist and Trip Workspace
+
+- Open `/wishlist` to record destinations with province, priority, target year, status, and a short reason. A destination can be converted directly into a collaborative plan.
+- Every visible plan has a dedicated workspace at `/plans/{id}`. Owners and accepted companions can add dated itinerary activities, mark them complete, and maintain a shared preparation checklist.
+- Checklist items support document, transport, accommodation, packing, and other categories, and can be assigned to any accepted participant.
+- The workspace brings together itinerary progress, checklist progress, linked footprints, plan expenses, base plan editing, and collaborator-aware actions.
+- Download `/plans/{id}/calendar.ics` to import the plan into calendar applications. When activities exist, each activity becomes a calendar event; otherwise the full trip is exported as an all-day event.
+- Read-only plan sharing is disabled by default and can only be controlled by the plan owner. Public share pages expose dates, destination, and itinerary only; budget, private notes, preparation items, and participant accounts stay hidden.
+- Personal JSON exports now also include the destination wishlist, owned-plan activities, and owned-plan checklist items.
+
+## Destination Guides and Smart Trip Planning
+
+- Open `/guides` to browse a destination guide center built from the local place catalog and approved public footprints. Province, keyword, popular-location, and travel-theme filters never include private or followers-only content.
+- Every trip workspace now calculates a 0–100 readiness score from dates, itinerary coverage, budget, checklist progress, and document, transport, and accommodation preparation.
+- The smart itinerary panel generates deterministic suggestions from the plan destination, the local place catalog, and approved public content. It does not call a cloud AI service or upload private trip data.
+- Suggested activities are previews only. Owners and accepted collaborators choose which suggestions to adopt; the server recomputes and validates every selected key, ignores stale or modified values, filters duplicate locations, and preserves existing activities.
+- Destination guides and smart suggestions are informational. Confirm opening hours, reservations, weather, and transport conditions before departure.
+
+## Global Search, Personalized Recommendations, and Advanced Insights
+
+- Open `/search` to search approved public footprints, the local map-place catalog, and trip plans visible to the signed-in user. Private plans never appear to outsiders, and approximate public locations keep their exact place text hidden.
+- Open `/recommendations` after signing in for a local, explainable inspiration feed. Ranking uses the signed-in user's footprint categories, provinces, and favorites; it never reads messages, passwords, or plans the user cannot access.
+- Recommendation cards show why an item matched. Use `减少此类推荐` to remove a result from the personal feed, or `恢复全部` to reset this feedback; dismissal preferences are included in the personal JSON export.
+- Open `/insights` for an all-time private dashboard with travel diversity, revisit rate, travel rhythm, yearly monthly pulse, season and category structure, spending structure, province milestones, and actionable improvement ideas.
+- `/search`, `/recommendations`, and `/insights` are excluded from service-worker page caching because their rendered results may contain private account data.
+- All search, recommendation, and insight calculations run against the local application database. No personal data is sent to an external recommendation or AI service.
 
 ## Official Province Tourism Import
 
@@ -253,6 +354,8 @@ python scripts/generate_china_map_svg.py
 - This batch imports attraction-focused description cards instead of province portals or route summaries.
 - Each imported record keeps a Baidu source link and is stored in the normal travel post feed with category `景点资料`.
 - Repeated imports are deduplicated by the source URL.
+- The webpage button and interaction stay the same, but the import source is now editable through the local file `data/baidu-scenic-seeds.json`.
+- To add your own scenic records, append a new JSON object in that file with at least `title`, `province`, `location`, `description`, and `sourceUrl`, then click the same homepage import button again.
 
 ## Offline Support
 
@@ -264,23 +367,24 @@ python scripts/generate_china_map_svg.py
 
 ## WeChat Mini Program
 
-- A new mini program client scaffold is available under `miniapp/`.
-- This first version keeps the existing Spring Boot account system and exposes mini-program-friendly APIs under `/api/mini/**`.
-- Supported mini program flows in this version:
+- A native WeChat Mini Program client is available under `miniapp/` and shares the existing Spring Boot data model through `/api/mini/**`.
+- Supported mini program flows:
   - username/password login and registration
-  - feed browsing
-  - publish a travel footprint
-  - personal center
-  - province-based footprint distribution
-  - post detail page
+  - premium travel feed, filtering, pull-to-refresh, post detail, likes, and favorites
+  - travel-footprint publishing with photo upload and native location selection
+  - native map markers; the public map has no route line, while the personal map connects points by publish time
+  - trip-plan browsing, creation, progress, and deletion
+  - weekly, monthly, and yearly travel reports
+  - personal archive and configurable backend connection for real-device debugging
 - Local development steps:
   - start the Java backend with `mvn spring-boot:run`
   - open the `miniapp/` folder in WeChat DevTools
-  - keep `miniapp/config.js` pointing to your backend address, default is `http://127.0.0.1:8080`
+  - the default backend address is `http://127.0.0.1:8080`; use the in-app `连接设置` page to switch addresses
+  - for a physical device on the same Wi-Fi, use the computer LAN address, such as `http://192.168.43.15:8080`
   - when using local debugging in WeChat DevTools, keep domain validation disabled
-- Current note:
-  - this version has not yet integrated real `wx.login` + OpenID binding
-  - once you have a formal WeChat mini program `appid`, HTTPS domain, and backend secrets, it can be upgraded to official WeChat authorization login
+- Before submission, deploy the backend to HTTPS and configure the request/uploadFile legal domains in the WeChat admin console.
+- The current account flow intentionally reuses the website account system. Real `wx.login` + OpenID binding requires a formal appid and backend secret configuration.
+- See `miniapp/README.md` for import, debugging, preview, and release preparation.
 
 ## Render Deployment
 
@@ -290,11 +394,90 @@ python scripts/generate_china_map_svg.py
 - Uploaded files should be stored on the Render disk mounted at `/app/uploads`.
 - Recommended Render setup in this repository:
   - Web service: Docker runtime
-  - Web service plan: `starter`
-  - PostgreSQL plan: `basic-256mb`
-  - Persistent disk mount path: `/app/uploads`
+  - Web service plan: Render `free`
+  - PostgreSQL: external Neon Free connection supplied as `DATABASE_URL`
+  - Uploaded images: stored in PostgreSQL with `APP_UPLOAD_STORAGE_MODE=database`
+  - Persistent disk: none
 - Basic deployment flow:
   - create a standalone GitHub repository for this project
   - push the current project code to that repository
   - create a new Render Blueprint from the GitHub repository
-  - Render will read `render.yaml` and provision the web service, PostgreSQL, and disk
+  - create a Neon Free PostgreSQL project and paste its connection string into the Render `DATABASE_URL` environment variable
+  - Render will read `render.yaml` and provision only the free web service
+
+## Production Hardening and Final Acceptance
+
+- Browser responses now include a Content Security Policy, strict referrer policy, permissions policy, frame protection, MIME-sniffing protection, request IDs, and `Server-Timing` diagnostics. HSTS is emitted for secure HTTPS requests.
+- Repeated failed logins from the same account and client address are temporarily limited. Configure the threshold with `APP_LOGIN_MAX_ATTEMPTS` and the rolling window with `APP_LOGIN_WINDOW_MINUTES`.
+- `/uploads/**` is no longer a directly exposed static directory. Avatar files remain public, while footprint photos repeat the same public, followers-only, private, disabled-user, and moderation checks used by the footprint page.
+- HTML, JSON, CSS, JavaScript, and SVG responses support compression. Versioned CSS, JavaScript, and bundled images receive browser cache headers; the service worker itself remains `no-store` so updates are discovered promptly.
+- Open `/health` for the deployment health probe. It reports only overall, database, and upload-storage readiness and does not expose credentials, filesystem paths, or exception details.
+- Unknown routes use a safe 404 page. Internal exception messages and stack traces are disabled in HTTP error responses.
+- Every response includes `X-Request-Id`; requests slower than one second are written to the server log with method, path, status, duration, and request ID, but not the query string.
+
+### Local and production profiles
+
+- Local development keeps `APP_DEMO_SEED_ENABLED=true` by default, so the documented demo accounts remain available.
+- The `prod` profile disables the H2 console, enables Thymeleaf template caching, requires secure session cookies, disables demo-data seeding, and hides error details.
+- Start a production-profile instance manually with:
+
+```powershell
+$env:SPRING_PROFILES_ACTIVE="prod"
+$env:APP_DEMO_SEED_ENABLED="false"
+$env:APP_ADMIN_BOOTSTRAP_PASSWORD="replace-with-a-strong-unique-password"
+mvn spring-boot:run
+```
+
+- `render.yaml` activates the production profile automatically and generates `APP_ADMIN_BOOTSTRAP_PASSWORD`. Retrieve that generated value from the Render environment dashboard for the first `admin` login, then change the password from account settings.
+- An existing administrator is never silently assigned the bootstrap password, and a deliberately disabled administrator is no longer re-enabled during startup.
+
+### Final self-check and D-drive backup
+
+Run the complete test suite and build the deployable JAR:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\final-check.ps1
+```
+
+The script refuses to run outside the D drive, verifies `data/`, `uploads/`, and `run/`, runs all tests, packages the application, and checks the final JAR.
+
+For a consistent local H2 and upload snapshot, stop the application first and then run:
+
+```powershell
+.\stop-app.bat
+powershell -ExecutionPolicy Bypass -File .\scripts\backup-local-data.ps1
+.\start-app.bat
+```
+
+Backups are created under the ignored D-drive directory `backups/<timestamp>/`. The backup script refuses to copy the database while port 8080 is still serving the application.
+
+## Android Application
+
+- The `android-app/` directory contains an installable Android shell for the existing Spring Boot + Thymeleaf application. The backend and database remain on the server; the phone connects through the configured server URL.
+- The app includes persistent server configuration, login cookies, file selection for photo uploads, loading progress, back navigation, external-link handling, offline retry, and strict SSL failure handling.
+- Debug builds allow a LAN HTTP address for local testing. Release builds reject cleartext HTTP and must use an HTTPS deployment.
+- Android SDK, Gradle, caches, and generated build files stay in ignored directories under this D-drive project.
+
+Install the D-drive Android toolchain and build the APK:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\setup-android.ps1
+powershell -ExecutionPolicy Bypass -File .\scripts\build-android.ps1
+```
+
+The installable debug package is copied to `outputs/travel-footprint-android-debug.apk`. The Android emulator can use `http://10.0.2.2:8080`; a physical phone on the same Wi-Fi should use the computer's LAN address, such as `http://192.168.1.20:8080`. See `android-app/README.md` for details.
+
+When the backend and APK have both been built, a phone can download the package directly from `/download/android`. The Docker image includes `distribution/travel-footprint-android.apk`, so the same download works from the public HTTPS deployment while the development computer is off. The response uses the Android package MIME type and an attachment filename. Override the source APK with `APP_ANDROID_APK_PATH` when needed.
+
+### Android App without a running computer
+
+The APK is a network client, so the backend must run somewhere even when the development computer is off. Deploy the included free Render Docker service, connect it to Neon Free PostgreSQL, verify its HTTPS URL, and then build an APK with that URL embedded:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\verify-cloud-deployment.ps1 `
+  -ServerUrl "https://travel-footprint-xxxx.onrender.com"
+powershell -ExecutionPolicy Bypass -File .\scripts\build-android-cloud.ps1 `
+  -ServerUrl "https://travel-footprint-xxxx.onrender.com"
+```
+
+The resulting `outputs/travel-footprint-android-cloud.apk` opens the cloud service immediately and no longer depends on the computer or local Wi-Fi. The build script also refreshes `distribution/travel-footprint-android.apk`; after the updated image is deployed, Android users can open `https://<your-service>/download/android` on the phone and download it directly. See `docs/CLOUD-APP-DEPLOYMENT.md` for deployment, costs, initial credentials, and local-data migration notes.

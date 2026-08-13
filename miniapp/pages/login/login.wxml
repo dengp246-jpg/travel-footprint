@@ -1,21 +1,28 @@
-<view class="page-shell">
-  <view class="card auth-card">
-    <view class="section-title">欢迎来到旅迹小程序</view>
-    <view class="muted intro">先用系统现有账号登录。等你有微信小程序正式资质后，再接入微信授权登录。</view>
+<view class="page-shell auth-page">
+  <view class="brand-mark">TF</view>
+  <view class="page-hero auth-hero">
+    <view class="eyebrow">WELCOME TO TRAVEL</view>
+    <view class="page-title">{{mode === 'login' ? '欢迎回来' : '开始记录旅途'}}</view>
+    <view class="page-subtitle">{{mode === 'login' ? '登录后继续你的旅行档案。' : '创建账号，让每一次出发都有迹可循。'}}</view>
+  </view>
 
+  <view class="card auth-card">
     <view class="mode-switch">
       <view class="mode-item {{mode === 'login' ? 'active' : ''}}" bindtap="switchMode" data-mode="login">登录</view>
       <view class="mode-item {{mode === 'register' ? 'active' : ''}}" bindtap="switchMode" data-mode="register">注册</view>
     </view>
 
-    <input class="input field" placeholder="用户名" value="{{form.username}}" bindinput="onFieldChange" data-field="username" />
-    <input wx:if="{{mode === 'register'}}" class="input field" placeholder="昵称" value="{{form.nickname}}" bindinput="onFieldChange" data-field="nickname" />
-    <input class="input field" password placeholder="密码" value="{{form.password}}" bindinput="onFieldChange" data-field="password" />
-    <input wx:if="{{mode === 'register'}}" class="input field" password placeholder="确认密码" value="{{form.confirmPassword}}" bindinput="onFieldChange" data-field="confirmPassword" />
-    <textarea wx:if="{{mode === 'register'}}" class="textarea field" placeholder="个人简介（可选）" value="{{form.bio}}" bindinput="onFieldChange" data-field="bio"></textarea>
+    <view class="field"><text class="field-label">用户名</text><input class="input" maxlength="50" placeholder="输入系统账号" value="{{form.username}}" bindinput="onFieldChange" data-field="username" /></view>
+    <view wx:if="{{mode === 'register'}}" class="field"><text class="field-label">昵称</text><input class="input" maxlength="50" placeholder="旅友如何称呼你" value="{{form.nickname}}" bindinput="onFieldChange" data-field="nickname" /></view>
+    <view class="field"><text class="field-label">密码</text><input class="input" password maxlength="72" placeholder="至少 6 个字符" value="{{form.password}}" bindinput="onFieldChange" data-field="password" /></view>
+    <view wx:if="{{mode === 'register'}}" class="field"><text class="field-label">确认密码</text><input class="input" password maxlength="72" placeholder="再次输入密码" value="{{form.confirmPassword}}" bindinput="onFieldChange" data-field="confirmPassword" /></view>
+    <view wx:if="{{mode === 'register'}}" class="field"><text class="field-label">个人简介</text><textarea class="textarea bio" maxlength="500" placeholder="简单介绍你的旅行偏好（选填）" value="{{form.bio}}" bindinput="onFieldChange" data-field="bio"></textarea></view>
 
-    <button class="button-primary submit" loading="{{submitting}}" bindtap="submitForm">
-      {{mode === 'login' ? '立即登录' : '创建账号'}}
-    </button>
+    <button class="button-primary submit" loading="{{submitting}}" disabled="{{submitting}}" bindtap="submitForm">{{mode === 'login' ? '进入旅迹' : '创建账号'}}</button>
+
+    <view class="server-entry" bindtap="goServer">
+      <view><view class="server-label">当前服务器</view><view class="server-url">{{baseUrl}}</view></view>
+      <view class="server-arrow">›</view>
+    </view>
   </view>
 </view>

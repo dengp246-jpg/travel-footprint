@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('想去清单 | 旅迹')}"></head>
+<body class="wishlist-page"><header th:replace="~{fragments :: nav}"></header><section th:replace="~{fragments :: flash}"></section>
+<main class="container wishlist-shell">
+    <section class="wishlist-hero">
+        <div><span class="eyebrow">DREAM DESTINATIONS</span><h1>先收藏心动，再认真抵达</h1><p>记录想去的地方、期望年份和优先级；时机成熟时，一键转换为可协作的旅行计划。</p></div>
+        <div class="wishlist-stats"><article><strong th:text="${wishCount}">0</strong><span>想去</span></article><article><strong th:text="${plannedCount}">0</strong><span>已规划</span></article><article><strong th:text="${visitedCount}">0</strong><span>已抵达</span></article></div>
+    </section>
+    <section class="wishlist-layout">
+        <article class="wishlist-form-card"><span class="eyebrow">ADD A DREAM</span><h2>添加目的地</h2>
+            <form class="post-form" th:action="@{/wishlist}" method="post">
+                <label>目的地<input name="destination" maxlength="100" placeholder="例如：阿勒泰喀纳斯" required></label>
+                <div class="form-grid"><label>所在省份<select name="province"><option value="">暂不确定</option><option th:each="province : ${provinces}" th:value="${province}" th:text="${province}">浙江</option></select></label>
+                    <label>优先级<select name="priority"><option th:each="priority : ${priorities}" th:value="${priority}" th:text="${priority.label}">近期考虑</option></select></label></div>
+                <label>期望年份<input type="number" name="targetYear" th:min="${currentYear}" th:max="${currentYear + 20}" th:placeholder="${currentYear + 1}"></label>
+                <label>为什么想去<textarea name="note" maxlength="500" rows="4" placeholder="想看的风景、想体验的季节，或某个一直惦记的理由。"></textarea></label>
+                <button class="primary-button" type="submit">加入想去清单</button>
+            </form>
+        </article>
+        <section class="wishlist-board">
+            <div class="empty-state" th:if="${#lists.isEmpty(wishes)}">还没有心动目的地，从第一张愿望卡开始吧。</div>
+            <article class="wish-card" th:each="wish : ${wishes}" th:classappend="| status-${#strings.toLowerCase(wish.status.name())}|">
+                <header><div class="chip-row"><span class="chip chip-accent" th:text="${wish.priority.label}">优先级</span><span class="chip" th:text="${wish.status.label}">状态</span></div><strong th:text="${wish.targetYear != null ? wish.targetYear : '未来'}">未来</strong></header>
+                <h2 th:text="${wish.destination}">目的地</h2><p class="wish-province" th:text="${wish.province != null and !wish.province.isBlank() ? wish.province : '省份待定'}">省份</p>
+                <p th:text="${wish.note != null and !wish.note.isBlank() ? wish.note : '还没有写下想去这里的理由。'}">理由</p>
+                <a class="secondary-button" th:if="${wish.tripPlan != null}" th:href="@{/plans/{id}(id=${wish.tripPlan.id})}">打开关联计划</a>
+                <details class="wish-convert-panel" th:if="${wish.tripPlan == null}"><summary>转换为旅行计划</summary>
+                    <form th:action="@{/wishlist/{id}/convert(id=${wish.id})}" method="post"><label>开始日期<input type="date" name="startDate"></label><label>结束日期<input type="date" name="endDate"></label><button class="secondary-button" type="submit">创建协作计划</button></form>
+                </details>
+                <footer><form th:action="@{/wishlist/{id}/status(id=${wish.id})}" method="post"><select name="status" onchange="this.form.submit()"><option th:each="status : ${T(com.example.travelfootprint.model.DestinationWishStatus).values()}" th:value="${status}" th:text="${status.label}" th:selected="${status == wish.status}">状态</option></select></form>
+                    <form th:action="@{/wishlist/{id}/delete(id=${wish.id})}" method="post" onsubmit="return confirm('确认移除这个目的地吗？');"><button class="text-button" type="submit">移除</button></form></footer>
+            </article>
+        </section>
+    </section>
+</main>
+</body></html>

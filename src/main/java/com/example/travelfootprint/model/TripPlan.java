@@ -38,6 +38,11 @@ public class TripPlan extends BaseEntity {
     @Column(length = 1200)
     private String notes;
 
+    private Boolean shareEnabled;
+
+    @Column(unique = true, length = 64)
+    private String shareToken;
+
     @Column(nullable = false)
     private LocalDateTime createdAt;
 
@@ -119,4 +124,9 @@ public class TripPlan extends BaseEntity {
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
     }
+
+    public boolean isShareEnabled() { return Boolean.TRUE.equals(shareEnabled); }
+    public void setShareEnabled(boolean shareEnabled) { this.shareEnabled = shareEnabled; }
+    public String getShareToken() { return shareToken; }
+    public void setShareToken(String shareToken) { this.shareToken = shareToken; }
 }

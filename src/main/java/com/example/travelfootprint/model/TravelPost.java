@@ -2,7 +2,10 @@ package com.example.travelfootprint.model;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
+import jakarta.persistence.Index;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
@@ -10,11 +13,18 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "travel_post")
+@Table(name = "travel_post", indexes = {
+        @Index(name = "idx_travel_post_review_created", columnList = "review_status, created_at"),
+        @Index(name = "idx_travel_post_author_created", columnList = "author_id, created_at"),
+        @Index(name = "idx_travel_post_province", columnList = "province")
+})
 public class TravelPost extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.EAGER, optional = false)
     private User author;
+
+    @ManyToOne(fetch = FetchType.EAGER)
+    private TripPlan tripPlan;
 
     @Column(nullable = false, length = 100)
     private String title;
@@ -43,6 +53,16 @@ public class TravelPost extends BaseEntity {
     @Column(length = 40)
     private String category;
 
+    @Enumerated(EnumType.STRING)
+    @Column(length = 20)
+    private ContentReviewStatus reviewStatus;
+
+    @Enumerated(EnumType.STRING)
+    @Column(length = 20)
+    private PostVisibility visibility;
+
+    private Boolean approximateLocation;
+
     private Double latitude;
 
     private Double longitude;
@@ -66,6 +86,14 @@ public class TravelPost extends BaseEntity {
 
     public void setAuthor(User author) {
         this.author = author;
+    }
+
+    public TripPlan getTripPlan() {
+        return tripPlan;
+    }
+
+    public void setTripPlan(TripPlan tripPlan) {
+        this.tripPlan = tripPlan;
     }
 
     public String getTitle() {
@@ -138,6 +166,30 @@ public class TravelPost extends BaseEntity {
 
     public void setCategory(String category) {
         this.category = category;
+    }
+
+    public ContentReviewStatus getReviewStatus() {
+        return reviewStatus == null ? ContentReviewStatus.APPROVED : reviewStatus;
+    }
+
+    public void setReviewStatus(ContentReviewStatus reviewStatus) {
+        this.reviewStatus = reviewStatus;
+    }
+
+    public PostVisibility getVisibility() {
+        return visibility == null ? PostVisibility.PUBLIC : visibility;
+    }
+
+    public void setVisibility(PostVisibility visibility) {
+        this.visibility = visibility;
+    }
+
+    public boolean isApproximateLocation() {
+        return Boolean.TRUE.equals(approximateLocation);
+    }
+
+    public void setApproximateLocation(boolean approximateLocation) {
+        this.approximateLocation = approximateLocation;
     }
 
     public Double getLatitude() {

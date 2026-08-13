@@ -7,6 +7,15 @@ target/
 uploads/
 data/
 run/
+backups/
+outputs/
+.android-sdk/
+.android-tools/
+.gradle-user-home/
+android-app/.gradle/
+android-app/local.properties
+android-app/**/build/
+android-app/signing/
 .env
 *.iml
 tmp_*.ps1

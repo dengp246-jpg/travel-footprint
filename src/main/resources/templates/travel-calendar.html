@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('旅行日历 | 旅迹')}"></head>
+<body class="calendar-page">
+<header th:replace="~{fragments :: nav}"></header>
+<section th:replace="~{fragments :: flash}"></section>
+
+<main class="container calendar-shell">
+    <section class="calendar-hero">
+        <div><span class="eyebrow">TRAVEL CALENDAR</span><h1>每一个出发的日子，都值得被看见</h1>
+            <p>按真实旅行日期整理你的足迹，快速回到某一天的记忆。</p></div>
+        <div class="calendar-summary">
+            <span><strong th:text="${calendar.postCount}">0</strong> 条足迹</span>
+            <span><strong th:text="${calendar.travelDays}">0</strong> 个旅行日</span>
+        </div>
+    </section>
+
+    <section class="calendar-toolbar">
+        <a th:href="@{/calendar(month=${calendar.previousMonth})}">← 上个月</a>
+        <h2 th:text="${calendar.title}">2026年8月</h2>
+        <a th:href="@{/calendar(month=${calendar.nextMonth})}">下个月 →</a>
+    </section>
+
+    <section class="travel-calendar" aria-label="旅行日历">
+        <div class="calendar-weekdays"><span>周一</span><span>周二</span><span>周三</span><span>周四</span><span>周五</span><span>周六</span><span>周日</span></div>
+        <div class="calendar-days">
+            <article th:each="day : ${calendar.days}"
+                     th:classappend="|${day.inCurrentMonth ? '' : ' outside'}${day.today ? ' today' : ''}${!#lists.isEmpty(day.posts) ? ' has-trip' : ''}|">
+                <header><time th:datetime="${day.date}" th:text="${day.date.dayOfMonth}">1</time>
+                    <span th:if="${!#lists.isEmpty(day.posts)}" th:text="|${#lists.size(day.posts)} 条|">1 条</span></header>
+                <div class="calendar-posts">
+                    <a th:each="post, status : ${day.posts}" th:if="${status.index < 3}"
+                       th:href="@{/posts/{id}(id=${post.id})}" th:title="${post.title}">
+                        <i th:if="${post.photoPath != null}" th:style="|background-image:url('${post.photoPath}')|"></i>
+                        <span th:text="${post.title}">旅行足迹</span>
+                    </a>
+                    <small th:if="${#lists.size(day.posts) > 3}" th:text="|还有 ${#lists.size(day.posts) - 3} 条|">还有更多</small>
+                </div>
+            </article>
+        </div>
+    </section>
+
+    <section class="calendar-empty" th:if="${calendar.postCount == 0}">
+        <h2>这个月还没有旅行足迹</h2><p>选择真实的出行日期发布足迹，它会自动出现在这里。</p>
+        <a class="primary-button" th:href="@{/posts/new}">记录旅行</a>
+    </section>
+</main>
+</body>
+</html>

@@ -55,10 +55,31 @@ public class ProvinceCatalogService {
         if (province == null || province.isBlank()) {
             return Optional.empty();
         }
+        String candidate = province.trim();
         return PROVINCES.stream()
-                .filter(option -> Objects.equals(option.name(), province.trim()))
+                .filter(option -> Objects.equals(option.name(), candidate)
+                        || option.aliases().stream().anyMatch(alias -> Objects.equals(alias, candidate)))
                 .map(ProvinceOption::name)
                 .findFirst();
+    }
+
+    public List<String> provinceAliases(String province) {
+        return normalizeProvince(province)
+                .flatMap(normalized -> PROVINCES.stream()
+                        .filter(option -> Objects.equals(option.name(), normalized))
+                        .findFirst())
+                .map(ProvinceOption::aliases)
+                .orElse(List.of());
+    }
+
+    public boolean matchesProvinceAlias(String province, String candidate) {
+        if (candidate == null || candidate.isBlank()) {
+            return false;
+        }
+        String normalizedCandidate = candidate.trim().replace(" ", "");
+        return provinceAliases(province).stream()
+                .map(alias -> alias.replace(" ", ""))
+                .anyMatch(normalizedCandidate::equals);
     }
 
     public Optional<String> resolveProvince(String explicitProvince, String location) {

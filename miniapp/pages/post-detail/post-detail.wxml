@@ -1,11 +1,32 @@
-<view class="page-shell">
-  <view wx:if="{{post}}" class="card detail-card">
+<view class="detail-page">
+  <view wx:if="{{loading && !post}}" class="loading-state">正在打开这段旅途…</view>
+  <block wx:if="{{post}}">
     <image wx:if="{{post.photoUrl}}" class="detail-photo" mode="aspectFill" src="{{post.photoUrl}}"></image>
-    <view class="section-title">{{post.title}}</view>
-    <view class="muted detail-meta">{{post.province}} · {{post.location}} · {{post.travelDate}}</view>
-    <view class="tag">{{post.category}}</view>
-    <view wx:if="{{post.tags}}" class="muted detail-tags">标签：{{post.tags}}</view>
-    <view class="detail-content">{{post.content}}</view>
-    <view class="muted detail-stats">点赞 {{post.likeCount}} · 评论 {{post.commentCount}} · 收藏 {{post.favoriteCount}} · 评分 {{post.ratingAverage}}</view>
-  </view>
+    <view wx:else class="detail-placeholder"><text>{{post.province}}</text></view>
+
+    <view class="detail-content-wrap">
+      <view class="detail-author">
+        <view class="avatar">{{post.authorInitial}}</view>
+        <view class="author-copy"><view class="author-name">{{post.author.nickname}}</view><view class="muted author-note">{{post.dateLabel}} · {{post.province}}</view></view>
+        <view class="tag">{{post.category}}</view>
+      </view>
+
+      <view class="detail-title">{{post.title}}</view>
+      <view class="detail-location">⌖ {{post.location}}</view>
+      <view wx:if="{{post.tags}}" class="tag-list"><view class="tag tag-warm">{{post.tags}}</view></view>
+
+      <view class="story-label">TRAVEL NOTE</view>
+      <view class="detail-story">{{post.content}}</view>
+
+      <view class="interaction-card">
+        <view class="action {{post.liked ? 'active' : ''}}" bindtap="toggleLike"><view class="action-icon">♡</view><view><view class="action-value">{{post.likeCount}}</view><view class="action-label">点赞</view></view></view>
+        <view class="action-divider"></view>
+        <view class="action {{post.favorited ? 'active warm' : ''}}" bindtap="toggleFavorite"><view class="action-icon">☆</view><view><view class="action-value">{{post.favoriteCount}}</view><view class="action-label">收藏</view></view></view>
+        <view class="action-divider"></view>
+        <view class="action static"><view class="action-icon">◌</view><view><view class="action-value">{{post.commentCount}}</view><view class="action-label">评论</view></view></view>
+      </view>
+
+      <view class="rating-line"><text>旅行评分</text><text class="rating-value">{{post.ratingAverage || '暂无'}}</text></view>
+    </view>
+  </block>
 </view>

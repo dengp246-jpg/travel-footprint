@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('目的地攻略 | 旅迹')}"></head>
+<body class="guide-page"><header th:replace="~{fragments :: nav}"></header><section th:replace="~{fragments :: flash}"></section>
+<main class="container guide-shell">
+    <section class="guide-hero">
+        <div><span class="eyebrow">DESTINATION COMPASS</span><h1>从真实足迹中，找到下一站</h1><p>聚合已审核的公开旅行内容与本地点位目录，不展示私密或仅关注者可见的足迹。</p></div>
+        <form class="guide-search" action="/guides" method="get"><input type="hidden" name="province" th:value="${guide.selectedProvince}"><label><span>搜索地点或主题</span><input name="q" th:value="${guide.query}" placeholder="例如：西湖、徒步、古镇"></label><button class="primary-button" type="submit">探索攻略</button></form>
+    </section>
+
+    <nav class="guide-province-nav" aria-label="省份筛选"><a th:href="@{/guides(q=${guide.query})}" th:classappend="${guide.selectedProvince.isBlank() ? ' active' : ''}">全国</a><a th:each="province : ${guide.provinces}" th:href="@{/guides(province=${province},q=${guide.query})}" th:text="${province}" th:classappend="${province == guide.selectedProvince ? ' active' : ''}">浙江</a></nav>
+
+    <section class="guide-overview">
+        <div><span th:text="${guide.selectedProvince.isBlank() ? '全国灵感概览' : guide.selectedProvince + '旅行概览'}">旅行概览</span><h2 th:text="${guide.query.isBlank() ? (guide.selectedProvince.isBlank() ? '公开足迹正在为你指路' : guide.selectedProvince + '公开足迹正在为你指路') : '“' + guide.query + '”的探索结果'}">公开足迹正在为你指路</h2></div>
+        <article><strong th:text="${guide.footprintCount}">0</strong><span>公开足迹</span></article><article><strong th:text="${guide.uniquePlaces}">0</strong><span>真实地点</span></article><article><strong th:text="${guide.referenceCount}">0</strong><span>参考来源</span></article>
+    </section>
+
+    <section class="guide-insight-grid">
+        <article class="guide-rank-card"><div class="section-title-row"><h2>热门地点</h2><span>TOP 8</span></div><div class="guide-rank-list"><a th:each="item, stat : ${guide.topLocations}" th:href="@{/guides(province=${guide.selectedProvince},q=${item.label})}"><i th:text="|0${stat.count}|">01</i><strong th:text="${item.label}">地点</strong><span th:text="|${item.count} 条|">1 条</span></a><div class="empty-state compact" th:if="${#lists.isEmpty(guide.topLocations)}">暂时没有匹配的公开足迹。</div></div></article>
+        <article class="guide-rank-card"><div class="section-title-row"><h2>旅行主题</h2><span>兴趣雷达</span></div><div class="guide-theme-cloud"><a th:each="item : ${guide.topCategories}" th:href="@{/guides(province=${guide.selectedProvince},q=${item.label})}"><span th:text="${item.label}">主题</span><b th:text="${item.count}">1</b></a><div class="empty-state compact" th:if="${#lists.isEmpty(guide.topCategories)}">选择全国或其他省份查看更多主题。</div></div></article>
+        <article class="guide-rank-card"><div class="section-title-row"><h2>灵感目的地</h2><a th:href="@{/map}">在地图查看 →</a></div><div class="guide-place-list"><a th:each="place : ${guide.places}" th:href="@{/map(q=${place.location})}"><span>⌖</span><strong th:text="${place.location}">地点</strong><small th:text="${place.province}">省份</small></a><div class="empty-state compact" th:if="${#lists.isEmpty(guide.places)}">没有找到对应地点，试试更宽泛的关键词。</div></div></article>
+    </section>
+
+    <section class="guide-stories"><div class="workspace-section-heading"><div><span class="eyebrow">TRAVEL STORIES</span><h2>可参考的真实旅行记录</h2><p>攻略只做启发，出发前请再次核实开放时间、预约规则、天气与交通。</p></div><span th:text="|${#lists.size(guide.posts)} 篇精选|">0 篇精选</span></div>
+        <div class="guide-story-grid"><a class="guide-story-card" th:each="post : ${guide.posts}" th:href="@{/posts/{id}(id=${post.id})}"><div class="guide-story-cover" th:classappend="${post.photoPath == null ? ' no-image' : ''}" th:style="${post.photoPath != null ? 'background-image:url(' + post.photoPath + ')' : ''}"><span th:if="${post.sourceName != null and !post.sourceName.isBlank()}" th:text="${post.sourceName}">来源</span></div><div><small th:text="|${post.province == null or post.province.isBlank() ? (guide.selectedProvince.isBlank() ? '目的地' : guide.selectedProvince) : post.province} · ${post.category == null or post.category.isBlank() ? '旅行灵感' : post.category}|">主题</small><h3 th:text="${post.title}">标题</h3><p th:text="${post.location}">地点</p><span th:text="|${#temporals.format(post.travelDate, 'yyyy.MM.dd')} · ${post.author.nickname}|">作者</span></div></a><div class="empty-state" th:if="${#lists.isEmpty(guide.posts)}">没有找到匹配内容，可以清空关键词或切换省份继续探索。</div></div>
+    </section>
+</main>
+</body></html>

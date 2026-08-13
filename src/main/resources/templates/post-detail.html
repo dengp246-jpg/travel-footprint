@@ -9,11 +9,18 @@
     <article class="detail-panel">
         <div class="detail-header">
             <div>
-                <span class="eyebrow" th:text="${post.location}">地点</span>
+                <span class="eyebrow" th:text="${displayLocation}">地点</span>
                 <h1 th:text="${post.title}">标题</h1>
                 <div class="chip-row">
                     <span class="chip chip-accent" th:text="${post.category}">分类</span>
                     <span class="chip" th:if="${post.province != null and !post.province.isBlank()}" th:text="|省份：${post.province}|">省份</span>
+                    <a class="chip" th:if="${post.tripPlan != null}" th:href="@{/plans}"
+                       th:text="|关联行程：${post.tripPlan.title}|">关联行程</a>
+                    <span class="chip" th:if="${ownedByCurrentUser}" th:text="|可见范围：${post.visibility.label}|">公开</span>
+                    <span class="chip" th:if="${post.approximateLocation}">地图位置已模糊</span>
+                    <span class="chip moderation-chip"
+                          th:if="${showModerationStatus and post.reviewStatus.name() != 'APPROVED'}"
+                          th:text="|状态：${post.reviewStatus.label}|">状态：待审核</span>
                 </div>
             </div>
             <div class="detail-meta">
@@ -22,9 +29,29 @@
             </div>
         </div>
 
-        <div class="detail-image" th:if="${post.photoPath != null}">
-            <img th:src="@{${post.photoPath}}" th:alt="${post.title}">
-        </div>
+        <section class="detail-gallery" th:if="${!#lists.isEmpty(postPhotos)}" data-detail-gallery>
+            <div class="detail-gallery-stage">
+                <img th:each="photo, status : ${postPhotos}" th:src="@{${photo.path}}" th:alt="|${post.title} 照片 ${status.count}|"
+                     th:classappend="${status.first} ? ' active'" th:attr="data-gallery-slide=${status.index}">
+                <button type="button" data-gallery-previous aria-label="上一张照片">‹</button>
+                <button type="button" data-gallery-next aria-label="下一张照片">›</button>
+                <span><b data-gallery-current>1</b> / <b th:text="${#lists.size(postPhotos)}">1</b></span>
+            </div>
+            <div class="detail-gallery-thumbs" th:if="${#lists.size(postPhotos) > 1}">
+                <button type="button" th:each="photo, status : ${postPhotos}" th:classappend="${status.first} ? ' active'"
+                        th:attr="data-gallery-thumb=${status.index}" th:aria-label="|查看第 ${status.count} 张照片|">
+                    <img th:src="@{${photo.path}}" alt="">
+                </button>
+            </div>
+            <div class="detail-gallery-manage" th:if="${ownedByCurrentUser and #lists.size(postPhotos) > 1}">
+                <span>选择相册封面：</span>
+                <form th:each="photo, status : ${postPhotos}" th:if="${photo.id != null}"
+                      th:action="@{/posts/{postId}/photos/{photoId}/cover(postId=${post.id},photoId=${photo.id})}" method="post">
+                    <button type="submit" th:classappend="${photo.cover} ? ' active'"
+                            th:text="${photo.cover ? '当前封面' : '照片 ' + status.count}">照片 1</button>
+                </form>
+            </div>
+        </section>
 
         <div class="tag-row" th:if="${post.tags != null and !post.tags.isBlank()}">
             <span th:each="tag : ${#strings.arraySplit(post.tags, ',')}" th:text="${#strings.trim(tag)}">标签</span>
@@ -37,6 +64,11 @@
 
         <p class="detail-content" th:text="${post.content}">正文</p>
 
+        <div class="empty-state compact"
+             th:if="${showModerationStatus and post.reviewStatus.name() != 'APPROVED'}">
+            当前足迹还未进入公开信息流。管理员审核通过后，它才会出现在首页、地图和公开搜索结果中。
+        </div>
+
         <div class="detail-actions">
             <div class="engagement-row large">
                 <span th:text="|点赞 ${likeCount}|">点赞 0</span>
@@ -45,7 +77,7 @@
                 <span th:text="|评分 ${#numbers.formatDecimal(ratingAverage, 1, 1)} / 5|">评分 0.0 / 5</span>
                 <span th:text="|共 ${ratingCount} 人评分|">共 0 人评分</span>
             </div>
-            <div class="action-grid">
+            <div class="action-grid" th:if="${postApproved}">
                 <form th:action="@{/posts/{id}/like(id=${post.id})}" method="post">
                     <button class="primary-button" type="submit" th:text="${liked ? '取消点赞' : '点赞支持'}">点赞支持</button>
                 </form>
@@ -57,7 +89,7 @@
             </div>
         </div>
 
-        <section class="rating-panel">
+        <section class="rating-panel" th:if="${postApproved}">
             <div class="section-heading compact">
                 <div>
                     <span class="eyebrow">景点评分</span>
@@ -92,10 +124,15 @@
             </div>
         </div>
 
-        <form class="comment-form" th:action="@{/posts/{id}/comments(id=${post.id})}" method="post">
-            <textarea name="content" rows="5" placeholder="写下你的看法、建议或想问的问题。" required></textarea>
+        <form class="comment-form" th:if="${postApproved}" th:action="@{/posts/{id}/comments(id=${post.id})}" method="post">
+            <textarea name="content" rows="5" maxlength="1000"
+                      placeholder="写下你的看法、建议或想问的问题。" required></textarea>
             <button class="primary-button full-width" type="submit">发表评论</button>
         </form>
+
+        <div class="empty-state compact" th:if="${!postApproved}">
+            当前足迹仍在审核流程中，公开互动功能会在审核通过后开放。
+        </div>
 
         <div class="comment-list">
             <article class="comment-card" th:each="comment : ${comments}">
@@ -115,9 +152,9 @@
                     </article>
                 </div>
 
-                <form class="reply-form" th:action="@{/posts/{id}/comments(id=${post.id})}" method="post">
+                <form class="reply-form" th:if="${postApproved}" th:action="@{/posts/{id}/comments(id=${post.id})}" method="post">
                     <input type="hidden" name="parentId" th:value="${comment.id}">
-                    <textarea name="content" rows="2" placeholder="回复这条评论..." required></textarea>
+                    <textarea name="content" rows="2" maxlength="1000" placeholder="回复这条评论..." required></textarea>
                     <button class="ghost-button" type="submit">发送回复</button>
                 </form>
             </article>
@@ -127,5 +164,24 @@
         </div>
     </aside>
 </main>
+<script>
+    (() => {
+        const gallery = document.querySelector('[data-detail-gallery]');
+        if (!gallery) return;
+        const slides = [...gallery.querySelectorAll('[data-gallery-slide]')];
+        const thumbs = [...gallery.querySelectorAll('[data-gallery-thumb]')];
+        const counter = gallery.querySelector('[data-gallery-current]');
+        let active = 0;
+        const show = (index) => {
+            active = (index + slides.length) % slides.length;
+            slides.forEach((slide, item) => slide.classList.toggle('active', item === active));
+            thumbs.forEach((thumb, item) => thumb.classList.toggle('active', item === active));
+            if (counter) counter.textContent = String(active + 1);
+        };
+        gallery.querySelector('[data-gallery-previous]')?.addEventListener('click', () => show(active - 1));
+        gallery.querySelector('[data-gallery-next]')?.addEventListener('click', () => show(active + 1));
+        thumbs.forEach((thumb, index) => thumb.addEventListener('click', () => show(index)));
+    })();
+</script>
 </body>
 </html>

@@ -1,9 +1,10 @@
-const { request, setAuth } = require('../../utils/request')
+const { getBaseUrl, request, setAuth } = require('../../utils/request')
 
 Page({
   data: {
     mode: 'login',
     submitting: false,
+    baseUrl: '',
     form: {
       username: '',
       nickname: '',
@@ -11,6 +12,10 @@ Page({
       confirmPassword: '',
       bio: ''
     }
+  },
+
+  onShow() {
+    this.setData({ baseUrl: getBaseUrl() })
   },
 
   switchMode(event) {
@@ -31,8 +36,16 @@ Page({
       return
     }
 
-    this.setData({ submitting: true })
     const { mode, form } = this.data
+    if (!form.username.trim() || !form.password) {
+      wx.showToast({ title: '请输入用户名和密码', icon: 'none' })
+      return
+    }
+    if (mode === 'register' && (!form.nickname.trim() || form.password !== form.confirmPassword)) {
+      wx.showToast({ title: '请检查昵称和两次密码', icon: 'none' })
+      return
+    }
+    this.setData({ submitting: true })
     const url = mode === 'login' ? '/api/mini/auth/login' : '/api/mini/auth/register'
     try {
       const response = await request({
@@ -56,5 +69,9 @@ Page({
     } finally {
       this.setData({ submitting: false })
     }
+  },
+
+  goServer() {
+    wx.navigateTo({ url: '/pages/server/server' })
   }
 })

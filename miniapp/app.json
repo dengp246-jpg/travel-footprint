@@ -3,21 +3,24 @@
     "pages/feed/feed",
     "pages/map/map",
     "pages/publish/publish",
+    "pages/plans/plans",
     "pages/mine/mine",
     "pages/login/login",
-    "pages/post-detail/post-detail"
+    "pages/post-detail/post-detail",
+    "pages/report/report",
+    "pages/server/server"
   ],
   "window": {
     "navigationBarTitleText": "旅迹",
-    "navigationBarBackgroundColor": "#ffffff",
+    "navigationBarBackgroundColor": "#f7f5f0",
     "navigationBarTextStyle": "black",
-    "backgroundColor": "#f5f7fb",
+    "backgroundColor": "#f4f2ed",
     "backgroundTextStyle": "light"
   },
   "tabBar": {
-    "color": "#6b7280",
-    "selectedColor": "#0f766e",
-    "backgroundColor": "#ffffff",
+    "color": "#747872",
+    "selectedColor": "#176557",
+    "backgroundColor": "#fbfaf7",
     "borderStyle": "black",
     "list": [
       {
@@ -33,11 +36,23 @@
         "text": "发布"
       },
       {
+        "pagePath": "pages/plans/plans",
+        "text": "计划"
+      },
+      {
         "pagePath": "pages/mine/mine",
         "text": "我的"
       }
     ]
   },
+  "permission": {
+    "scope.userLocation": {
+      "desc": "用于选择旅行地点并在地图中显示当前位置"
+    }
+  },
+  "requiredPrivateInfos": [
+    "chooseLocation"
+  ],
   "sitemapLocation": "sitemap.json",
   "style": "v2"
 }

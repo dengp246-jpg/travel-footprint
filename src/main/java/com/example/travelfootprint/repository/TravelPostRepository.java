@@ -11,7 +11,14 @@ public interface TravelPostRepository extends JpaRepository<TravelPost, Long> {
 
     List<TravelPost> findByAuthorIdOrderByCreatedAtDesc(Long authorId);
 
+    List<TravelPost> findByTripPlanIdOrderByTravelDateAscCreatedAtAsc(Long tripPlanId);
+
+    List<TravelPost> findByAuthorIdAndTravelDateBetweenOrderByTravelDateAscCreatedAtAsc(
+            Long authorId, java.time.LocalDate startDate, java.time.LocalDate endDate);
+
     boolean existsBySourceUrl(String sourceUrl);
 
     Optional<TravelPost> findBySourceUrl(String sourceUrl);
+
+    Optional<TravelPost> findFirstByPhotoPath(String photoPath);
 }

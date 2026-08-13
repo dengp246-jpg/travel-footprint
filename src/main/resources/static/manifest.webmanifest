@@ -5,5 +5,13 @@
   "display": "standalone",
   "background_color": "#f4efe6",
   "theme_color": "#d4662a",
-  "description": "支持离线浏览部分页面和本地草稿保存的旅游足迹系统。"
+  "description": "支持离线浏览部分页面和本地草稿保存的旅游足迹系统。",
+  "icons": [
+    {
+      "src": "/images/app-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
 }

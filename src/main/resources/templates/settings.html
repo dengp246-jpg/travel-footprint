@@ -16,19 +16,59 @@
             <div class="form-grid">
                 <label>
                     昵称
-                    <input type="text" name="nickname" th:value="${currentUser.nickname}" required>
+                    <input type="text" name="nickname" th:value="${currentUser.nickname}" maxlength="50" required>
                 </label>
                 <label>
                     头像上传
-                    <input type="file" name="avatar" accept="image/*">
+                    <input type="file" name="avatar"
+                           accept="image/jpeg,image/png,image/gif,image/webp,.jpg,.jpeg,.png,.gif,.webp">
+                    <span class="field-hint">支持 JPG、PNG、GIF、WebP，最大 5MB</span>
                 </label>
             </div>
             <label>
                 个人简介
-                <textarea name="bio" rows="5" th:text="${currentUser.bio}" placeholder="说说你喜欢怎样的旅行方式。"></textarea>
+                <textarea name="bio" rows="5" maxlength="500" th:text="${currentUser.bio}"
+                          placeholder="说说你喜欢怎样的旅行方式。"></textarea>
             </label>
             <button class="primary-button full-width" type="submit">保存资料</button>
         </form>
+        <section class="data-export-card">
+            <div><span class="eyebrow">DATA OWNERSHIP</span><h2>下载我的旅行数据</h2>
+                <p>导出文件包含个人资料、足迹、相册路径、行程、账本和旅行目标，不包含密码。</p></div>
+            <a class="secondary-button" th:href="@{/settings/export}">导出 JSON 数据</a>
+        </section>
+        <section class="account-security-card" id="account-security">
+            <div class="security-card-copy">
+                <span class="eyebrow">ACCOUNT SECURITY</span>
+                <h2>账户与密码安全</h2>
+                <p>修改密码后会刷新当前会话标识，降低旧链接或旧会话被继续利用的风险。</p>
+                <dl>
+                    <div><dt>最近登录</dt><dd th:text="${currentUser.lastLoginAt != null ? #temporals.format(currentUser.lastLoginAt, 'yyyy-MM-dd HH:mm') : '暂无记录'}">暂无记录</dd></div>
+                    <div><dt>密码更新</dt><dd th:text="${currentUser.passwordChangedAt != null ? #temporals.format(currentUser.passwordChangedAt, 'yyyy-MM-dd HH:mm') : '尚未主动修改'}">尚未修改</dd></div>
+                </dl>
+            </div>
+            <form class="auth-form security-password-form" th:action="@{/settings/password}" method="post">
+                <label>当前密码<input type="password" name="currentPassword" autocomplete="current-password" required></label>
+                <label>新密码<input type="password" name="newPassword" minlength="8" maxlength="72" autocomplete="new-password" required></label>
+                <label>确认新密码<input type="password" name="confirmPassword" minlength="8" maxlength="72" autocomplete="new-password" required></label>
+                <button class="primary-button" type="submit">更新密码</button>
+            </form>
+        </section>
+        <section class="offline-control-card">
+            <div><span class="eyebrow">OFFLINE & PWA</span><h2>把旅迹安装到设备</h2>
+                <p>已访问的非敏感页面可离线打开；私信、通知、资料设置和数据导出不会写入离线页面缓存。</p></div>
+            <button class="secondary-button" type="button" data-install-app hidden>安装旅迹应用</button>
+            <span data-install-status>浏览器支持时会显示安装按钮。</span>
+        </section>
+        <section class="data-export-card">
+            <div>
+                <span class="eyebrow">ANDROID APK</span>
+                <h2>下载 Android 安装包</h2>
+                <p>Android 8.0 及以上设备可直接下载安装。云端专用版会自动连接本站；通用版首次启动时填写当前网站的 HTTPS 地址即可。</p>
+            </div>
+            <a class="secondary-button" th:href="@{/download/android}"
+               download="travel-footprint-android.apk">下载 APK</a>
+        </section>
     </section>
 </main>
 </body>

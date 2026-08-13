@@ -25,8 +25,16 @@ public class User extends BaseEntity {
     @Column(length = 255)
     private String avatarPath;
 
+    private Boolean admin;
+
+    private Boolean enabled;
+
     @Column(nullable = false)
     private LocalDateTime joinedAt;
+
+    private LocalDateTime lastLoginAt;
+
+    private LocalDateTime passwordChangedAt;
 
     @PrePersist
     public void onCreate() {
@@ -81,5 +89,37 @@ public class User extends BaseEntity {
 
     public void setAvatarPath(String avatarPath) {
         this.avatarPath = avatarPath;
+    }
+
+    public boolean isAdmin() {
+        return Boolean.TRUE.equals(admin);
+    }
+
+    public void setAdmin(boolean admin) {
+        this.admin = admin;
+    }
+
+    public boolean isEnabled() {
+        return enabled == null || Boolean.TRUE.equals(enabled);
+    }
+
+    public void setEnabled(boolean enabled) {
+        this.enabled = enabled;
+    }
+
+    public LocalDateTime getLastLoginAt() {
+        return lastLoginAt;
+    }
+
+    public void setLastLoginAt(LocalDateTime lastLoginAt) {
+        this.lastLoginAt = lastLoginAt;
+    }
+
+    public LocalDateTime getPasswordChangedAt() {
+        return passwordChangedAt;
+    }
+
+    public void setPasswordChangedAt(LocalDateTime passwordChangedAt) {
+        this.passwordChangedAt = passwordChangedAt;
     }
 }

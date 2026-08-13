@@ -1,13 +1,26 @@
-const CACHE_VERSION = "travelfootprint-offline-v4";
+const CACHE_VERSION = "travelfootprint-offline-v27";
 const SHELL_CACHE = [
   "/",
   "/map",
   "/login",
   "/register",
   "/offline.html",
-  "/css/style.css?v=20260502-1",
-  "/js/app-shell.js?v=20260502-1",
-  "/manifest.webmanifest?v=20260502-1"
+  "/css/style.css?v=20260808-16",
+  "/css/premium.css?v=20260809-1",
+  "/js/app-shell.js?v=20260809-1",
+  "/js/post-editor.js?v=20260808-2",
+  "/manifest.webmanifest?v=20260808-2"
+];
+const SENSITIVE_PATH_PREFIXES = [
+  "/messages",
+  "/notifications",
+  "/search",
+  "/recommendations",
+  "/insights",
+  "/settings",
+  "/admin",
+  "/api/",
+  "/h2-console"
 ];
 
 self.addEventListener("install", (event) => {
@@ -36,6 +49,10 @@ self.addEventListener("fetch", (event) => {
   }
 
   if (request.mode === "navigate") {
+    if (SENSITIVE_PATH_PREFIXES.some((prefix) => url.pathname.startsWith(prefix))) {
+      event.respondWith(networkOnly(request));
+      return;
+    }
     event.respondWith(networkFirst(request));
     return;
   }
@@ -47,7 +64,9 @@ async function networkFirst(request) {
   const cache = await caches.open(CACHE_VERSION);
   try {
     const response = await fetch(request);
-    cache.put(request, response.clone());
+    if (response.ok) {
+      cache.put(request, response.clone());
+    }
     return response;
   } catch (error) {
     const cached = await cache.match(request);
@@ -59,13 +78,24 @@ async function networkFirst(request) {
   }
 }
 
+async function networkOnly(request) {
+  try {
+    return await fetch(request);
+  } catch (error) {
+    const cache = await caches.open(CACHE_VERSION);
+    return await cache.match("/offline.html") || Response.error();
+  }
+}
+
 async function staleWhileRevalidate(request) {
   const cache = await caches.open(CACHE_VERSION);
   const cached = await cache.match(request);
 
   const networkPromise = fetch(request)
     .then((response) => {
-      cache.put(request, response.clone());
+      if (response.ok) {
+        cache.put(request, response.clone());
+      }
       return response;
     })
     .catch(() => null);

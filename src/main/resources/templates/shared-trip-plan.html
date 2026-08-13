@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head(${plan.title + ' | 只读行程'})}"></head>
+<body class="shared-trip-page">
+<main class="shared-trip-shell">
+    <header class="shared-trip-brand"><a th:href="@{/}"><strong>旅迹</strong><span>Travel Footprint</span></a><i>只读分享</i></header>
+    <section class="shared-trip-hero"><span class="eyebrow">SHARED JOURNEY</span><h1 th:text="${plan.title}">旅行计划</h1><p th:text="${plan.destination}">目的地</p><div><span th:text="${plan.startDate != null ? #temporals.format(plan.startDate, 'yyyy.MM.dd') : '日期待定'}">开始</span><i>—</i><span th:text="${plan.endDate != null ? #temporals.format(plan.endDate, 'yyyy.MM.dd') : '日期待定'}">结束</span><b th:if="${dayCount > 0}" th:text="|${dayCount} 天|">4天</b></div></section>
+    <section class="shared-trip-summary"><article><strong th:text="${activityCount}">0</strong><span>行程安排</span></article><article><strong th:text="${completedActivityCount}">0</strong><span>已经完成</span></article><article><strong th:text="${#maps.size(activityGroups)}">0</strong><span>安排天数</span></article></section>
+    <section class="shared-itinerary"><div class="section-heading compact"><div><span class="eyebrow">PUBLIC ITINERARY</span><h2>每日行程</h2></div><p>此页面不会展示预算、准备清单、私密备注或同行账号。</p></div><div class="empty-state" th:if="${#maps.isEmpty(activityGroups)}">分享者还没有添加每日行程。</div>
+        <section th:each="entry, stat : ${activityGroups}"><header><span th:text="|DAY ${stat.count}|">DAY 1</span><strong th:text="${#temporals.format(entry.key, 'MM月dd日 EEEE')}">日期</strong></header><article th:each="activity : ${entry.value}" th:classappend="${activity.completed ? ' completed' : ''}"><time th:text="${activity.startTime != null ? #temporals.format(activity.startTime, 'HH:mm') : '全天'}">全天</time><div><strong th:text="${activity.title}">安排</strong><p th:if="${activity.location != null and !activity.location.isBlank()}" th:text="${activity.location}">地点</p></div><i th:if="${activity.completed}">已完成</i></article></section>
+    </section>
+    <footer class="shared-trip-footer"><strong>旅迹 Travel Footprint</strong><p>把每一次抵达，都变成值得回看的故事。</p></footer>
+</main>
+</body></html>

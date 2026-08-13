@@ -1,7 +1,7 @@
 {
   "appid": "wxc1e930880b5a4dcb",
   "compileType": "miniprogram",
-  "libVersion": "trial",
+  "libVersion": "3.15.2",
   "miniprogramRoot": "./",
   "projectname": "travel-footprint-miniapp",
   "setting": {

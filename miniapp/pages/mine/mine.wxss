@@ -1,38 +1,46 @@
-.profile-card {
-  margin-bottom: 24rpx;
-}
-
-.stats-row {
-  display: flex;
-  gap: 16rpx;
-  margin: 24rpx 0;
-}
-
-.stat-box {
-  flex: 1;
-  background: #f8fafc;
-  border-radius: 18rpx;
-  padding: 20rpx;
-  text-align: center;
-}
-
-.stat-number {
-  font-size: 34rpx;
-  font-weight: 700;
-  margin-bottom: 8rpx;
-}
-
-.my-post-item {
-  padding: 18rpx 0;
-  border-bottom: 2rpx solid #f1f5f9;
-}
-
-.my-post-item:last-child {
-  border-bottom: 0;
-}
-
-.my-post-title {
-  font-size: 30rpx;
-  font-weight: 600;
-  margin-bottom: 8rpx;
-}
+.mine-page { padding-left: 24rpx; padding-right: 24rpx; }
+.profile-cover { padding: 36rpx 30rpx 28rpx; border-radius: 32rpx; background: linear-gradient(145deg, #123d35, #176557 60%, #3d7e72); color: #fff; box-shadow: 0 24rpx 52rpx rgba(23,101,87,.22); }
+.profile-top { display: flex; align-items: center; gap: 22rpx; }
+.profile-avatar, .profile-avatar-image { width: 112rpx; height: 112rpx; border-radius: 32rpx; }
+.profile-avatar { background: rgba(255,255,255,.15); border: 2rpx solid rgba(255,255,255,.3); font-size: 43rpx; font-weight: 760; line-height: 112rpx; text-align: center; }
+.profile-avatar-image { background: rgba(255,255,255,.12); }
+.profile-copy { flex: 1; }
+.profile-kicker { color: #a7d9cf; font-size: 18rpx; font-weight: 720; letter-spacing: 3rpx; }
+.profile-name { margin-top: 8rpx; font-size: 40rpx; font-weight: 740; }
+.profile-username { margin-top: 3rpx; color: rgba(255,255,255,.64); font-size: 22rpx; }
+.profile-bio { margin-top: 24rpx; color: rgba(255,255,255,.78); line-height: 1.65; }
+.profile-stats { display: grid; grid-template-columns: repeat(3, 1fr); margin-top: 26rpx; padding-top: 22rpx; border-top: 2rpx solid rgba(255,255,255,.15); }
+.profile-stats view { text-align: center; }
+.profile-stats text { display: block; font-size: 33rpx; font-weight: 730; }
+.profile-stats label { display: block; margin-top: 4rpx; color: rgba(255,255,255,.6); font-size: 20rpx; }
+.quick-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14rpx; margin: 22rpx 0 34rpx; }
+.quick-card { min-height: 190rpx; padding: 22rpx; }
+.quick-symbol { width: 58rpx; height: 58rpx; border-radius: 18rpx; background: #e6f0ec; color: #176557; font-size: 24rpx; font-weight: 720; line-height: 58rpx; text-align: center; }
+.warm-symbol { background: #fff0e3; color: #a76633; }
+.blue-symbol { background: #e9f0f1; color: #3f7378; }
+.gray-symbol { background: #eeefeb; color: #69736d; }
+.quick-title { margin-top: 15rpx; font-weight: 680; }
+.quick-note { margin-top: 5rpx; font-size: 21rpx; }
+.archive-head { margin: 0 4rpx 18rpx; }
+.my-post { display: flex; align-items: center; gap: 18rpx; margin-bottom: 13rpx; padding: 20rpx 22rpx; }
+.post-date { width: 118rpx; }
+.post-date text { display: block; color: #a36d45; font-size: 20rpx; }
+.post-date label { display: block; margin-top: 5rpx; color: #7c847f; font-size: 21rpx; }
+.post-copy { flex: 1; min-width: 0; }
+.post-title { overflow: hidden; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
+.post-location { overflow: hidden; margin-top: 6rpx; font-size: 21rpx; text-overflow: ellipsis; white-space: nowrap; }
+.post-arrow { color: #a0a7a3; font-size: 36rpx; }
+.account-card { margin-top: 28rpx; }
+.account-server { display: flex; align-items: center; justify-content: space-between; }
+.account-label { color: #7a817d; font-size: 21rpx; }
+.account-url { overflow: hidden; max-width: 550rpx; margin-top: 5rpx; font-family: monospace; font-size: 22rpx; text-overflow: ellipsis; white-space: nowrap; }
+.online-dot { width: 16rpx; height: 16rpx; border-radius: 50%; background: #2d8c79; box-shadow: 0 0 0 8rpx rgba(45,140,121,.12); }
+.logout-button { margin-top: 22rpx; }
+.guest-cover { margin-top: 30rpx; padding: 48rpx 34rpx; border-radius: 34rpx; background: linear-gradient(145deg, #123d35, #246a5d); color: #fff; text-align: center; box-shadow: 0 24rpx 56rpx rgba(23,101,87,.22); }
+.guest-mark { width: 96rpx; height: 96rpx; margin: 0 auto 26rpx; border-radius: 30rpx; background: rgba(255,255,255,.14); border: 2rpx solid rgba(255,255,255,.24); font-size: 31rpx; font-weight: 760; line-height: 96rpx; }
+.guest-eyebrow { color: #a8d8ce; }
+.guest-title { margin-top: 16rpx; font-size: 42rpx; font-weight: 740; line-height: 1.35; }
+.guest-copy { margin-top: 16rpx; color: rgba(255,255,255,.7); line-height: 1.65; }
+.guest-button { margin-top: 30rpx; background: #fff; color: #176557; border-radius: 19rpx; font-weight: 680; }
+.guest-server { display: flex; align-items: center; justify-content: space-between; margin-top: 22rpx; }
+.server-copy { overflow: hidden; max-width: 560rpx; margin-top: 8rpx; font-size: 22rpx; text-overflow: ellipsis; white-space: nowrap; }

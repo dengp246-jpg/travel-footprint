@@ -1,0 +1,28 @@
+.plan-hero { padding-bottom: 26rpx; }
+.hero-actions { display: flex; gap: 14rpx; margin-top: 28rpx; }
+.hero-button { flex: 1; margin: 0; }
+.create-card { margin-bottom: 34rpx; }
+.field { margin-bottom: 22rpx; }
+.date-grid { display: flex; gap: 16rpx; }
+.date-field { flex: 1; min-width: 0; }
+.notes { min-height: 180rpx; }
+.login-state { margin-top: 20rpx; }
+.login-button { margin-top: 28rpx; }
+.list-heading { display: flex; align-items: center; justify-content: space-between; margin: 12rpx 4rpx 20rpx; }
+.plan-card { margin-bottom: 22rpx; }
+.plan-top { display: flex; gap: 20rpx; }
+.plan-index { color: #ad825f; font-size: 24rpx; font-weight: 720; letter-spacing: 2rpx; }
+.plan-main { flex: 1; }
+.plan-status { display: inline-block; margin-bottom: 10rpx; padding: 7rpx 13rpx; border-radius: 10rpx; background: #e8f0ec; color: #176557; font-size: 20rpx; font-weight: 650; }
+.status-BOOKED { background: #fff1e3; color: #a7632f; }
+.status-FINISHED { background: #eef0ed; color: #6c756f; }
+.plan-title { font-size: 34rpx; font-weight: 720; line-height: 1.35; }
+.plan-destination { margin-top: 9rpx; color: #176557; font-size: 23rpx; }
+.plan-meta { display: grid; grid-template-columns: 1.4fr 1fr; gap: 12rpx; margin: 24rpx 0; padding: 20rpx; border-radius: 18rpx; background: #f7f6f2; font-size: 23rpx; }
+.plan-meta view { display: flex; flex-direction: column; gap: 7rpx; }
+.meta-label { color: #8b918e; font-size: 20rpx; }
+.progress-head { display: flex; justify-content: space-between; color: #68716d; font-size: 22rpx; }
+.progress-track { height: 10rpx; margin-top: 12rpx; overflow: hidden; border-radius: 8rpx; background: #e8e9e4; }
+.progress-fill { height: 100%; border-radius: 8rpx; background: linear-gradient(90deg, #176557, #65a294); }
+.plan-foot { display: flex; justify-content: space-between; margin-top: 20rpx; font-size: 22rpx; }
+.delete-link { color: #a44535; }

@@ -19,10 +19,10 @@ public class CurrentUserService {
     public User getCurrentUser(HttpSession session) {
         Object userId = session.getAttribute(SESSION_USER_ID);
         if (userId instanceof Long id) {
-            return userRepository.findById(id).orElse(null);
+            return resolveActiveUser(id, session);
         }
         if (userId instanceof Integer id) {
-            return userRepository.findById(id.longValue()).orElse(null);
+            return resolveActiveUser(id.longValue(), session);
         }
         return null;
     }
@@ -37,5 +37,14 @@ public class CurrentUserService {
 
     public void logout(HttpSession session) {
         session.invalidate();
+    }
+
+    private User resolveActiveUser(Long userId, HttpSession session) {
+        User user = userRepository.findById(userId).orElse(null);
+        if (user != null && user.isEnabled()) {
+            return user;
+        }
+        session.removeAttribute(SESSION_USER_ID);
+        return null;
     }
 }

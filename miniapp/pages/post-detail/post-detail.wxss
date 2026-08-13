@@ -1,22 +1,23 @@
-.detail-card {
-  line-height: 1.8;
-}
-
-.detail-photo {
-  width: 100%;
-  height: 380rpx;
-  border-radius: 18rpx;
-  margin-bottom: 24rpx;
-  background: #e5e7eb;
-}
-
-.detail-meta,
-.detail-tags,
-.detail-stats {
-  margin-bottom: 18rpx;
-}
-
-.detail-content {
-  margin: 18rpx 0 24rpx;
-  white-space: pre-wrap;
-}
+.detail-page { min-height: 100vh; background: #f4f2ed; }
+.detail-photo, .detail-placeholder { width: 100%; height: 520rpx; }
+.detail-placeholder { display: flex; align-items: center; justify-content: center; background: linear-gradient(150deg, #133d35, #438174); color: rgba(255,255,255,.86); font-size: 48rpx; letter-spacing: 10rpx; }
+.detail-content-wrap { position: relative; z-index: 2; margin-top: -42rpx; padding: 32rpx 30rpx 60rpx; border-radius: 38rpx 38rpx 0 0; background: #f8f6f1; }
+.detail-author { display: flex; align-items: center; gap: 16rpx; }
+.author-copy { flex: 1; }
+.author-name { font-weight: 680; }
+.author-note { margin-top: 5rpx; font-size: 22rpx; }
+.detail-title { margin-top: 34rpx; color: #18231f; font-size: 48rpx; font-weight: 760; line-height: 1.3; letter-spacing: -1rpx; }
+.detail-location { margin-top: 14rpx; color: #176557; font-size: 25rpx; }
+.tag-list { margin-top: 18rpx; }
+.story-label { margin-top: 42rpx; color: #a4714b; font-size: 20rpx; font-weight: 720; letter-spacing: 3rpx; }
+.detail-story { margin-top: 16rpx; color: #46514c; font-size: 30rpx; line-height: 1.95; white-space: pre-wrap; }
+.interaction-card { display: flex; align-items: center; margin-top: 42rpx; padding: 22rpx 16rpx; border: 2rpx solid #e7e5df; border-radius: 24rpx; background: #fff; box-shadow: 0 14rpx 40rpx rgba(35,48,43,.06); }
+.action { display: flex; align-items: center; justify-content: center; flex: 1; gap: 12rpx; color: #68716d; }
+.action-icon { font-size: 38rpx; }
+.action-value { color: #2d3934; font-size: 25rpx; font-weight: 700; }
+.action-label { margin-top: 2rpx; font-size: 19rpx; }
+.action.active, .action.active .action-value { color: #176557; }
+.action.active.warm, .action.active.warm .action-value { color: #b16b37; }
+.action-divider { width: 2rpx; height: 50rpx; background: #ecebe6; }
+.rating-line { display: flex; justify-content: space-between; margin-top: 18rpx; padding: 20rpx 6rpx; color: #7b827e; font-size: 23rpx; }
+.rating-value { color: #a66d41; font-weight: 700; }

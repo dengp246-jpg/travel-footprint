@@ -4,25 +4,49 @@ import com.example.travelfootprint.model.TravelPost;
 import com.example.travelfootprint.model.User;
 import com.example.travelfootprint.repository.TravelPostRepository;
 import com.example.travelfootprint.repository.UserRepository;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.LocalDate;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 @Service
 public class PublicAttractionImportService {
 
+    private static final TypeReference<List<BaiduScenicSeed>> BAIDU_SEED_LIST = new TypeReference<>() {
+    };
+
     private final TravelPostRepository postRepository;
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final ContentVisibilityService contentVisibilityService;
+    private final LocationNormalizationService locationNormalizationService;
+    private final ObjectMapper objectMapper;
+    private final Path scenicSeedFile;
 
     public PublicAttractionImportService(
             TravelPostRepository postRepository,
             UserRepository userRepository,
-            PasswordEncoder passwordEncoder) {
+            PasswordEncoder passwordEncoder,
+            ContentVisibilityService contentVisibilityService,
+            LocationNormalizationService locationNormalizationService,
+            ObjectMapper objectMapper,
+            @Value("${app.import.baidu-scenic-file:data/baidu-scenic-seeds.json}") String scenicSeedFileLocation) {
         this.postRepository = postRepository;
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
+        this.contentVisibilityService = contentVisibilityService;
+        this.locationNormalizationService = locationNormalizationService;
+        this.objectMapper = objectMapper;
+        this.scenicSeedFile = Paths.get(scenicSeedFileLocation).toAbsolutePath().normalize();
     }
 
     public ImportResult importBaiduScenicDescriptions() {
@@ -33,7 +57,7 @@ public class PublicAttractionImportService {
         int imported = 0;
         int skipped = 0;
 
-        for (BaiduScenicSeed seed : baiduScenicSeeds()) {
+        for (BaiduScenicSeed seed : loadBaiduScenicSeeds()) {
             if (postRepository.existsBySourceUrl(seed.sourceUrl())) {
                 skipped++;
                 continue;
@@ -42,14 +66,15 @@ public class PublicAttractionImportService {
             TravelPost post = new TravelPost();
             post.setAuthor(sourceUser);
             post.setTitle(seed.title());
-            post.setLocation(seed.location());
+            post.setLocation(locationNormalizationService.normalizeDisplayLocation(seed.province(), seed.location()));
             post.setProvince(seed.province());
             post.setCategory("景点资料");
-            post.setTags(seed.tags());
-            post.setTravelDate(LocalDate.now().minusDays(seed.dayOffset()));
-            post.setSourceName("百度百科");
+            post.setTags(orEmpty(seed.tags()));
+            post.setTravelDate(LocalDate.now().minusDays(resolveDayOffset(seed.dayOffset())));
+            post.setSourceName(seed.sourceName().isBlank() ? "百度百科" : seed.sourceName());
             post.setSourceUrl(seed.sourceUrl());
             post.setContent(buildBaiduDescription(seed));
+            post.setReviewStatus(contentVisibilityService.defaultPostStatus(sourceUser, true));
             postRepository.save(post);
             imported++;
         }
@@ -61,14 +86,88 @@ public class PublicAttractionImportService {
         return seed.description()
                 + "\n\n"
                 + "推荐玩法："
-                + seed.playSuggestion()
+                + orEmpty(seed.playSuggestion())
                 + "。\n"
                 + "适合人群："
-                + seed.audience()
+                + orEmpty(seed.audience())
                 + "。\n"
-                + "资料说明：本条内容由系统根据百度景点词条结果整理为景点描述卡，可用于首页展示、地图联动和行程规划参考。\n\n"
-                + "百度来源："
+                + "资料说明：本条内容由系统根据可维护的景点资料文件整理为景点描述卡，可用于首页展示、地图联动和行程规划参考。\n\n"
+                + "来源链接："
                 + seed.sourceUrl();
+    }
+
+    private List<BaiduScenicSeed> loadBaiduScenicSeeds() {
+        try {
+            if (Files.notExists(scenicSeedFile)) {
+                List<BaiduScenicSeed> defaults = defaultBaiduScenicSeeds();
+                writeSeedFile(defaults);
+                return defaults;
+            }
+
+            List<BaiduScenicSeed> loaded = objectMapper.readValue(scenicSeedFile.toFile(), BAIDU_SEED_LIST);
+            if (loaded == null || loaded.isEmpty()) {
+                return List.of();
+            }
+            return normalizeSeeds(loaded);
+        } catch (IOException exception) {
+            throw new IllegalStateException(
+                    "景点资料文件读取失败，请检查 " + scenicSeedFile + " 是否存在且为有效 JSON 格式。",
+                    exception);
+        }
+    }
+
+    private void writeSeedFile(List<BaiduScenicSeed> seeds) throws IOException {
+        Path parent = scenicSeedFile.getParent();
+        if (parent != null) {
+            Files.createDirectories(parent);
+        }
+        objectMapper.writerWithDefaultPrettyPrinter().writeValue(scenicSeedFile.toFile(), seeds);
+    }
+
+    private List<BaiduScenicSeed> normalizeSeeds(List<BaiduScenicSeed> loaded) {
+        Map<String, BaiduScenicSeed> unique = new LinkedHashMap<>();
+        for (int index = 0; index < loaded.size(); index++) {
+            BaiduScenicSeed seed = loaded.get(index);
+            if (seed == null) {
+                throw new IllegalStateException("景点资料文件第 " + (index + 1) + " 条记录为空。");
+            }
+            requireValue(seed.title(), "title", index);
+            requireValue(seed.province(), "province", index);
+            requireValue(seed.location(), "location", index);
+            requireValue(seed.description(), "description", index);
+            requireValue(seed.sourceUrl(), "sourceUrl", index);
+
+            BaiduScenicSeed normalized = new BaiduScenicSeed(
+                    seed.title().trim(),
+                    seed.province().trim(),
+                    seed.location().trim(),
+                    seed.description().trim(),
+                    orEmpty(seed.playSuggestion()).trim(),
+                    orEmpty(seed.audience()).trim(),
+                    orEmpty(seed.tags()).trim(),
+                    seed.sourceUrl().trim(),
+                    orEmpty(seed.sourceName()).trim(),
+                    seed.dayOffset());
+            unique.putIfAbsent(normalized.sourceUrl(), normalized);
+        }
+        return List.copyOf(unique.values());
+    }
+
+    private void requireValue(String value, String fieldName, int index) {
+        if (value == null || value.isBlank()) {
+            throw new IllegalStateException("景点资料文件第 " + (index + 1) + " 条缺少字段 " + fieldName + "。");
+        }
+    }
+
+    private long resolveDayOffset(Integer dayOffset) {
+        if (dayOffset == null || dayOffset < 0) {
+            return 0;
+        }
+        return dayOffset;
+    }
+
+    private String orEmpty(String value) {
+        return value == null ? "" : value;
     }
 
     private User findOrCreateSourceUser(String username, String nickname, String bio) {
@@ -87,6 +186,10 @@ public class PublicAttractionImportService {
             user.setBio(bio);
             changed = true;
         }
+        if (!user.isEnabled()) {
+            user.setEnabled(true);
+            changed = true;
+        }
         return changed ? userRepository.save(user) : user;
     }
 
@@ -96,10 +199,12 @@ public class PublicAttractionImportService {
         user.setNickname(nickname);
         user.setPasswordHash(passwordEncoder.encode("123456"));
         user.setBio(bio);
+        user.setEnabled(true);
+        user.setAdmin(false);
         return userRepository.save(user);
     }
 
-    private List<BaiduScenicSeed> baiduScenicSeeds() {
+    private List<BaiduScenicSeed> defaultBaiduScenicSeeds() {
         return List.of(
                 new BaiduScenicSeed(
                         "西湖",
@@ -110,6 +215,7 @@ public class PublicAttractionImportService {
                         "第一次到杭州、喜欢城市风景与轻松漫游的人",
                         "西湖,杭州,湖景,城市漫游,经典景点",
                         "https://baike.baidu.com/search/word?word=西湖风景名胜区",
+                        "百度百科",
                         2),
                 new BaiduScenicSeed(
                         "鼓浪屿",
@@ -120,6 +226,7 @@ public class PublicAttractionImportService {
                         "喜欢拍照、海岛散步和历史建筑的人",
                         "鼓浪屿,厦门,海岛,建筑,文艺漫游",
                         "https://baike.baidu.com/search/word?word=鼓浪屿",
+                        "百度百科",
                         4),
                 new BaiduScenicSeed(
                         "黄山风景区",
@@ -130,6 +237,7 @@ public class PublicAttractionImportService {
                         "喜欢登山、摄影和山岳风光的人",
                         "黄山,山岳,云海,日出,徒步",
                         "https://baike.baidu.com/search/word?word=黄山风景名胜区",
+                        "百度百科",
                         6),
                 new BaiduScenicSeed(
                         "九寨沟",
@@ -140,6 +248,7 @@ public class PublicAttractionImportService {
                         "适合自然风光爱好者和摄影人群",
                         "九寨沟,高原湖泊,彩林,瀑布,摄影",
                         "https://baike.baidu.com/search/word?word=九寨沟风景名胜区",
+                        "百度百科",
                         8),
                 new BaiduScenicSeed(
                         "故宫博物院",
@@ -150,6 +259,7 @@ public class PublicAttractionImportService {
                         "适合历史、建筑、文博类游客",
                         "故宫,北京,宫殿,博物馆,中轴线",
                         "https://baike.baidu.com/search/word?word=故宫博物院",
+                        "百度百科",
                         10),
                 new BaiduScenicSeed(
                         "布达拉宫",
@@ -160,6 +270,7 @@ public class PublicAttractionImportService {
                         "适合对高原风光、历史建筑和藏地文化感兴趣的人",
                         "布达拉宫,拉萨,高原,宫殿,藏地文化",
                         "https://baike.baidu.com/search/word?word=布达拉宫",
+                        "百度百科",
                         12),
                 new BaiduScenicSeed(
                         "丽江古城",
@@ -170,6 +281,7 @@ public class PublicAttractionImportService {
                         "适合轻松度假、情侣游和朋友结伴游",
                         "丽江古城,云南,古城,夜景,高原慢游",
                         "https://baike.baidu.com/search/word?word=丽江古城",
+                        "百度百科",
                         14),
                 new BaiduScenicSeed(
                         "龙门石窟",
@@ -180,6 +292,7 @@ public class PublicAttractionImportService {
                         "适合历史、雕塑艺术和研学游客",
                         "龙门石窟,洛阳,石窟,雕塑,历史文化",
                         "https://baike.baidu.com/search/word?word=龙门石窟",
+                        "百度百科",
                         16),
                 new BaiduScenicSeed(
                         "乐山大佛",
@@ -190,6 +303,7 @@ public class PublicAttractionImportService {
                         "适合家庭游客、人文旅行者和首次到川南的游客",
                         "乐山大佛,四川,大佛,江景,人文景观",
                         "https://baike.baidu.com/search/word?word=乐山大佛",
+                        "百度百科",
                         18),
                 new BaiduScenicSeed(
                         "武夷山",
@@ -200,6 +314,7 @@ public class PublicAttractionImportService {
                         "适合山水游、亲子游和喜欢喝茶的人",
                         "武夷山,福建,丹霞,竹筏,茶文化",
                         "https://baike.baidu.com/search/word?word=武夷山风景名胜区",
+                        "百度百科",
                         20),
                 new BaiduScenicSeed(
                         "秦始皇兵马俑",
@@ -210,6 +325,7 @@ public class PublicAttractionImportService {
                         "适合历史控、亲子研学和第一次到西安的人",
                         "兵马俑,西安,考古,博物馆,历史",
                         "https://baike.baidu.com/search/word?word=秦始皇兵马俑博物馆",
+                        "百度百科",
                         22),
                 new BaiduScenicSeed(
                         "张家界国家森林公园",
@@ -220,6 +336,7 @@ public class PublicAttractionImportService {
                         "适合喜欢山地地貌、拍照和户外步行的人",
                         "张家界,森林公园,石峰,峡谷,户外",
                         "https://baike.baidu.com/search/word?word=张家界国家森林公园",
+                        "百度百科",
                         24));
     }
 
@@ -235,6 +352,7 @@ public class PublicAttractionImportService {
             String audience,
             String tags,
             String sourceUrl,
-            int dayOffset) {
+            String sourceName,
+            Integer dayOffset) {
     }
 }

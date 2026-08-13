@@ -26,19 +26,24 @@
               th:action="@{/posts}"
               method="post"
               enctype="multipart/form-data"
-              data-draft-key="post-create-draft">
+              data-draft-key="post-create-draft"
+              data-post-editor>
+            <div class="form-inline-error" data-form-error role="alert" hidden></div>
             <div class="form-grid">
                 <label>
                     标题
-                    <input type="text" name="title" th:value="${formPost.title}" placeholder="例如：青岛海边的一场日出" required>
+                    <input type="text" name="title" th:value="${formPost.title}" placeholder="例如：青岛海边的一场日出"
+                           maxlength="100" data-counted-field required>
+                    <span class="field-hint"><span data-character-count>0</span>/100</span>
                 </label>
-                <label>
+                <label class="smart-location-field">
                     目的地
-                    <input type="text" name="location" th:value="${formPost.location}" placeholder="例如：青岛 栈桥 / 杭州 西湖" required>
+                    <input type="text" name="location" th:value="${formPost.location}" placeholder="例如：青岛 栈桥 / 杭州 西湖"
+                           maxlength="100" autocomplete="off" data-location-input required>
                 </label>
                 <label>
                     所在省份
-                    <select name="province" required>
+                    <select name="province" data-province-select required>
                         <option value="">请选择省份</option>
                         <option th:each="item : ${provinces}" th:value="${item}" th:text="${item}"
                                 th:selected="${item == formPost.province}">浙江</option>
@@ -60,22 +65,80 @@
                 </label>
                 <label>
                     标签
-                    <input type="text" name="tags" th:value="${formPost.tags}" placeholder="例如：海边,日出,摄影">
+                    <input type="text" name="tags" th:value="${formPost.tags}" placeholder="例如：海边,日出,摄影"
+                           maxlength="100" data-counted-field>
+                    <span class="field-hint"><span data-character-count>0</span>/100</span>
                 </label>
                 <label>
-                    景点照片
-                    <input type="file" name="photo" accept="image/*">
+                    关联行程
+                    <select name="tripPlanId">
+                        <option value="">不关联行程</option>
+                        <option th:each="plan : ${availablePlans}" th:value="${plan.id}" th:text="${plan.title}"
+                                th:selected="${formPost.tripPlan != null and formPost.tripPlan.id == plan.id}">行程计划</option>
+                    </select>
+                    <span class="field-hint">关联后会自动计入行程完成进度</span>
+                </label>
+                <label>
+                    谁可以查看
+                    <select name="visibility">
+                        <option th:each="visibility : ${postVisibilities}" th:value="${visibility}" th:text="${visibility.label}"
+                                th:selected="${formPost.visibility == visibility}">公开</option>
+                    </select>
+                </label>
+                <label class="privacy-location-option">
+                    <span>地图隐私</span>
+                    <span><input type="checkbox" name="approximateLocation" value="true" th:checked="${formPost.approximateLocation}"> 对其他用户隐藏具体点位，仅显示省份范围</span>
+                </label>
+                <label class="image-upload-field">
+                    旅行相册
+                    <input type="file" name="photos" multiple
+                           accept="image/jpeg,image/png,image/gif,image/webp,.jpg,.jpeg,.png,.gif,.webp"
+                           data-gallery-input>
+                    <span class="field-hint">最多 9 张；可拖动排序并选择封面，单张最大 5MB</span>
                 </label>
             </div>
+            <input type="hidden" name="latitude" th:value="${formPost.latitude}" data-latitude-input>
+            <input type="hidden" name="longitude" th:value="${formPost.longitude}" data-longitude-input>
+            <section class="smart-location-assistant" data-location-assistant>
+                <div class="smart-location-copy">
+                    <span>SMART LOCATION</span>
+                    <strong>智能定位助手</strong>
+                    <small data-location-status>输入城市或景点名称，选择建议后自动填写省份和精准坐标。</small>
+                    <div class="smart-location-suggestions" data-location-suggestions>
+                        <button type="button" th:each="suggestion : ${locationSuggestions}"
+                                data-location-suggestion hidden
+                                th:text="|${suggestion.province} · ${suggestion.location}|"
+                                th:attr="data-location=${suggestion.location},
+                                         data-province=${suggestion.province},
+                                         data-latitude=${suggestion.latitude},
+                                         data-longitude=${suggestion.longitude},
+                                         data-left=${suggestion.left},
+                                         data-top=${suggestion.top},
+                                         data-search=${suggestion.searchText}">浙江 · 杭州西湖</button>
+                    </div>
+                    <button class="smart-location-clear" type="button" data-location-clear hidden>取消精准坐标</button>
+                </div>
+                <div class="smart-location-map" aria-hidden="true">
+                    <img th:src="@{/images/china-map-generated.svg}" alt="">
+                    <i data-location-preview-pin hidden></i>
+                </div>
+            </section>
             <label>
                 旅行感悟
                 <textarea name="content" rows="10" placeholder="记录下这次旅行里最值得分享的故事、风景和你的感受。"
-                          th:text="${formPost.content}" required></textarea>
+                          th:text="${formPost.content}" maxlength="4000" data-counted-field required></textarea>
+                <span class="field-hint"><span data-character-count>0</span>/4000</span>
             </label>
+            <input type="hidden" name="coverPhotoIndex" value="0" data-cover-photo-index>
+            <div class="gallery-upload-preview" data-gallery-preview hidden>
+                <div class="gallery-upload-heading"><strong>相册预览</strong><span>拖动照片调整顺序，点击“设为封面”选择封面</span></div>
+                <div class="gallery-upload-grid" data-gallery-grid></div>
+                <button class="secondary-button" type="button" data-clear-gallery>清空本次选择</button>
+            </div>
             <div class="offline-draft-actions">
                 <span class="draft-status" data-draft-status>草稿会自动保存到本机</span>
                 <button class="secondary-button" type="button" data-clear-draft>清空本地草稿</button>
-                <button class="primary-button" type="submit">发布我的足迹</button>
+                <button class="primary-button" type="submit" data-submit-button data-submit-label="正在发布…">发布我的足迹</button>
             </div>
         </form>
 
@@ -84,19 +147,24 @@
               th:action="@{/posts/{id}/edit(id=${formPost.id})}"
               method="post"
               enctype="multipart/form-data"
-              th:attr="data-draft-key=${'post-edit-draft-' + formPost.id}">
+              th:attr="data-draft-key=${'post-edit-draft-' + formPost.id}"
+              data-post-editor>
+            <div class="form-inline-error" data-form-error role="alert" hidden></div>
             <div class="form-grid">
                 <label>
                     标题
-                    <input type="text" name="title" th:value="${formPost.title}" placeholder="例如：青岛海边的一场日出" required>
+                    <input type="text" name="title" th:value="${formPost.title}" placeholder="例如：青岛海边的一场日出"
+                           maxlength="100" data-counted-field required>
+                    <span class="field-hint"><span data-character-count>0</span>/100</span>
                 </label>
-                <label>
+                <label class="smart-location-field">
                     目的地
-                    <input type="text" name="location" th:value="${formPost.location}" placeholder="例如：青岛 栈桥 / 杭州 西湖" required>
+                    <input type="text" name="location" th:value="${formPost.location}" placeholder="例如：青岛 栈桥 / 杭州 西湖"
+                           maxlength="100" autocomplete="off" data-location-input required>
                 </label>
                 <label>
                     所在省份
-                    <select name="province" required>
+                    <select name="province" data-province-select required>
                         <option value="">请选择省份</option>
                         <option th:each="item : ${provinces}" th:value="${item}" th:text="${item}"
                                 th:selected="${item == formPost.province}">浙江</option>
@@ -118,22 +186,85 @@
                 </label>
                 <label>
                     标签
-                    <input type="text" name="tags" th:value="${formPost.tags}" placeholder="例如：海边,日出,摄影">
+                    <input type="text" name="tags" th:value="${formPost.tags}" placeholder="例如：海边,日出,摄影"
+                           maxlength="100" data-counted-field>
+                    <span class="field-hint"><span data-character-count>0</span>/100</span>
                 </label>
                 <label>
-                    景点照片
-                    <input type="file" name="photo" accept="image/*">
+                    关联行程
+                    <select name="tripPlanId">
+                        <option value="">不关联行程</option>
+                        <option th:each="plan : ${availablePlans}" th:value="${plan.id}" th:text="${plan.title}"
+                                th:selected="${formPost.tripPlan != null and formPost.tripPlan.id == plan.id}">行程计划</option>
+                    </select>
+                    <span class="field-hint">关联后会自动计入行程完成进度</span>
+                </label>
+                <label>
+                    谁可以查看
+                    <select name="visibility">
+                        <option th:each="visibility : ${postVisibilities}" th:value="${visibility}" th:text="${visibility.label}"
+                                th:selected="${formPost.visibility == visibility}">公开</option>
+                    </select>
+                </label>
+                <label class="privacy-location-option">
+                    <span>地图隐私</span>
+                    <span><input type="checkbox" name="approximateLocation" value="true" th:checked="${formPost.approximateLocation}"> 对其他用户隐藏具体点位，仅显示省份范围</span>
+                </label>
+                <label class="image-upload-field">
+                    继续添加照片
+                    <input type="file" name="photos" multiple
+                           accept="image/jpeg,image/png,image/gif,image/webp,.jpg,.jpeg,.png,.gif,.webp"
+                           data-gallery-input>
+                    <span class="field-hint">整篇足迹最多 9 张；新照片可拖动排序并设为封面</span>
                 </label>
             </div>
+            <input type="hidden" name="latitude" th:value="${formPost.latitude}" data-latitude-input>
+            <input type="hidden" name="longitude" th:value="${formPost.longitude}" data-longitude-input>
+            <section class="smart-location-assistant" data-location-assistant>
+                <div class="smart-location-copy">
+                    <span>SMART LOCATION</span>
+                    <strong>智能定位助手</strong>
+                    <small data-location-status>输入城市或景点名称，选择建议后自动填写省份和精准坐标。</small>
+                    <div class="smart-location-suggestions" data-location-suggestions>
+                        <button type="button" th:each="suggestion : ${locationSuggestions}"
+                                data-location-suggestion hidden
+                                th:text="|${suggestion.province} · ${suggestion.location}|"
+                                th:attr="data-location=${suggestion.location},
+                                         data-province=${suggestion.province},
+                                         data-latitude=${suggestion.latitude},
+                                         data-longitude=${suggestion.longitude},
+                                         data-left=${suggestion.left},
+                                         data-top=${suggestion.top},
+                                         data-search=${suggestion.searchText}">浙江 · 杭州西湖</button>
+                    </div>
+                    <button class="smart-location-clear" type="button" data-location-clear hidden>取消精准坐标</button>
+                </div>
+                <div class="smart-location-map" aria-hidden="true">
+                    <img th:src="@{/images/china-map-generated.svg}" alt="">
+                    <i data-location-preview-pin hidden></i>
+                </div>
+            </section>
             <label>
                 旅行感悟
                 <textarea name="content" rows="10" placeholder="记录下这次旅行里最值得分享的故事、风景和你的感受。"
-                          th:text="${formPost.content}" required></textarea>
+                          th:text="${formPost.content}" maxlength="4000" data-counted-field required></textarea>
+                <span class="field-hint"><span data-character-count>0</span>/4000</span>
             </label>
+            <section class="existing-photo-strip" th:if="${!#lists.isEmpty(postPhotos)}">
+                <strong>当前相册</strong>
+                <div><img th:each="photo : ${postPhotos}" th:src="@{${photo.path}}" th:alt="${formPost.title}"></div>
+                <small>保存后可在足迹详情页更换已有照片的封面。</small>
+            </section>
+            <input type="hidden" name="coverPhotoIndex" value="0" data-cover-photo-index>
+            <div class="gallery-upload-preview" data-gallery-preview hidden>
+                <div class="gallery-upload-heading"><strong>新增照片预览</strong><span>拖动照片调整顺序，点击“设为封面”选择新封面</span></div>
+                <div class="gallery-upload-grid" data-gallery-grid></div>
+                <button class="secondary-button" type="button" data-clear-gallery>清空本次选择</button>
+            </div>
             <div class="offline-draft-actions">
                 <span class="draft-status" data-draft-status>草稿会自动保存到本机</span>
                 <button class="secondary-button" type="button" data-clear-draft>清空本地草稿</button>
-                <button class="primary-button" type="submit">保存修改</button>
+                <button class="primary-button" type="submit" data-submit-button data-submit-label="正在保存…">保存修改</button>
             </div>
         </form>
     </section>
@@ -143,11 +274,12 @@
         <h2>让你的足迹更容易被看见</h2>
         <ul class="feature-list">
             <li>省份会直接用于地图点亮和省份筛选，建议按真实旅行地点选择。</li>
-            <li>地图会根据你选择的省份和填写的目的地自动落点，不需要手动填写经纬度。</li>
+            <li>地图会根据“省份 + 目的地第一个层级”自动落点，例如“长沙 岳麓山”会按长沙定位，不需要手动填写经纬度。</li>
             <li>断网时你仍然可以继续编辑文字草稿，但图片上传和最终提交需要恢复联网。</li>
             <li>正文可以写风景、交通建议、感受和避坑提醒，图文越完整越容易获得互动。</li>
         </ul>
     </aside>
 </main>
+<script defer th:src="@{/js/post-editor.js(v='20260808-2')}"></script>
 </body>
 </html>

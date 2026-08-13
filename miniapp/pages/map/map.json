@@ -1,3 +1,4 @@
 {
-  "navigationBarTitleText": "足迹分布"
+  "navigationBarTitleText": "旅行地图",
+  "enablePullDownRefresh": true
 }

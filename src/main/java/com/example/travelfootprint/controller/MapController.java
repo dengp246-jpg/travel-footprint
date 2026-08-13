@@ -3,12 +3,18 @@ package com.example.travelfootprint.controller;
 import com.example.travelfootprint.model.TravelPost;
 import com.example.travelfootprint.model.User;
 import com.example.travelfootprint.repository.TravelPostRepository;
+import com.example.travelfootprint.service.ContentVisibilityService;
 import com.example.travelfootprint.service.CurrentUserService;
 import com.example.travelfootprint.service.DestinationMapService;
+import com.example.travelfootprint.service.LocationNormalizationService;
 import com.example.travelfootprint.service.ProvinceCatalogService;
 import jakarta.servlet.http.HttpSession;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -25,6 +31,9 @@ public class MapController {
     private static final String MODE_PUBLIC = "public";
     private static final String MODE_PERSONAL = "personal";
     private static final String SESSION_MAP_MODE = "preferredMapMode";
+    private static final String SORT_LATEST = "latest";
+    private static final String SORT_OLDEST = "oldest";
+    private static final String SORT_TITLE = "title";
     private static final Map<String, ProvinceFocusView> PROVINCE_FOCUSES = Map.ofEntries(
             Map.entry("北京", focus("北京", 68.71, 41.22, 4.2)),
             Map.entry("天津", focus("天津", 69.42, 42.85, 4.2)),
@@ -65,22 +74,34 @@ public class MapController {
     private final CurrentUserService currentUserService;
     private final ProvinceCatalogService provinceCatalogService;
     private final DestinationMapService destinationMapService;
+    private final ContentVisibilityService contentVisibilityService;
+    private final LocationNormalizationService locationNormalizationService;
 
     public MapController(
             TravelPostRepository postRepository,
             CurrentUserService currentUserService,
             ProvinceCatalogService provinceCatalogService,
-            DestinationMapService destinationMapService) {
+            DestinationMapService destinationMapService,
+            ContentVisibilityService contentVisibilityService,
+            LocationNormalizationService locationNormalizationService) {
         this.postRepository = postRepository;
         this.currentUserService = currentUserService;
         this.provinceCatalogService = provinceCatalogService;
         this.destinationMapService = destinationMapService;
+        this.contentVisibilityService = contentVisibilityService;
+        this.locationNormalizationService = locationNormalizationService;
     }
 
     @GetMapping("/map")
     public String map(
             @RequestParam(required = false) String province,
+            @RequestParam(required = false) String city,
             @RequestParam(required = false) String mode,
+            @RequestParam(required = false) Integer year,
+            @RequestParam(required = false) String category,
+            @RequestParam(required = false) String q,
+            @RequestParam(required = false, defaultValue = "false") boolean hasPhoto,
+            @RequestParam(required = false) String sort,
             HttpSession session,
             Model model) {
         User currentUser = currentUserService.getCurrentUser(session);
@@ -91,20 +112,71 @@ public class MapController {
 
         session.setAttribute(SESSION_MAP_MODE, selectedMode);
 
-        List<TravelPost> sourcePosts = filterPostsByMode(
-                postRepository.findAllByOrderByCreatedAtDesc(), currentUser, personalMode);
+        List<TravelPost> allPosts = postRepository.findAllByOrderByCreatedAtDesc();
+        List<TravelPost> sourcePosts = personalMode && currentUser != null
+                ? allPosts.stream()
+                        .filter(post -> post.getAuthor() != null && Objects.equals(post.getAuthor().getId(), currentUser.getId()))
+                        .filter(post -> contentVisibilityService.canViewPost(currentUser, post))
+                        .toList()
+                : contentVisibilityService.approvedPosts(allPosts);
+        List<Integer> availableYears = sourcePosts.stream()
+                .map(TravelPost::getTravelDate)
+                .filter(Objects::nonNull)
+                .map(LocalDate::getYear)
+                .distinct()
+                .sorted(Comparator.reverseOrder())
+                .toList();
+        List<String> availableCategories = sourcePosts.stream()
+                .map(TravelPost::getCategory)
+                .filter(value -> value != null && !value.isBlank())
+                .map(String::trim)
+                .distinct()
+                .sorted()
+                .toList();
+        Integer selectedYear = availableYears.contains(year) ? year : null;
+        String selectedCategory = category == null ? null : category.trim();
+        if (selectedCategory == null || !availableCategories.contains(selectedCategory)) {
+            selectedCategory = null;
+        }
+        String selectedKeyword = normalizeKeyword(q);
+        String selectedSort = normalizeSort(sort);
+        String finalSelectedCategory = selectedCategory;
+        List<TravelPost> filteredPosts = sourcePosts.stream()
+                .filter(post -> selectedYear == null
+                        || (post.getTravelDate() != null && post.getTravelDate().getYear() == selectedYear))
+                .filter(post -> finalSelectedCategory == null
+                        || finalSelectedCategory.equals(post.getCategory()))
+                .filter(post -> selectedKeyword == null || containsKeyword(post, selectedKeyword))
+                .filter(post -> !hasPhoto || (post.getPhotoPath() != null && !post.getPhotoPath().isBlank()))
+                .sorted(postComparator(selectedSort))
+                .toList();
         String selectedProvince = normalizeSelectedProvince(province);
 
-        List<TravelPost> provinceResolvedPosts = sourcePosts.stream()
+        List<TravelPost> provinceResolvedPosts = filteredPosts.stream()
                 .filter(post -> resolveProvinceName(post).isPresent())
                 .toList();
-        List<TravelPost> unmappedPosts = sourcePosts.stream()
+        List<TravelPost> unmappedPosts = filteredPosts.stream()
+                .filter(post -> selectedProvince == null
+                        || resolveProvinceName(post).filter(selectedProvince::equals).isPresent())
                 .filter(post -> destinationMapService.resolvePoint(post).isEmpty())
                 .toList();
-        List<MarkerCandidate> mappablePosts = sourcePosts.stream()
-                .map(this::toMarkerCandidate)
+        List<MarkerCandidate> mappablePosts = filteredPosts.stream()
+                .map(post -> toMarkerCandidate(post, personalMode))
                 .flatMap(Optional::stream)
                 .toList();
+
+        List<String> availableCities = mappablePosts.stream()
+                .filter(marker -> selectedProvince != null && selectedProvince.equals(marker.province()))
+                .map(MarkerCandidate::groupLabel)
+                .filter(value -> value != null && !value.isBlank())
+                .distinct()
+                .sorted()
+                .toList();
+        String selectedCity = city == null ? null : city.trim();
+        if (selectedCity == null || !availableCities.contains(selectedCity)) {
+            selectedCity = null;
+        }
+        String finalSelectedCity = selectedCity;
 
         Map<String, Long> provinceCounts = mappablePosts.stream()
                 .map(MarkerCandidate::province)
@@ -112,14 +184,52 @@ public class MapController {
 
         List<MapMarkerView> markers = mappablePosts.stream()
                 .filter(marker -> selectedProvince == null || selectedProvince.equals(marker.province()))
+                .filter(marker -> finalSelectedCity == null || finalSelectedCity.equals(marker.groupLabel()))
                 .map(marker -> new MapMarkerView(
                         marker.post().getId(),
                         marker.post().getTitle(),
-                        marker.post().getLocation(),
+                        marker.post().isApproximateLocation() && !personalMode
+                                ? marker.province() + " · 具体位置已隐藏"
+                                : locationNormalizationService.normalizeDisplayLocation(marker.post()),
+                        marker.groupKey(),
+                        marker.groupLabel(),
                         marker.post().getAuthor().getNickname(),
                         marker.province(),
                         marker.point().left(),
-                        marker.point().top()))
+                        marker.point().top(),
+                        marker.post().getCreatedAt(),
+                        marker.post().getCategory(),
+                        marker.post().getTravelDate(),
+                        marker.post().getPhotoPath(),
+                        excerpt(marker.post().getContent())))
+                .toList();
+
+        Map<String, List<MapMarkerView>> locationGroups = markers.stream()
+                .collect(Collectors.groupingBy(
+                        MapMarkerView::groupKey,
+                        LinkedHashMap::new,
+                        Collectors.toList()));
+        long maximumLocationCount = locationGroups.values().stream()
+                .mapToLong(List::size)
+                .max()
+                .orElse(1L);
+        List<LocationHeatView> locationHeat = locationGroups.values().stream()
+                .map(group -> {
+                    MapMarkerView anchor = group.get(0);
+                    long count = group.size();
+                    double relativeStrength = (double) count / maximumLocationCount;
+                    double intensity = 0.28 + relativeStrength * 0.72;
+                    double diameter = Math.min(88.0, 34.0 + Math.sqrt(count) * 16.0);
+                    return new LocationHeatView(
+                            anchor.groupKey(),
+                            anchor.province(),
+                            anchor.groupLabel(),
+                            count,
+                            anchor.left(),
+                            anchor.top(),
+                            diameter,
+                            intensity);
+                })
                 .toList();
 
         List<ProvinceRankingView> provinceRanking = provinceCounts.entrySet().stream()
@@ -140,24 +250,58 @@ public class MapController {
         model.addAttribute("unmappedPosts", unmappedPosts);
         model.addAttribute("provinceNames", provinceCatalogService.provinceNames());
         model.addAttribute("provinceCounts", provinceCounts);
+        model.addAttribute("locationHeat", locationHeat);
         model.addAttribute("provinceRanking", provinceRanking);
         model.addAttribute("provinceFocuses", PROVINCE_FOCUSES);
         model.addAttribute("selectedProvince", selectedProvince);
+        model.addAttribute("availableCities", availableCities);
+        model.addAttribute("selectedCity", selectedCity);
+        model.addAttribute("availableYears", availableYears);
+        model.addAttribute("availableCategories", availableCategories);
+        model.addAttribute("selectedYear", selectedYear);
+        model.addAttribute("selectedMapCategory", selectedCategory);
+        model.addAttribute("selectedMapKeyword", selectedKeyword);
+        model.addAttribute("selectedMapHasPhoto", hasPhoto);
+        model.addAttribute("selectedMapSort", selectedSort);
+        model.addAttribute("mapFiltersActive", selectedYear != null
+                || selectedCategory != null
+                || selectedProvince != null
+                || selectedCity != null
+                || selectedKeyword != null
+                || hasPhoto
+                || !SORT_LATEST.equals(selectedSort));
         model.addAttribute("sourcePostCount", sourcePosts.size());
+        model.addAttribute("filteredPostCount", filteredPosts.size());
         model.addAttribute("coveredProvinceCount", provinceCounts.size());
+        model.addAttribute("mappedLocationCount", markers.stream().map(MapMarkerView::groupKey).distinct().count());
         model.addAttribute("totalMappedPosts", markers.size());
         model.addAttribute("allMappedPosts", mappablePosts.size());
         model.addAttribute("resolvedProvincePosts", provinceResolvedPosts.size());
         return "map";
     }
 
-    private Optional<MarkerCandidate> toMarkerCandidate(TravelPost post) {
+    private Optional<MarkerCandidate> toMarkerCandidate(TravelPost post, boolean personalMode) {
         Optional<String> province = resolveProvinceName(post);
-        Optional<DestinationMapService.MapPoint> point = destinationMapService.resolvePoint(post);
-        if (province.isEmpty() || point.isEmpty()) {
+        if (post.isApproximateLocation() && !personalMode && province.isPresent()) {
+            ProvinceFocusView focus = PROVINCE_FOCUSES.get(province.get());
+            if (focus != null) {
+                return Optional.of(new MarkerCandidate(
+                        post,
+                        province.get(),
+                        new DestinationMapService.MapPoint(focus.left(), focus.top()),
+                        province.get() + "|模糊位置",
+                        province.get() + " · 位置已模糊"));
+            }
+        }
+        Optional<DestinationMapService.MapPlacement> placement = destinationMapService.resolvePlacement(post);
+        if (province.isEmpty() || placement.isEmpty()) {
             return Optional.empty();
         }
-        return Optional.of(new MarkerCandidate(post, province.get(), point.get()));
+        String groupLabel = placement.get().groupLabel().isBlank()
+                ? locationNormalizationService.normalizeDisplayLocation(post)
+                : placement.get().groupLabel();
+        String groupKey = province.get() + "|" + (placement.get().groupKey().isBlank() ? groupLabel : placement.get().groupKey());
+        return Optional.of(new MarkerCandidate(post, province.get(), placement.get().point(), groupKey, groupLabel));
     }
 
     private String resolveRequestedMode(String mode, HttpSession session) {
@@ -195,11 +339,84 @@ public class MapController {
         return provinceCatalogService.normalizeProvince(province).orElse(null);
     }
 
+    private String normalizeKeyword(String keyword) {
+        if (keyword == null || keyword.isBlank()) {
+            return null;
+        }
+        String normalized = keyword.trim().replaceAll("\\s+", " ");
+        return normalized.substring(0, Math.min(normalized.length(), 60));
+    }
+
+    private String normalizeSort(String sort) {
+        if (SORT_OLDEST.equalsIgnoreCase(sort)) {
+            return SORT_OLDEST;
+        }
+        if (SORT_TITLE.equalsIgnoreCase(sort)) {
+            return SORT_TITLE;
+        }
+        return SORT_LATEST;
+    }
+
+    private boolean containsKeyword(TravelPost post, String keyword) {
+        String author = post.getAuthor() == null ? "" : post.getAuthor().getNickname();
+        String searchableText = String.join(" ",
+                valueOrEmpty(post.getTitle()),
+                valueOrEmpty(post.getLocation()),
+                valueOrEmpty(post.getProvince()),
+                valueOrEmpty(post.getCategory()),
+                valueOrEmpty(post.getTags()),
+                valueOrEmpty(post.getContent()),
+                valueOrEmpty(author));
+        return searchableText.toLowerCase(Locale.ROOT).contains(keyword.toLowerCase(Locale.ROOT));
+    }
+
+    private Comparator<TravelPost> postComparator(String sort) {
+        if (SORT_OLDEST.equals(sort)) {
+            return Comparator.comparing(
+                            TravelPost::getTravelDate,
+                            Comparator.nullsLast(Comparator.naturalOrder()))
+                    .thenComparing(
+                            TravelPost::getCreatedAt,
+                            Comparator.nullsLast(Comparator.naturalOrder()))
+                    .thenComparing(TravelPost::getId);
+        }
+        if (SORT_TITLE.equals(sort)) {
+            return Comparator.comparing(
+                            (TravelPost post) -> valueOrEmpty(post.getTitle()),
+                            String.CASE_INSENSITIVE_ORDER)
+                    .thenComparing(TravelPost::getId);
+        }
+        return Comparator.comparing(
+                        TravelPost::getTravelDate,
+                        Comparator.nullsLast(Comparator.reverseOrder()))
+                .thenComparing(
+                        TravelPost::getCreatedAt,
+                        Comparator.nullsLast(Comparator.reverseOrder()))
+                .thenComparing(TravelPost::getId);
+    }
+
+    private String valueOrEmpty(String value) {
+        return value == null ? "" : value;
+    }
+
+    private String excerpt(String content) {
+        if (content == null || content.isBlank()) {
+            return "";
+        }
+        String normalized = content.trim();
+        return normalized.length() <= 90 ? normalized : normalized.substring(0, 90) + "...";
+    }
+
     private static ProvinceFocusView focus(String province, double left, double top, double scale) {
         return new ProvinceFocusView(province, left, top, scale);
     }
 
-    private record MarkerCandidate(TravelPost post, String province, DestinationMapService.MapPoint point) {
+    private record MarkerCandidate(
+            TravelPost post,
+            String province,
+            DestinationMapService.MapPoint point,
+            String groupKey,
+            String groupLabel) {
     }
 
     public record ProvinceRankingView(String name, long count) {
@@ -209,12 +426,30 @@ public class MapController {
             Long postId,
             String title,
             String location,
+            String groupKey,
+            String groupLabel,
             String author,
             String province,
             double left,
-            double top) {
+            double top,
+            LocalDateTime publishedAt,
+            String category,
+            LocalDate travelDate,
+            String photoPath,
+            String excerpt) {
     }
 
     public record ProvinceFocusView(String province, double left, double top, double scale) {
+    }
+
+    public record LocationHeatView(
+            String groupKey,
+            String province,
+            String label,
+            long count,
+            double left,
+            double top,
+            double diameter,
+            double intensity) {
     }
 }

@@ -18,6 +18,10 @@
             <span class="chip chip-accent" th:text="|上图地点 ${totalMappedPosts}|">上图地点 0</span>
             <span class="chip" th:text="|范围：${mapOwnerLabel}|">范围：全部足迹</span>
             <span class="chip" th:text="${selectedProvince != null ? '省份：' + selectedProvince : '省份：全国'}">省份：全国</span>
+            <span class="chip" th:if="${selectedYear != null}" th:text="|年份：${selectedYear}|">年份：2026</span>
+            <span class="chip" th:if="${selectedMapCategory != null}" th:text="|分类：${selectedMapCategory}|">分类：自然风光</span>
+            <span class="chip" th:if="${selectedMapKeyword != null}" th:text="|关键词：${selectedMapKeyword}|">关键词：西湖</span>
+            <span class="chip" th:if="${selectedMapHasPhoto}">仅看有图</span>
         </div>
     </section>
 
@@ -35,7 +39,7 @@
             <div class="map-mode-switch">
                 <a class="map-mode-chip"
                    th:classappend="${!isPersonalMode ? ' active' : ''}"
-                   th:href="@{/map(mode='public', province=${selectedProvince})}">
+                   th:href="@{/map(mode='public', province=${selectedProvince}, year=${selectedYear}, category=${selectedMapCategory}, q=${selectedMapKeyword}, hasPhoto=${selectedMapHasPhoto}, sort=${selectedMapSort})}">
                     <span class="map-mode-badge">公共</span>
                     <strong>公共地图</strong>
                     <small>查看所有公开发布内容在地图上的整体分布。</small>
@@ -44,7 +48,7 @@
 
                 <a class="map-mode-chip"
                    th:classappend="${isPersonalMode ? ' active' : ''} + ${!personalModeAvailable ? ' disabled' : ''}"
-                   th:href="${personalModeAvailable} ? @{/map(mode='personal', province=${selectedProvince})} : @{/login}">
+                   th:href="${personalModeAvailable} ? @{/map(mode='personal', province=${selectedProvince}, year=${selectedYear}, category=${selectedMapCategory}, q=${selectedMapKeyword}, hasPhoto=${selectedMapHasPhoto}, sort=${selectedMapSort})} : @{/login}">
                     <span class="map-mode-badge map-mode-badge-personal">个人</span>
                     <strong>个人地图</strong>
                     <small th:text="${personalModeAvailable ? '只看你自己发布的足迹。' : '登录后可查看只属于你的地图。'}">只看你自己发布的足迹。</small>
@@ -58,11 +62,81 @@
             当前未登录，系统已自动切回公共地图。登录后可继续查看个人地图。
         </article>
 
+        <form class="map-filter-panel" method="get" th:action="@{/map}">
+            <input type="hidden" name="mode" th:value="${mapMode}">
+            <input type="hidden" name="province" th:if="${selectedProvince != null}" th:value="${selectedProvince}">
+            <div th:if="${selectedProvince != null and !#lists.isEmpty(availableCities)}">
+                <span class="card-label">城市下钻</span>
+                <label><span th:text="|${selectedProvince}内地点|">省内地点</span>
+                    <select name="city"><option value="">全部地点</option>
+                        <option th:each="city : ${availableCities}" th:value="${city}" th:text="${city}"
+                                th:selected="${city == selectedCity}">杭州</option>
+                    </select>
+                </label>
+            </div>
+            <div class="map-filter-search">
+                <span class="card-label">快速搜索</span>
+                <label>
+                    <span>关键词</span>
+                    <input type="search" name="q" maxlength="60" autocomplete="off"
+                           placeholder="标题、地点、标签或作者"
+                           th:value="${selectedMapKeyword}">
+                </label>
+            </div>
+            <div>
+                <span class="card-label">时间筛选</span>
+                <label>
+                    <span>旅行年份</span>
+                    <select name="year">
+                        <option value="">全部年份</option>
+                        <option th:each="item : ${availableYears}" th:value="${item}" th:text="${item}"
+                                th:selected="${item == selectedYear}">2026</option>
+                    </select>
+                </label>
+            </div>
+            <div>
+                <span class="card-label">内容筛选</span>
+                <label>
+                    <span>足迹分类</span>
+                    <select name="category">
+                        <option value="">全部分类</option>
+                        <option th:each="item : ${availableCategories}" th:value="${item}" th:text="${item}"
+                                th:selected="${item == selectedMapCategory}">自然风光</option>
+                    </select>
+                </label>
+            </div>
+            <div>
+                <span class="card-label">结果排序</span>
+                <label>
+                    <span>显示顺序</span>
+                    <select name="sort">
+                        <option value="latest" th:selected="${selectedMapSort == 'latest'}">旅行日期：最新优先</option>
+                        <option value="oldest" th:selected="${selectedMapSort == 'oldest'}">旅行日期：最早优先</option>
+                        <option value="title" th:selected="${selectedMapSort == 'title'}">标题名称排序</option>
+                    </select>
+                </label>
+            </div>
+            <div class="map-filter-actions">
+                <label class="map-photo-filter">
+                    <input type="checkbox" name="hasPhoto" value="true" th:checked="${selectedMapHasPhoto}">
+                    <span>仅显示有照片的足迹</span>
+                </label>
+                <button class="primary-button" type="submit">应用筛选</button>
+                <a class="secondary-button" th:if="${mapFiltersActive}" th:href="@{/map(mode=${mapMode})}">清空筛选</a>
+            </div>
+        </form>
+
         <div class="map-insight-grid">
             <article class="map-stat-card">
                 <span class="card-label" th:text="${isPersonalMode ? '我的足迹' : '上图地点'}">上图地点</span>
-                <strong class="map-insight-number" th:text="${isPersonalMode ? sourcePostCount : allMappedPosts}">0</strong>
-                <p th:text="${isPersonalMode ? '只统计你已经发布的内容。' : '当前可在地图上显示的公开地点总数。'}">当前可在地图上显示的公开地点总数。</p>
+                <strong class="map-insight-number" th:text="${filteredPostCount}">0</strong>
+                <p>符合当前范围和筛选条件的足迹数量。</p>
+            </article>
+
+            <article class="map-stat-card">
+                <span class="card-label">具体地点</span>
+                <strong class="map-insight-number" th:text="${mappedLocationCount}">0</strong>
+                <p>相同城市或景点的多条足迹会聚合为一个地图位置。</p>
             </article>
 
             <article class="map-stat-card">
@@ -72,51 +146,10 @@
             </article>
         </div>
 
-        <article class="map-ranking-card" th:unless="${isPersonalMode}">
-            <div class="map-ranking-head">
-                <div>
-                    <span class="card-label">热门省份</span>
-                    <h2>公共地图榜单</h2>
-                </div>
-                <span class="chip chip-accent">按地点数排序</span>
-            </div>
-            <div class="empty-state compact" th:if="${#lists.isEmpty(provinceRanking)}">当前还没有足够数据生成榜单。</div>
-            <div class="map-ranking-list" th:unless="${#lists.isEmpty(provinceRanking)}">
-                <article class="map-ranking-item" th:each="entry, iter : ${provinceRanking}">
-                    <div>
-                        <span class="ranking-index" th:text="${iter.count}">1</span>
-                        <strong th:text="${entry.name}">浙江</strong>
-                    </div>
-                    <span class="map-ranking-meta" th:text="|${entry.count} 个地点|">0 个地点</span>
-                </article>
-            </div>
-        </article>
-
-        <div class="map-summary">
-            <div>
-                <strong th:text="${isPersonalMode ? '个人地图已开启' : '公共地图已开启'}">公共地图已开启</strong>
-                <p th:text="${isPersonalMode ? '地图会优先根据你发布时选择的省份和填写的目的地自动落点。' : '地图会优先根据发布时选择的省份和目的地自动落点。'}">
-                    地图会优先根据发布时选择的省份和目的地自动落点。
-                </p>
-            </div>
-            <div class="map-legend">
-                <span><i></i> 足迹点位</span>
-                <span><b></b> 中国地图</span>
-            </div>
-        </div>
-
-        <div class="map-focus-bar" th:unless="${#lists.isEmpty(markers)}">
-            <div>
-                <strong>省份聚焦</strong>
-                <p>点击任意足迹点后，地图会切换成该省的独立地图，并只显示这个省的全部足迹点。</p>
-            </div>
-            <button type="button" class="secondary-button map-focus-reset" data-map-reset hidden>返回全国视图</button>
-        </div>
-
         <div class="province-filter-bar">
             <a class="province-filter-chip"
                th:classappend="${selectedProvince == null ? ' active' : ''}"
-               th:href="@{/map(mode=${mapMode})}">
+               th:href="@{/map(mode=${mapMode}, year=${selectedYear}, category=${selectedMapCategory}, q=${selectedMapKeyword}, hasPhoto=${selectedMapHasPhoto}, sort=${selectedMapSort})}">
                 全国
                 <strong th:text="${allMappedPosts}">0</strong>
             </a>
@@ -124,10 +157,17 @@
                th:each="provinceName : ${provinceNames}"
                th:if="${provinceCounts[provinceName] != null and provinceCounts[provinceName] > 0}"
                th:classappend="${provinceName == selectedProvince ? ' active' : ''}"
-               th:href="@{/map(mode=${mapMode}, province=${provinceName})}">
+               th:href="@{/map(mode=${mapMode}, province=${provinceName}, year=${selectedYear}, category=${selectedMapCategory}, q=${selectedMapKeyword}, hasPhoto=${selectedMapHasPhoto}, sort=${selectedMapSort})}">
                 <span th:text="${provinceName}">浙江</span>
                 <strong th:text="${provinceCounts[provinceName]}">0</strong>
             </a>
+        </div>
+        <div class="city-drilldown-bar" th:if="${selectedProvince != null and !#lists.isEmpty(availableCities)}">
+            <span th:text="|${selectedProvince} · 地点下钻|">地点下钻</span>
+            <a th:href="@{/map(mode=${mapMode}, province=${selectedProvince}, year=${selectedYear}, category=${selectedMapCategory}, q=${selectedMapKeyword}, hasPhoto=${selectedMapHasPhoto}, sort=${selectedMapSort})}"
+               th:classappend="${selectedCity == null} ? ' active'">全部</a>
+            <a th:each="city : ${availableCities}" th:text="${city}" th:classappend="${city == selectedCity} ? ' active'"
+               th:href="@{/map(mode=${mapMode}, province=${selectedProvince}, city=${city}, year=${selectedYear}, category=${selectedMapCategory}, q=${selectedMapKeyword}, hasPhoto=${selectedMapHasPhoto}, sort=${selectedMapSort})}">杭州</a>
         </div>
 
         <article class="empty-state" th:if="${#lists.isEmpty(markers)}">
@@ -138,9 +178,37 @@
         </article>
 
         <div class="china-map-stage" th:unless="${#lists.isEmpty(markers)}">
+            <div class="map-atlas-shell">
             <div class="china-map-photo-frame"
                  data-map-frame
-                 th:attr="data-selected-province=${selectedProvince},data-map-mode=${mapMode},data-province-meta=@{/images/provinces/metadata.json}">
+                 th:attr="data-selected-province=${selectedProvince},
+                          data-selected-year=${selectedYear},
+                          data-selected-category=${selectedMapCategory},
+                          data-selected-keyword=${selectedMapKeyword},
+                          data-selected-has-photo=${selectedMapHasPhoto},
+                          data-selected-sort=${selectedMapSort},
+                           data-map-mode=${mapMode},
+                           data-province-meta=@{/images/provinces/metadata.json}">
+                <div class="map-atlas-status">
+                    <span><i></i> LIVE ATLAS</span>
+                    <strong th:text="${selectedProvince != null ? selectedProvince + ' · 省域视图' : '中国 · 全国视图'}">中国 · 全国视图</strong>
+                </div>
+                <button class="map-fullscreen-button" type="button" data-map-fullscreen aria-pressed="false">
+                    <span aria-hidden="true">⛶</span>
+                    <strong data-map-fullscreen-label>全屏地图</strong>
+                </button>
+                <article class="map-story-drawer" data-map-story-drawer hidden aria-live="polite">
+                    <button type="button" class="map-story-close" data-map-story-close aria-label="关闭足迹预览">×</button>
+                    <img data-map-story-photo alt="" hidden>
+                    <div class="map-story-content">
+                        <span data-map-story-eyebrow>足迹预览</span>
+                        <strong data-map-story-title>选择地图中的足迹</strong>
+                        <small data-map-story-meta></small>
+                        <p data-map-story-excerpt></p>
+                        <a href="#" data-map-story-link>阅读完整故事</a>
+                    </div>
+                </article>
+                <div class="map-atlas-coordinates" aria-hidden="true">N 35.8617° · E 104.1954°</div>
                 <div class="china-map-scene" data-map-scene>
                     <img class="china-map-photo"
                          th:src="@{/images/china-map-generated.svg}"
@@ -149,17 +217,45 @@
                          alt="中国地图底图">
                     <div class="china-map-position-layer">
                         <div class="china-map-overlay">
+                        <div class="map-heat-layer" aria-label="地点足迹热度">
+                            <span class="map-location-heat" th:each="heat : ${locationHeat}"
+                                  role="img"
+                                  th:style="|left:${heat.left}%; top:${heat.top}%; --heat-size:${heat.diameter}px; --heat-strength:${heat.intensity};|"
+                                  th:title="|${heat.province} · ${heat.label} · ${heat.count} 条足迹|"
+                                  th:attr="aria-label=|${heat.province} ${heat.label} ${heat.count} 条足迹|,
+                                           data-heat-group=${heat.groupKey}">
+                                <i></i>
+                            </span>
+                        </div>
+                        <div class="map-cluster-layer" data-map-clusters aria-label="密集地点聚合"></div>
+                        <svg class="map-route-layer" viewBox="0 0 100 100" preserveAspectRatio="none"
+                             aria-hidden="true" data-map-routes th:if="${isPersonalMode}">
+                            <defs>
+                                <linearGradient id="travelRouteGradient" x1="0" y1="0" x2="1" y2="1">
+                                    <stop offset="0" stop-color="#67e8f9"></stop>
+                                    <stop offset="1" stop-color="#fb923c"></stop>
+                                </linearGradient>
+                            </defs>
+                            <g data-map-route-paths></g>
+                        </svg>
                         <details class="map-pin"
                                  th:each="marker : ${markers}"
                                  th:style="|left:${marker.left}%; top:${marker.top}%;|"
-                                 th:attr="data-province=${marker.province},
-                                          data-group-key=${marker.province + '|' + marker.location},
+                                 th:attr="data-post-id=${marker.postId},
+                                          data-province=${marker.province},
+                                          data-group-key=${marker.groupKey},
+                                          data-group-label=${marker.groupLabel},
                                           data-base-left=${marker.left},
                                           data-base-top=${marker.top},
-                                          data-title=${marker.title},
-                                          data-location=${marker.location},
-                                          data-author=${marker.author},
-                                          data-post-url=@{/posts/{id}(id=${marker.postId})}">
+                                           data-title=${marker.title},
+                                           data-location=${marker.location},
+                                           data-author=${marker.author},
+                                           data-category=${marker.category},
+                                           data-travel-date=${marker.travelDate},
+                                           data-published-at=${marker.publishedAt},
+                                           data-photo-path=${marker.photoPath},
+                                           data-excerpt=${marker.excerpt},
+                                           data-post-url=@{/posts/{id}(id=${marker.postId})}">
                             <summary class="map-pin-trigger" th:title="${marker.title}">
                                 <span></span>
                             </summary>
@@ -173,7 +269,116 @@
                     </div>
                 </div>
             </div>
+            <aside class="map-intelligence-panel">
+                <div class="map-intelligence-head">
+                    <span class="map-intelligence-kicker">TRAVEL INTELLIGENCE</span>
+                    <h3>足迹探索中心</h3>
+                    <p th:text="${isPersonalMode ? '个人地图会按照足迹发布时间从早到晚绘制动态轨迹。' : '公共地图只展示全站足迹分布，不绘制用户之间的旅行轨迹。'}">
+                        公共地图只展示全站足迹分布。
+                    </p>
+                </div>
+                <div class="map-intelligence-metrics">
+                    <div><strong th:text="${totalMappedPosts}">0</strong><span>足迹</span></div>
+                    <div><strong th:text="${mappedLocationCount}">0</strong><span>地点</span></div>
+                    <div><strong th:text="${coveredProvinceCount}">0</strong><span>省份</span></div>
+                </div>
+                <div class="map-heat-legend">
+                    <div><span>地点热度</span><small>光晕与定位点完全重合</small></div>
+                    <i></i>
+                    <div class="map-heat-scale"><small>足迹较少</small><small>足迹较多</small></div>
+                </div>
+                <section class="map-timeline-panel" th:if="${isPersonalMode}" data-map-timeline>
+                    <div class="map-timeline-heading">
+                        <div><span>TIME JOURNEY</span><strong>足迹时间轴</strong></div>
+                        <small data-map-timeline-progress>准备播放</small>
+                    </div>
+                    <div class="map-timeline-current">
+                        <strong data-map-timeline-title>从第一段旅程开始</strong>
+                        <small data-map-timeline-meta>路线将按照足迹发布时间依次出现</small>
+                    </div>
+                    <input class="map-timeline-range" type="range" min="0" value="0"
+                           th:max="${#numbers.formatInteger(T(java.lang.Math).max(markers.size() - 1, 0), 0)}"
+                           data-map-timeline-range aria-label="足迹时间轴进度">
+                    <div class="map-timeline-actions">
+                        <button type="button" data-map-timeline-prev aria-label="上一步">‹</button>
+                        <button type="button" class="map-timeline-play" data-map-timeline-play>播放旅程</button>
+                        <button type="button" data-map-timeline-next aria-label="下一步">›</button>
+                        <button type="button" data-map-timeline-reset>重置</button>
+                    </div>
+                </section>
+                <div class="map-active-footprint" data-map-active-panel>
+                    <span th:text="${isPersonalMode ? '个人发布轨迹' : '当前选择'}">当前选择</span>
+                    <strong data-map-active-title>等待探索</strong>
+                    <p data-map-active-location>选择地图中的发光足迹点，查看地点信息。</p>
+                    <small data-map-active-meta>足迹数据已就绪</small>
+                </div>
+                <div class="map-hotspot-panel">
+                    <div class="map-hotspot-heading">
+                        <span>热点分布</span>
+                        <small>TOP <span th:text="${provinceRanking.size()}">6</span></small>
+                    </div>
+                    <a class="map-hotspot-item" th:each="entry, iter : ${provinceRanking}"
+                       th:href="@{/map(mode=${mapMode}, province=${entry.name}, year=${selectedYear}, category=${selectedMapCategory}, q=${selectedMapKeyword}, hasPhoto=${selectedMapHasPhoto}, sort=${selectedMapSort})}">
+                        <span class="map-hotspot-rank" th:text="${#numbers.formatInteger(iter.count, 2)}">01</span>
+                        <strong th:text="${entry.name}">浙江</strong>
+                        <span class="map-hotspot-bar"><i th:style="|width:${entry.count * 100 / provinceRanking[0].count}%;|"></i></span>
+                        <small th:text="|${entry.count} 条|">0 条</small>
+                    </a>
+                </div>
+                <div class="map-atlas-actions">
+                    <a href="#map-results">浏览足迹列表</a>
+                    <button type="button" class="map-atlas-reset" data-map-reset-secondary hidden>返回全国视图</button>
+                </div>
+            </aside>
+            </div>
         </div>
+
+        <section class="map-result-section" id="map-results" th:unless="${#lists.isEmpty(markers)}">
+            <div class="section-heading map-result-heading">
+                <div>
+                    <span class="eyebrow">地图中的足迹</span>
+                    <h2>点击卡片，在地图中定位</h2>
+                    <p>地图点位与下方卡片会同步高亮，方便在地点分布和旅行故事之间切换。</p>
+                </div>
+                <div class="map-result-toolbar">
+                    <span class="chip" th:text="|当前 ${markers.size()} 条|">当前 0 条</span>
+                    <div class="map-view-switch" aria-label="结果布局">
+                        <button type="button" data-map-view="grid" aria-pressed="true">卡片</button>
+                        <button type="button" data-map-view="list" aria-pressed="false">列表</button>
+                    </div>
+                    <button class="secondary-button map-share-button" type="button" data-share-map>复制当前视图</button>
+                </div>
+            </div>
+            <p class="map-selection-status" data-map-selection-status aria-live="polite">尚未选择足迹</p>
+            <div class="map-result-grid" data-map-result-grid>
+                <article class="map-result-card" th:each="marker : ${markers}"
+                         tabindex="0"
+                         th:attr="data-map-post-card='',data-post-id=${marker.postId},data-group-key=${marker.groupKey},data-province=${marker.province}">
+                    <img th:if="${marker.photoPath != null}" th:src="@{${marker.photoPath}}" th:alt="|${marker.title} 的旅行照片|">
+                    <div class="map-result-photo-placeholder" th:unless="${marker.photoPath != null}" aria-hidden="true">
+                        <span th:text="${marker.province}">浙江</span>
+                    </div>
+                    <div class="map-result-card-body">
+                        <div class="chip-row">
+                            <span class="chip chip-accent" th:text="${marker.province}">浙江</span>
+                            <span class="chip" th:text="${marker.category}">自然风光</span>
+                        </div>
+                        <h3 th:text="${marker.title}">足迹标题</h3>
+                        <p class="post-location" th:text="${marker.location}">杭州 · 西湖</p>
+                        <p class="post-excerpt" th:text="${marker.excerpt}">旅行内容摘要</p>
+                        <div class="map-result-meta">
+                            <span th:text="|作者：${marker.author}|">作者</span>
+                            <span th:if="${marker.travelDate != null}"
+                                  th:text="${#temporals.format(marker.travelDate, 'yyyy-MM-dd')}">2026-08-07</span>
+                        </div>
+                        <div class="map-result-actions">
+                            <button class="secondary-button" type="button" data-focus-map>在地图中定位</button>
+                            <a class="primary-button" th:href="@{/posts/{id}(id=${marker.postId})}">查看详情</a>
+                        </div>
+                    </div>
+                </article>
+            </div>
+        </section>
     </section>
 
     <section class="section-heading top-gap">
@@ -218,13 +423,181 @@
         const mapFrame = document.querySelector('[data-map-frame]');
         const mapScene = document.querySelector('[data-map-scene]');
         const mapImage = document.querySelector('.china-map-photo');
-        const resetButton = document.querySelector('[data-map-reset]');
+        const atlasShell = document.querySelector('.map-atlas-shell');
+        const fullscreenButton = document.querySelector('[data-map-fullscreen]');
+        const fullscreenLabel = document.querySelector('[data-map-fullscreen-label]');
+        const resetButtons = Array.from(document.querySelectorAll('[data-map-reset], [data-map-reset-secondary]'));
         const markers = Array.from(document.querySelectorAll('.map-pin'));
+        const heatNodes = Array.from(document.querySelectorAll('[data-heat-group]'));
+        const clusterLayer = document.querySelector('[data-map-clusters]');
+        const postCards = Array.from(document.querySelectorAll('[data-map-post-card]'));
+        const selectionStatus = document.querySelector('[data-map-selection-status]');
+        const resultGrid = document.querySelector('[data-map-result-grid]');
+        const viewButtons = Array.from(document.querySelectorAll('[data-map-view]'));
+        const shareButton = document.querySelector('[data-share-map]');
+        const routePaths = document.querySelector('[data-map-route-paths]');
+        const atlasViewLabel = document.querySelector('.map-atlas-status strong');
+        const activeTitle = document.querySelector('[data-map-active-title]');
+        const activeLocation = document.querySelector('[data-map-active-location]');
+        const activeMeta = document.querySelector('[data-map-active-meta]');
+        const storyDrawer = document.querySelector('[data-map-story-drawer]');
+        const storyClose = document.querySelector('[data-map-story-close]');
+        const storyPhoto = document.querySelector('[data-map-story-photo]');
+        const storyEyebrow = document.querySelector('[data-map-story-eyebrow]');
+        const storyTitle = document.querySelector('[data-map-story-title]');
+        const storyMeta = document.querySelector('[data-map-story-meta]');
+        const storyExcerpt = document.querySelector('[data-map-story-excerpt]');
+        const storyLink = document.querySelector('[data-map-story-link]');
+        const timelinePanel = document.querySelector('[data-map-timeline]');
+        const timelineProgress = document.querySelector('[data-map-timeline-progress]');
+        const timelineTitle = document.querySelector('[data-map-timeline-title]');
+        const timelineMeta = document.querySelector('[data-map-timeline-meta]');
+        const timelineRange = document.querySelector('[data-map-timeline-range]');
+        const timelinePlay = document.querySelector('[data-map-timeline-play]');
+        const timelinePrevious = document.querySelector('[data-map-timeline-prev]');
+        const timelineNext = document.querySelector('[data-map-timeline-next]');
+        const timelineReset = document.querySelector('[data-map-timeline-reset]');
+        const personalMap = mapFrame?.dataset.mapMode === 'personal';
         const NATIONAL_MAP_WIDTH = 1600;
         const NATIONAL_MAP_HEIGHT = 1200;
         let focusedProvince = null;
         const nationalSrc = mapImage?.dataset.nationalSrc || mapImage?.getAttribute('src');
         let provinceMeta = {};
+        let timelineIndex = -1;
+        let timelineTimer = null;
+
+        const syncFullscreenSceneSize = function () {
+            if (!mapScene || !mapImage) {
+                return;
+            }
+            const imageRatio = mapImage.naturalWidth > 0 && mapImage.naturalHeight > 0
+                ? mapImage.naturalWidth / mapImage.naturalHeight
+                : 4 / 3;
+            mapScene.style.setProperty('--fullscreen-map-width', (window.innerHeight * imageRatio).toFixed(2) + 'px');
+        };
+
+        const fullscreenActive = function () {
+            return document.fullscreenElement === atlasShell || atlasShell?.classList.contains('is-map-expanded');
+        };
+
+        const updateFullscreenControl = function () {
+            const active = fullscreenActive();
+            fullscreenButton?.setAttribute('aria-pressed', String(active));
+            if (fullscreenLabel) {
+                fullscreenLabel.textContent = active ? '退出全屏' : '全屏地图';
+            }
+            syncFullscreenSceneSize();
+        };
+
+        const closeFallbackFullscreen = function () {
+            atlasShell?.classList.remove('is-map-expanded');
+            document.body.classList.remove('map-fullscreen-fallback');
+            updateFullscreenControl();
+        };
+
+        fullscreenButton?.addEventListener('click', async function () {
+            if (!atlasShell) {
+                return;
+            }
+            if (document.fullscreenElement === atlasShell) {
+                await document.exitFullscreen();
+                return;
+            }
+            if (atlasShell.classList.contains('is-map-expanded')) {
+                closeFallbackFullscreen();
+                return;
+            }
+            if (atlasShell.requestFullscreen) {
+                try {
+                    await atlasShell.requestFullscreen();
+                    return;
+                } catch (ignored) {
+                    // 浏览器拒绝原生全屏时，继续使用页面内沉浸模式。
+                }
+            }
+            atlasShell.classList.add('is-map-expanded');
+            document.body.classList.add('map-fullscreen-fallback');
+            updateFullscreenControl();
+        });
+
+        document.addEventListener('fullscreenchange', updateFullscreenControl);
+        document.addEventListener('keydown', function (event) {
+            if (event.key === 'Escape') {
+                if (atlasShell?.classList.contains('is-map-expanded')) {
+                    closeFallbackFullscreen();
+                }
+                closeStoryDrawer();
+            }
+        });
+        window.addEventListener('resize', syncFullscreenSceneSize);
+        mapImage?.addEventListener('load', syncFullscreenSceneSize);
+        syncFullscreenSceneSize();
+
+        const updateStatus = function (message) {
+            if (selectionStatus) {
+                selectionStatus.textContent = message;
+            }
+        };
+
+        const applyResultView = function (view, remember) {
+            const normalizedView = view === 'list' ? 'list' : 'grid';
+            resultGrid?.classList.toggle('is-list-view', normalizedView === 'list');
+            viewButtons.forEach(function (button) {
+                button.setAttribute('aria-pressed', String(button.dataset.mapView === normalizedView));
+            });
+            if (remember) {
+                try {
+                    window.localStorage.setItem('travel-map-result-view', normalizedView);
+                } catch (ignored) {
+                    // 隐私模式下存储不可用时，当前页面仍可正常切换布局。
+                }
+            }
+        };
+
+        let rememberedView = 'grid';
+        try {
+            rememberedView = window.localStorage.getItem('travel-map-result-view') || 'grid';
+        } catch (ignored) {
+            rememberedView = 'grid';
+        }
+        applyResultView(rememberedView, false);
+        viewButtons.forEach(function (button) {
+            button.addEventListener('click', function () {
+                applyResultView(button.dataset.mapView, true);
+            });
+        });
+
+        const copyCurrentView = async function () {
+            const shareUrl = window.location.origin + window.location.pathname + window.location.search;
+            try {
+                if (navigator.clipboard && window.isSecureContext) {
+                    await navigator.clipboard.writeText(shareUrl);
+                } else {
+                    const temporaryInput = document.createElement('textarea');
+                    temporaryInput.value = shareUrl;
+                    temporaryInput.setAttribute('readonly', '');
+                    temporaryInput.style.position = 'fixed';
+                    temporaryInput.style.opacity = '0';
+                    document.body.appendChild(temporaryInput);
+                    temporaryInput.select();
+                    const copied = document.execCommand('copy');
+                    temporaryInput.remove();
+                    if (!copied) {
+                        throw new Error('copy failed');
+                    }
+                }
+                updateStatus('当前地图视图链接已复制，可直接分享给朋友。');
+                if (shareButton) {
+                    shareButton.textContent = '已复制';
+                    window.setTimeout(function () {
+                        shareButton.textContent = '复制当前视图';
+                    }, 1800);
+                }
+            } catch (ignored) {
+                window.prompt('复制下面的地图链接', shareUrl);
+            }
+        };
+        shareButton?.addEventListener('click', copyCurrentView);
 
         const clamp = function (value, min, max) {
             return Math.min(Math.max(value, min), max);
@@ -239,12 +612,108 @@
                 .replace(/'/g, '&#39;');
         };
 
+        const showStoryDrawer = function (marker) {
+            if (!storyDrawer || !marker) {
+                return;
+            }
+            if (storyTitle) {
+                storyTitle.textContent = marker.dataset.title || '未命名足迹';
+            }
+            if (storyEyebrow) {
+                storyEyebrow.textContent = marker.dataset.province || '足迹预览';
+            }
+            if (storyMeta) {
+                storyMeta.textContent = [
+                    marker.dataset.location,
+                    marker.dataset.travelDate,
+                    marker.dataset.author
+                ].filter(Boolean).join(' · ');
+            }
+            if (storyExcerpt) {
+                storyExcerpt.textContent = marker.dataset.excerpt || '这条足迹暂时没有故事摘要。';
+            }
+            if (storyLink) {
+                storyLink.href = marker.dataset.postUrl || '#';
+            }
+            if (storyPhoto) {
+                const photoPath = marker.dataset.photoPath || '';
+                if (photoPath) {
+                    storyPhoto.src = photoPath;
+                    storyPhoto.alt = (marker.dataset.title || '足迹') + '的旅行照片';
+                    storyPhoto.hidden = false;
+                } else {
+                    storyPhoto.removeAttribute('src');
+                    storyPhoto.hidden = true;
+                }
+            }
+            storyDrawer.hidden = false;
+            window.requestAnimationFrame(function () {
+                storyDrawer.classList.add('is-visible');
+            });
+        };
+
+        const closeStoryDrawer = function () {
+            if (!storyDrawer) {
+                return;
+            }
+            storyDrawer.classList.remove('is-visible');
+            window.setTimeout(function () {
+                if (!storyDrawer.classList.contains('is-visible')) {
+                    storyDrawer.hidden = true;
+                }
+            }, 180);
+        };
+
+        storyClose?.addEventListener('click', closeStoryDrawer);
+
+        const highlightPost = function (postId, title, scrollToCard) {
+            const normalizedPostId = String(postId || '');
+            postCards.forEach(function (card) {
+                const selected = card.dataset.postId === normalizedPostId;
+                card.classList.toggle('is-selected', selected);
+                card.setAttribute('aria-current', selected ? 'true' : 'false');
+                if (selected && scrollToCard) {
+                    card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            });
+            markers.forEach(function (marker) {
+                const targetMarker = marker.dataset.postId === normalizedPostId;
+                const targetGroup = markers.find(function (candidate) {
+                    return candidate.dataset.postId === normalizedPostId;
+                })?.dataset.groupKey;
+                marker.classList.toggle(
+                    'is-selected',
+                    targetMarker || (targetGroup && marker.dataset.groupKey === targetGroup && !marker.classList.contains('is-group-shadow'))
+                );
+            });
+            const selectedMarker = markers.find(function (marker) {
+                return marker.dataset.postId === normalizedPostId;
+            });
+            if (selectedMarker) {
+                showStoryDrawer(selectedMarker);
+                if (activeTitle) {
+                    activeTitle.textContent = selectedMarker.dataset.title || '未命名足迹';
+                }
+                if (activeLocation) {
+                    activeLocation.textContent = (selectedMarker.dataset.province || '')
+                        + ' · ' + (selectedMarker.dataset.location || '地点待补充');
+                }
+                if (activeMeta) {
+                    activeMeta.textContent = [selectedMarker.dataset.category, selectedMarker.dataset.travelDate]
+                        .filter(Boolean)
+                        .join(' · ') || '旅行足迹';
+                }
+            }
+            updateStatus(title ? '已选择：' + title : '已选择一条地图足迹');
+        };
+
         const renderMarkerCard = function (marker) {
             const card = marker.querySelector('.map-pin-card');
             if (!card) {
                 return;
             }
             const groupKey = marker.dataset.groupKey || '';
+            const groupLabel = marker.dataset.groupLabel || marker.dataset.location || '';
             const sameGroupMarkers = markers.filter(function (candidate) {
                 return (candidate.dataset.groupKey || '') === groupKey;
             });
@@ -253,13 +722,17 @@
             });
             const province = escapeHtml(marker.dataset.province || '');
             const location = escapeHtml(marker.dataset.location || '');
+            const groupTitle = escapeHtml(groupLabel);
             const groupCount = sortedMarkers.length;
             const entriesHtml = sortedMarkers.map(function (entry) {
                 return [
                     '<article class="map-pin-entry">',
                     '<strong>' + escapeHtml(entry.dataset.title || '未命名足迹') + '</strong>',
-                    '<small>' + province + ' · ' + location + ' · ' + escapeHtml(entry.dataset.author || '未知作者') + '</small>',
+                    '<small>' + province + ' · ' + escapeHtml(entry.dataset.location || groupLabel) + ' · ' + escapeHtml(entry.dataset.author || '未知作者') + '</small>',
+                    '<div class="map-pin-entry-actions">',
+                    '<button type="button" class="map-pin-focus-link" data-focus-post="' + escapeHtml(entry.dataset.postId || '') + '" data-focus-title="' + escapeHtml(entry.dataset.title || '') + '">在列表中定位</button>',
                     '<a class="map-pin-link" href="' + escapeHtml(entry.dataset.postUrl || '#') + '">查看足迹</a>',
+                    '</div>',
                     '</article>'
                 ].join('');
             }).join('');
@@ -267,8 +740,8 @@
             card.innerHTML = [
                 '<div class="map-pin-card-head">',
                 '<div>',
-                '<strong>' + location + '</strong>',
-                '<small>' + province + ' · ' + location + '</small>',
+                '<strong>' + groupTitle + '</strong>',
+                '<small>' + province + ' · ' + groupTitle + '</small>',
                 '</div>',
                 (groupCount > 1 ? '<span class="map-pin-count">共 ' + groupCount + ' 条</span>' : ''),
                 '</div>',
@@ -333,6 +806,289 @@
             });
         };
 
+        const collapseNationalMarkerGroups = function () {
+            const visibleGroups = new Set();
+            markers.forEach(function (marker) {
+                const key = marker.dataset.groupKey || marker.dataset.postId || '';
+                const isShadow = visibleGroups.has(key);
+                marker.classList.toggle('is-group-shadow', isShadow);
+                visibleGroups.add(key);
+            });
+        };
+
+        const clearNationalClusters = function () {
+            clusterLayer?.replaceChildren();
+            markers.forEach(function (marker) {
+                marker.classList.remove('is-cluster-member');
+            });
+            heatNodes.forEach(function (heat) {
+                heat.classList.remove('is-cluster-member');
+            });
+        };
+
+        const renderNationalClusters = function () {
+            clearNationalClusters();
+            if (!clusterLayer || personalMap || focusedProvince || timelineIndex >= 0) {
+                return;
+            }
+            const anchors = markers
+                .filter(function (marker) { return !marker.classList.contains('is-group-shadow'); })
+                .map(function (marker) {
+                    return {
+                        marker: marker,
+                        province: marker.dataset.province || '',
+                        groupKey: marker.dataset.groupKey || marker.dataset.postId || '',
+                        left: parseFloat(marker.dataset.baseLeft || '50'),
+                        top: parseFloat(marker.dataset.baseTop || '50')
+                    };
+                });
+            const clusters = [];
+            anchors.forEach(function (item) {
+                let cluster = clusters.find(function (candidate) {
+                    return candidate.province === item.province && distance(candidate.center, item) < 4.4;
+                });
+                if (!cluster) {
+                    cluster = {
+                        province: item.province,
+                        center: { left: item.left, top: item.top },
+                        items: []
+                    };
+                    clusters.push(cluster);
+                }
+                cluster.items.push(item);
+                cluster.center.left = cluster.items.reduce(function (sum, entry) { return sum + entry.left; }, 0)
+                    / cluster.items.length;
+                cluster.center.top = cluster.items.reduce(function (sum, entry) { return sum + entry.top; }, 0)
+                    / cluster.items.length;
+            });
+
+            clusters.filter(function (cluster) { return cluster.items.length > 1; }).forEach(function (cluster) {
+                const groupKeys = new Set(cluster.items.map(function (item) { return item.groupKey; }));
+                markers.forEach(function (marker) {
+                    if (groupKeys.has(marker.dataset.groupKey || marker.dataset.postId || '')) {
+                        marker.classList.add('is-cluster-member');
+                    }
+                });
+                heatNodes.forEach(function (heat) {
+                    if (groupKeys.has(heat.dataset.heatGroup || '')) {
+                        heat.classList.add('is-cluster-member');
+                    }
+                });
+
+                const button = document.createElement('button');
+                const count = document.createElement('strong');
+                const label = document.createElement('small');
+                button.type = 'button';
+                button.className = 'map-location-cluster';
+                button.style.left = cluster.center.left.toFixed(2) + '%';
+                button.style.top = cluster.center.top.toFixed(2) + '%';
+                button.setAttribute('aria-label', cluster.province + ' ' + cluster.items.length + ' 个相邻地点，点击展开');
+                count.textContent = String(cluster.items.length);
+                label.textContent = '地点';
+                button.append(count, label);
+                button.addEventListener('click', function () {
+                    applyProvinceFocus(cluster.province, cluster.items[0].marker);
+                });
+                clusterLayer.appendChild(button);
+            });
+        };
+
+        const collectRouteMarkers = function (province) {
+            const visitedGroups = new Set();
+            return markers
+                .filter(function (marker) {
+                    return !province || marker.dataset.province === province;
+                })
+                .sort(function (first, second) {
+                    return (first.dataset.publishedAt || '9999-12-31T23:59:59')
+                        .localeCompare(second.dataset.publishedAt || '9999-12-31T23:59:59');
+                })
+                .filter(function (marker) {
+                    const groupKey = marker.dataset.groupKey || marker.dataset.postId || '';
+                    if (visitedGroups.has(groupKey)) {
+                        return false;
+                    }
+                    visitedGroups.add(groupKey);
+                    return true;
+                })
+                .slice(0, 14);
+        };
+
+        const renderTravelRoutes = function (province, visibleCount) {
+            if (!personalMap || !routePaths) {
+                return;
+            }
+            routePaths.replaceChildren();
+            let routeMarkers = collectRouteMarkers(province);
+            if (Number.isInteger(visibleCount)) {
+                routeMarkers = routeMarkers.slice(0, Math.max(0, visibleCount));
+            }
+            routeMarkers.slice(1).forEach(function (marker, index) {
+                const previous = routeMarkers[index];
+                const startX = parseFloat(previous.style.left || previous.dataset.baseLeft || '50');
+                const startY = parseFloat(previous.style.top || previous.dataset.baseTop || '50');
+                const endX = parseFloat(marker.style.left || marker.dataset.baseLeft || '50');
+                const endY = parseFloat(marker.style.top || marker.dataset.baseTop || '50');
+                const curveX = (startX + endX) / 2;
+                const curveY = Math.max(5, Math.min(startY, endY) - Math.min(10, Math.abs(endX - startX) * 0.14 + 3));
+                const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                path.setAttribute('d', 'M ' + startX + ' ' + startY + ' Q ' + curveX + ' ' + curveY + ' ' + endX + ' ' + endY);
+                path.setAttribute('class', 'map-route-path');
+                path.setAttribute('pathLength', '1');
+                routePaths.appendChild(path);
+            });
+        };
+
+        const stopTimeline = function () {
+            if (timelineTimer) {
+                window.clearInterval(timelineTimer);
+                timelineTimer = null;
+            }
+            if (timelinePlay) {
+                timelinePlay.textContent = '播放旅程';
+                timelinePlay.classList.remove('is-playing');
+            }
+        };
+
+        const timelineDateLabel = function (value) {
+            if (!value) {
+                return '发布时间待补充';
+            }
+            return value.replace('T', ' ').slice(0, 16);
+        };
+
+        const showTimelineStep = function (requestedIndex) {
+            const journeys = collectRouteMarkers(null);
+            if (!journeys.length) {
+                return;
+            }
+            if (focusedProvince) {
+                clearProvinceFocus();
+            }
+            clearNationalClusters();
+            timelineIndex = clamp(requestedIndex, 0, journeys.length - 1);
+            const visibleGroupKeys = new Set(journeys.slice(0, timelineIndex + 1).map(function (marker) {
+                return marker.dataset.groupKey || marker.dataset.postId || '';
+            }));
+            const currentMarker = journeys[timelineIndex];
+            const currentGroupKey = currentMarker.dataset.groupKey || currentMarker.dataset.postId || '';
+
+            markers.forEach(function (marker) {
+                const groupKey = marker.dataset.groupKey || marker.dataset.postId || '';
+                marker.classList.toggle('is-timeline-pending', !visibleGroupKeys.has(groupKey));
+                marker.classList.toggle('is-timeline-current', groupKey === currentGroupKey);
+            });
+            heatNodes.forEach(function (heat) {
+                heat.classList.toggle('is-timeline-pending', !visibleGroupKeys.has(heat.dataset.heatGroup || ''));
+            });
+            renderTravelRoutes(null, timelineIndex + 1);
+            highlightPost(currentMarker.dataset.postId, currentMarker.dataset.title, false);
+
+            if (timelineProgress) {
+                timelineProgress.textContent = (timelineIndex + 1) + ' / ' + journeys.length;
+            }
+            if (timelineTitle) {
+                timelineTitle.textContent = currentMarker.dataset.title || currentMarker.dataset.groupLabel || '旅行足迹';
+            }
+            if (timelineMeta) {
+                timelineMeta.textContent = [
+                    timelineDateLabel(currentMarker.dataset.publishedAt),
+                    currentMarker.dataset.province,
+                    currentMarker.dataset.location
+                ].filter(Boolean).join(' · ');
+            }
+            if (timelineRange) {
+                timelineRange.value = String(timelineIndex);
+            }
+            if (timelinePrevious) {
+                timelinePrevious.disabled = timelineIndex <= 0;
+            }
+            if (timelineNext) {
+                timelineNext.disabled = timelineIndex >= journeys.length - 1;
+            }
+        };
+
+        const resetTimelineExperience = function () {
+            stopTimeline();
+            timelineIndex = -1;
+            markers.forEach(function (marker) {
+                marker.classList.remove('is-timeline-pending', 'is-timeline-current');
+            });
+            heatNodes.forEach(function (heat) {
+                heat.classList.remove('is-timeline-pending');
+            });
+            renderTravelRoutes(focusedProvince);
+            renderNationalClusters();
+            if (timelineProgress) {
+                timelineProgress.textContent = '准备播放';
+            }
+            if (timelineTitle) {
+                timelineTitle.textContent = '从第一段旅程开始';
+            }
+            if (timelineMeta) {
+                timelineMeta.textContent = '路线将按照足迹发布时间依次出现';
+            }
+            if (timelineRange) {
+                timelineRange.value = '0';
+            }
+            if (timelinePrevious) {
+                timelinePrevious.disabled = true;
+            }
+            if (timelineNext) {
+                timelineNext.disabled = collectRouteMarkers(null).length <= 1;
+            }
+        };
+
+        const playTimeline = function () {
+            const journeys = collectRouteMarkers(null);
+            if (!journeys.length) {
+                return;
+            }
+            if (timelineTimer) {
+                stopTimeline();
+                return;
+            }
+            if (timelineIndex >= journeys.length - 1) {
+                timelineIndex = -1;
+            }
+            showTimelineStep(timelineIndex + 1);
+            if (timelinePlay) {
+                timelinePlay.textContent = '暂停播放';
+                timelinePlay.classList.add('is-playing');
+            }
+            timelineTimer = window.setInterval(function () {
+                if (timelineIndex >= journeys.length - 1) {
+                    stopTimeline();
+                    return;
+                }
+                showTimelineStep(timelineIndex + 1);
+            }, 1700);
+        };
+
+        if (timelinePanel) {
+            const journeys = collectRouteMarkers(null);
+            timelinePanel.hidden = journeys.length === 0;
+            if (timelineRange) {
+                timelineRange.max = String(Math.max(journeys.length - 1, 0));
+                timelineRange.disabled = journeys.length <= 1;
+                timelineRange.addEventListener('input', function () {
+                    stopTimeline();
+                    showTimelineStep(parseInt(timelineRange.value || '0', 10));
+                });
+            }
+            timelinePlay?.addEventListener('click', playTimeline);
+            timelinePrevious?.addEventListener('click', function () {
+                stopTimeline();
+                showTimelineStep(Math.max(0, timelineIndex - 1));
+            });
+            timelineNext?.addEventListener('click', function () {
+                stopTimeline();
+                showTimelineStep(Math.min(journeys.length - 1, timelineIndex + 1));
+            });
+            timelineReset?.addEventListener('click', resetTimelineExperience);
+            resetTimelineExperience();
+        }
+
         const applyProvinceFocus = function (province, sourceMarker) {
             if (!mapFrame || !mapScene || !mapImage || !province || !provinceMeta[province]) {
                 return;
@@ -346,6 +1102,7 @@
                 return;
             }
 
+            clearNationalClusters();
             focusedProvince = province;
             mapFrame.dataset.focusProvince = province;
             mapScene.style.transformOrigin = '50% 50%';
@@ -388,9 +1145,11 @@
                 item.marker.style.top = item.top.toFixed(2) + '%';
             });
 
-            if (resetButton) {
-                resetButton.hidden = false;
+            resetButtons.forEach(function (button) { button.hidden = false; });
+            if (atlasViewLabel) {
+                atlasViewLabel.textContent = province + ' · 省域视图';
             }
+            renderTravelRoutes(province);
         };
 
         const clearProvinceFocus = function () {
@@ -414,15 +1173,22 @@
                 marker.style.setProperty('--pin-scale', '1');
                 marker.open = false;
             });
-            if (resetButton) {
-                resetButton.hidden = true;
+            collapseNationalMarkerGroups();
+            renderNationalClusters();
+            resetButtons.forEach(function (button) { button.hidden = true; });
+            if (atlasViewLabel) {
+                atlasViewLabel.textContent = '中国 · 全国视图';
             }
+            renderTravelRoutes(null);
         };
 
         markers.forEach(function (marker) {
             renderMarkerCard(marker);
             const trigger = marker.querySelector('.map-pin-trigger');
             trigger?.addEventListener('click', function () {
+                if (timelineIndex >= 0) {
+                    resetTimelineExperience();
+                }
                 const province = marker.dataset.province;
                 if (province && province !== focusedProvince) {
                     applyProvinceFocus(province, marker);
@@ -433,6 +1199,15 @@
                 if (!marker.open) {
                     return;
                 }
+                highlightPost(marker.dataset.postId, marker.dataset.title, false);
+                const sameGroupCount = markers.filter(function (candidate) {
+                    return candidate.dataset.groupKey === marker.dataset.groupKey;
+                }).length;
+                if (sameGroupCount === 1) {
+                    window.setTimeout(function () {
+                        marker.open = false;
+                    }, 0);
+                }
                 markers.forEach(function (other) {
                     if (other !== marker) {
                         other.open = false;
@@ -440,14 +1215,84 @@
                 });
             });
         });
-        resetButton?.addEventListener('click', function () {
+        collapseNationalMarkerGroups();
+        renderNationalClusters();
+        renderTravelRoutes(null);
+
+        const focusPostOnMap = function (postId) {
+            const target = markers.find(function (marker) {
+                return marker.dataset.postId === String(postId);
+            });
+            if (!target) {
+                return;
+            }
+            const province = target.dataset.province;
+            if (province && provinceMeta[province] && province !== focusedProvince) {
+                applyProvinceFocus(province, target);
+            }
+            const visibleTarget = markers.find(function (marker) {
+                return marker.dataset.groupKey === target.dataset.groupKey
+                    && !marker.classList.contains('is-group-shadow');
+            }) || target;
+            markers.forEach(function (marker) {
+                marker.open = marker === visibleTarget;
+            });
+            highlightPost(target.dataset.postId, target.dataset.title, false);
+            mapFrame?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        };
+
+        postCards.forEach(function (card) {
+            const focusButton = card.querySelector('[data-focus-map]');
+            focusButton?.addEventListener('click', function () {
+                focusPostOnMap(card.dataset.postId);
+            });
+            card.addEventListener('keydown', function (event) {
+                if ((event.key === 'Enter' || event.key === ' ') && !event.target.closest('a, button')) {
+                    event.preventDefault();
+                    focusPostOnMap(card.dataset.postId);
+                }
+            });
+        });
+
+        document.addEventListener('click', function (event) {
+            const focusLink = event.target.closest('[data-focus-post]');
+            if (!focusLink) {
+                return;
+            }
+            highlightPost(focusLink.dataset.focusPost, focusLink.dataset.focusTitle, true);
+        });
+        const resetMapView = function () {
             const selectedProvince = mapFrame?.dataset.selectedProvince;
             const mapMode = mapFrame?.dataset.mapMode || 'public';
             if (selectedProvince) {
-                window.location.href = '/map?mode=' + encodeURIComponent(mapMode);
+                const params = new URLSearchParams({ mode: mapMode });
+                const selectedYear = mapFrame?.dataset.selectedYear;
+                const selectedCategory = mapFrame?.dataset.selectedCategory;
+                const selectedKeyword = mapFrame?.dataset.selectedKeyword;
+                const selectedHasPhoto = mapFrame?.dataset.selectedHasPhoto;
+                const selectedSort = mapFrame?.dataset.selectedSort;
+                if (selectedYear) {
+                    params.set('year', selectedYear);
+                }
+                if (selectedCategory) {
+                    params.set('category', selectedCategory);
+                }
+                if (selectedKeyword) {
+                    params.set('q', selectedKeyword);
+                }
+                if (selectedHasPhoto === 'true') {
+                    params.set('hasPhoto', 'true');
+                }
+                if (selectedSort && selectedSort !== 'latest') {
+                    params.set('sort', selectedSort);
+                }
+                window.location.href = '/map?' + params.toString();
                 return;
             }
             clearProvinceFocus();
+        };
+        resetButtons.forEach(function (button) {
+            button.addEventListener('click', resetMapView);
         });
 
         fetch((mapFrame?.dataset.provinceMeta || '/images/provinces/metadata.json') + '?v=20260501-1', {
@@ -468,7 +1313,7 @@
             if (event.target.closest('.map-pin')) {
                 return;
             }
-            if (!event.target.closest('[data-map-reset]')) {
+            if (!event.target.closest('[data-map-reset], [data-map-reset-secondary]')) {
                 markers.forEach(function (marker) {
                     marker.open = false;
                 });

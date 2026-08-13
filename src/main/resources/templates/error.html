@@ -1,0 +1,6 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('页面未找到 | 旅迹')}"></head>
+<body class="error-page"><header th:replace="~{fragments :: nav}"></header>
+<main class="container error-shell"><section><span class="eyebrow">SAFE LANDING</span><strong th:text="${status == null ? '遇到问题' : status}">404</strong><h1 th:text="${status == 404 ? '这条旅行路线暂时不存在' : '页面没有按预期抵达'}">页面未找到</h1><p>链接可能已经失效，或当前账号没有查看权限。为了保护隐私，这里不会展示服务器内部错误信息。</p><div><a class="primary-button" th:href="@{/}">返回首页</a><a class="secondary-button" th:href="@{/search}">重新搜索</a></div></section></main>
+</body></html>

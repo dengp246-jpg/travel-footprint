@@ -1,30 +1,69 @@
 <view class="page-shell">
-  <view class="card search-card">
-    <view class="section-title">社区足迹</view>
-    <input class="input field" placeholder="搜索景点、标题或作者" value="{{query}}" bindinput="onQueryInput" />
-    <picker class="picker field" mode="selector" range="{{provinceOptions}}" value="{{provinceIndex}}" bindchange="onProvinceChange">
-      <view>{{provinceOptions[provinceIndex]}}</view>
-    </picker>
-    <button class="button-secondary" bindtap="loadPosts">开始检索</button>
+  <view class="page-hero home-hero">
+    <view class="eyebrow">TRAVEL FOOTPRINT</view>
+    <view class="page-title">把走过的地方，<br />留成自己的世界。</view>
+    <view class="page-subtitle">{{user ? '欢迎回来，' + user.nickname : '发现真实旅途，也记录你的下一站。'}}</view>
   </view>
+
+  <view class="overview-card card">
+    <view class="overview-main">
+      <view class="overview-value">{{posts.length}}</view>
+      <view class="overview-label">当前足迹</view>
+    </view>
+    <view class="overview-divider"></view>
+    <view class="overview-main">
+      <view class="overview-value">{{provinceCount}}</view>
+      <view class="overview-label">覆盖省份</view>
+    </view>
+    <button class="button-primary button-small publish-button" bindtap="goPublish">记录旅程</button>
+  </view>
+
+  <view class="card search-card">
+    <view class="search-line">
+      <input class="input search-input" confirm-type="search" placeholder="搜索目的地、标题或作者" value="{{query}}" bindinput="onQueryInput" bindconfirm="loadPosts" />
+      <button class="button-primary search-button" bindtap="loadPosts">搜索</button>
+    </view>
+    <picker mode="selector" range="{{provinceOptions}}" value="{{provinceIndex}}" bindchange="onProvinceChange">
+      <view class="province-select">筛选范围 · {{provinceOptions[provinceIndex]}}⌄</view>
+    </picker>
+  </view>
+
+  <view class="feed-heading">
+    <view class="section-title">近期旅行</view>
+    <view class="section-note">真实足迹 · 持续更新</view>
+  </view>
+
+  <view wx:if="{{loading && posts.length === 0}}" class="loading-state">正在寻找新的风景…</view>
 
   <view class="post-list">
     <view class="card post-card" wx:for="{{posts}}" wx:key="id" bindtap="openDetail" data-id="{{item.id}}">
       <image wx:if="{{item.photoUrl}}" class="post-photo" mode="aspectFill" src="{{item.photoUrl}}"></image>
-      <view class="post-header">
+      <view wx:else class="post-placeholder"><text>{{item.province}}</text></view>
+      <view class="post-content">
+        <view class="post-author">
+          <view class="avatar small-avatar">{{item.authorInitial}}</view>
+          <view class="author-copy">
+            <view class="author-name">{{item.author.nickname}}</view>
+            <view class="muted author-meta">{{item.province}} · {{item.dateLabel}}</view>
+          </view>
+          <view class="tag">{{item.category}}</view>
+        </view>
         <view class="post-title">{{item.title}}</view>
-        <view class="muted post-meta">{{item.province}} · {{item.location}}</view>
-      </view>
-      <view class="post-excerpt">{{item.excerpt}}</view>
-      <view class="post-footer">
-        <view class="tag">{{item.category}}</view>
-        <view class="muted stat-line">点赞 {{item.likeCount}} · 评论 {{item.commentCount}} · 收藏 {{item.favoriteCount}}</view>
+        <view class="post-location">⌖ {{item.location}}</view>
+        <view class="post-excerpt">{{item.excerpt}}</view>
+        <view class="post-footer">
+          <text class="{{item.liked ? 'active-stat' : ''}}">♡ {{item.likeCount}}</text>
+          <text>◌ {{item.commentCount}}</text>
+          <text class="{{item.favorited ? 'active-stat' : ''}}">☆ {{item.favoriteCount}}</text>
+          <text class="open-hint">查看详情 →</text>
+        </view>
       </view>
     </view>
 
-    <view wx:if="{{!loading && posts.length === 0}}" class="card empty-card">
-      <view class="section-title">还没有匹配内容</view>
-      <view class="muted">换个关键词或省份试试，或者先去发布一条属于你的足迹。</view>
+    <view wx:if="{{!loading && posts.length === 0}}" class="card empty-state">
+      <view class="empty-symbol">迹</view>
+      <view class="empty-title">没有找到匹配的旅途</view>
+      <view class="empty-copy">换个关键词或省份，也可以发布第一条足迹。</view>
     </view>
   </view>
 </view>

@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('审核台 | 旅迹')}"></head>
+<body>
+<header th:replace="~{fragments :: nav}"></header>
+<section th:replace="~{fragments :: flash}"></section>
+
+<main class="container page-shell">
+    <section class="section-heading">
+        <div>
+            <span class="eyebrow">管理员后台</span>
+            <h1>内容审核与用户管理</h1>
+            <p>这里集中处理待审核足迹、评论，以及账号启用状态。</p>
+        </div>
+    </section>
+
+    <section class="admin-stat-grid">
+        <article class="glass-card">
+            <p class="card-label">待审核足迹</p>
+            <strong th:text="${pendingPostCount}">0</strong>
+        </article>
+        <article class="glass-card">
+            <p class="card-label">待审核评论</p>
+            <strong th:text="${pendingCommentCount}">0</strong>
+        </article>
+        <article class="glass-card">
+            <p class="card-label">停用账号</p>
+            <strong th:text="${disabledUserCount}">0</strong>
+        </article>
+        <article class="glass-card">
+            <p class="card-label">公开足迹</p>
+            <strong th:text="${approvedPostCount}">0</strong>
+        </article>
+    </section>
+
+    <section class="admin-layout">
+        <div class="feed-column">
+            <section class="side-panel">
+                <div class="section-heading compact">
+                    <div>
+                        <span class="eyebrow">足迹审核</span>
+                        <h2>待审核足迹</h2>
+                    </div>
+                </div>
+                <div class="empty-state compact" th:if="${#lists.isEmpty(pendingPosts)}">当前没有待审核足迹。</div>
+                <div class="admin-list" th:if="${!#lists.isEmpty(pendingPosts)}">
+                    <article class="admin-card" th:each="post : ${pendingPosts}">
+                        <div class="admin-card-head">
+                            <div>
+                                <strong th:text="${post.title}">标题</strong>
+                                <p th:text="|${post.author.nickname} · ${post.location}|">作者 · 地点</p>
+                            </div>
+                            <span class="chip moderation-chip" th:text="${post.reviewStatus.label}">待审核</span>
+                        </div>
+                        <p class="post-excerpt" th:text="${post.content}">正文</p>
+                        <div class="admin-action-row">
+                            <a class="secondary-button" th:href="@{/posts/{id}(id=${post.id})}">查看详情</a>
+                            <form th:action="@{/admin/posts/{id}/approve(id=${post.id})}" method="post">
+                                <button class="primary-button" type="submit">通过</button>
+                            </form>
+                            <form th:action="@{/admin/posts/{id}/reject(id=${post.id})}" method="post">
+                                <button class="ghost-button danger" type="submit">驳回</button>
+                            </form>
+                        </div>
+                    </article>
+                </div>
+            </section>
+
+            <section class="side-panel">
+                <div class="section-heading compact">
+                    <div>
+                        <span class="eyebrow">评论审核</span>
+                        <h2>待审核评论</h2>
+                    </div>
+                </div>
+                <div class="empty-state compact" th:if="${#lists.isEmpty(pendingComments)}">当前没有待审核评论。</div>
+                <div class="admin-list" th:if="${!#lists.isEmpty(pendingComments)}">
+                    <article class="admin-card" th:each="comment : ${pendingComments}">
+                        <div class="admin-card-head">
+                            <div>
+                                <strong th:text="${comment.author.nickname}">评论者</strong>
+                                <p th:text="|所属足迹：${comment.post.title}|">所属足迹</p>
+                            </div>
+                            <span class="chip moderation-chip" th:text="${comment.reviewStatus.label}">待审核</span>
+                        </div>
+                        <p class="post-excerpt" th:text="${comment.content}">评论内容</p>
+                        <div class="admin-action-row">
+                            <a class="secondary-button" th:href="@{/posts/{id}(id=${comment.post.id})}">查看足迹</a>
+                            <form th:action="@{/admin/comments/{id}/approve(id=${comment.id})}" method="post">
+                                <button class="primary-button" type="submit">通过</button>
+                            </form>
+                            <form th:action="@{/admin/comments/{id}/reject(id=${comment.id})}" method="post">
+                                <button class="ghost-button danger" type="submit">驳回</button>
+                            </form>
+                        </div>
+                    </article>
+                </div>
+            </section>
+        </div>
+
+        <aside class="sidebar-column">
+            <section class="side-panel">
+                <div class="section-heading compact">
+                    <div>
+                        <span class="eyebrow">账号状态</span>
+                        <h2>已停用用户</h2>
+                    </div>
+                </div>
+                <div class="empty-state compact" th:if="${#lists.isEmpty(disabledUsers)}">当前没有停用账号。</div>
+                <div class="admin-list" th:if="${!#lists.isEmpty(disabledUsers)}">
+                    <article class="admin-card" th:each="user : ${disabledUsers}">
+                        <div class="admin-card-head">
+                            <div>
+                                <strong th:text="${user.nickname}">用户</strong>
+                                <p th:text="|@${user.username}|">@username</p>
+                            </div>
+                            <span class="chip danger">已停用</span>
+                        </div>
+                        <form th:action="@{/admin/users/{id}/enable(id=${user.id})}" method="post">
+                            <button class="primary-button full-width" type="submit">恢复账号</button>
+                        </form>
+                    </article>
+                </div>
+            </section>
+
+            <section class="side-panel">
+                <div class="section-heading compact">
+                    <div>
+                        <span class="eyebrow">用户管理</span>
+                        <h2>最近加入</h2>
+                    </div>
+                </div>
+                <div class="admin-list">
+                    <article class="admin-card" th:each="user : ${recentUsers}">
+                        <div class="admin-card-head">
+                            <div>
+                                <strong th:text="${user.nickname}">用户</strong>
+                                <p th:text="|@${user.username}|">@username</p>
+                            </div>
+                            <span class="chip" th:text="${user.admin ? '管理员' : (user.enabled ? '正常' : '停用')}">正常</span>
+                        </div>
+                        <div class="admin-action-row">
+                            <a class="secondary-button" th:href="@{/users/{id}(id=${user.id})}">看主页</a>
+                            <form th:if="${!user.admin and user.enabled}" th:action="@{/admin/users/{id}/disable(id=${user.id})}" method="post">
+                                <button class="ghost-button danger" type="submit">停用</button>
+                            </form>
+                            <form th:if="${!user.admin and !user.enabled}" th:action="@{/admin/users/{id}/enable(id=${user.id})}" method="post">
+                                <button class="primary-button" type="submit">恢复</button>
+                            </form>
+                        </div>
+                    </article>
+                </div>
+            </section>
+
+            <section class="side-panel" th:if="${!#lists.isEmpty(rejectedPosts)}">
+                <div class="section-heading compact">
+                    <div>
+                        <span class="eyebrow">历史记录</span>
+                        <h2>最近驳回足迹</h2>
+                    </div>
+                </div>
+                <div class="ranking-list">
+                    <div class="ranking-item" th:each="post : ${rejectedPosts}">
+                        <div>
+                            <strong th:text="${post.title}">标题</strong>
+                            <p th:text="${post.author.nickname}">作者</p>
+                        </div>
+                        <span class="chip danger">未通过</span>
+                    </div>
+                </div>
+            </section>
+        </aside>
+    </section>
+</main>
+</body>
+</html>

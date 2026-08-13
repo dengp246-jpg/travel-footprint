@@ -10,7 +10,8 @@
         <div>
             <span class="eyebrow">欢迎回来</span>
             <h1>登录旅迹，继续记录你的下一段旅行。</h1>
-            <p>演示账号可直接体验：`lin / 123456`、`yue / 123456`、`qing / 123456`。</p>
+            <p th:if="${demoSeedEnabled}">演示账号可直接体验：`lin / 123456`、`yue / 123456`、`qing / 123456`。</p>
+            <p th:unless="${demoSeedEnabled}">请使用已迁移的账号登录，或先注册一个新账号。</p>
         </div>
         <form class="auth-form" th:action="@{/login}" method="post">
             <label>

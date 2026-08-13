@@ -7,6 +7,7 @@ import com.example.travelfootprint.service.LoginAttemptService;
 import jakarta.servlet.http.HttpSession;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -23,23 +24,27 @@ public class AuthController {
     private final PasswordEncoder passwordEncoder;
     private final CurrentUserService currentUserService;
     private final LoginAttemptService loginAttemptService;
+    private final boolean demoSeedEnabled;
 
     public AuthController(
             UserRepository userRepository,
             PasswordEncoder passwordEncoder,
             CurrentUserService currentUserService,
-            LoginAttemptService loginAttemptService) {
+            LoginAttemptService loginAttemptService,
+            @Value("${app.demo.seed-enabled:true}") boolean demoSeedEnabled) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.currentUserService = currentUserService;
         this.loginAttemptService = loginAttemptService;
+        this.demoSeedEnabled = demoSeedEnabled;
     }
 
     @GetMapping("/login")
-    public String loginPage(HttpSession session) {
+    public String loginPage(HttpSession session, org.springframework.ui.Model model) {
         if (currentUserService.isLoggedIn(session)) {
             return "redirect:/";
         }
+        model.addAttribute("demoSeedEnabled", demoSeedEnabled);
         return "login";
     }
 

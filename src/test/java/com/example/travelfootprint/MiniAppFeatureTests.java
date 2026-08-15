@@ -5,12 +5,14 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.example.travelfootprint.model.ContentReviewStatus;
 import com.example.travelfootprint.model.TravelPost;
 import com.example.travelfootprint.model.User;
 import com.example.travelfootprint.repository.TravelPostRepository;
 import com.example.travelfootprint.repository.UserRepository;
+import com.example.travelfootprint.repository.MiniAppSessionRepository;
 import com.example.travelfootprint.service.MiniAppTokenService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -40,6 +42,9 @@ class MiniAppFeatureTests {
 
     @Autowired
     private MiniAppTokenService tokenService;
+
+    @Autowired
+    private MiniAppSessionRepository sessionRepository;
 
     @Autowired
     private ObjectMapper objectMapper;
@@ -143,6 +148,17 @@ class MiniAppFeatureTests {
                         .param("longitude", "120.1551"))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.title").value("不带照片的小程序足迹"));
+    }
+
+    @Test
+    void miniLoginTokenRemainsValidWhenTokenServiceIsRecreated() {
+        User user = createUser();
+        String token = tokenService.issueToken(user);
+
+        MiniAppTokenService restartedService = new MiniAppTokenService(sessionRepository, userRepository, 30);
+
+        assertEquals(user.getId(), restartedService.findUser(token).orElseThrow().getId());
+        assertEquals(1L, sessionRepository.count());
     }
 
     private User createUser() {

@@ -364,6 +364,8 @@ python scripts/generate_china_map_svg.py
 - An offline fallback page is available at `/offline.html`.
 - The post editor automatically saves text drafts to local storage, so you can continue writing while offline.
 - Final submission, login state refresh, image upload, and the latest synchronized data still require network access.
+- Mini-program login tokens are stored as SHA-256 hashes in the database with a configurable validity period, so a cloud container restart no longer signs every mini-program user out.
+- Mini-program photo publishing optimizes mobile originals before upload to stay within the 2MB Back4app image limit.
 
 ## WeChat Mini Program
 

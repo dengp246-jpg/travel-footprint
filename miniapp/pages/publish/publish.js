@@ -1,5 +1,50 @@
 const { getToken, request, upload } = require('../../utils/request')
 
+const MAX_SOURCE_IMAGE_BYTES = 25 * 1024 * 1024
+const TARGET_IMAGE_BYTES = 1800 * 1024
+
+function fileSize(filePath) {
+  return new Promise((resolve, reject) => {
+    wx.getFileSystemManager().getFileInfo({
+      filePath,
+      success: (result) => resolve(result.size || 0),
+      fail: reject
+    })
+  })
+}
+
+function compressImage(filePath, quality) {
+  return new Promise((resolve, reject) => {
+    wx.compressImage({
+      src: filePath,
+      quality,
+      compressedWidth: 1920,
+      compressedHeight: 1920,
+      success: (result) => resolve(result.tempFilePath),
+      fail: reject
+    })
+  })
+}
+
+async function optimizeImage(file) {
+  let currentPath = file.tempFilePath
+  let currentSize = file.size || await fileSize(currentPath)
+  if (currentSize > MAX_SOURCE_IMAGE_BYTES) {
+    throw new Error('原图超过25MB，请先在相册中裁剪后重试')
+  }
+  if (currentSize <= TARGET_IMAGE_BYTES) {
+    return { path: currentPath, size: currentSize }
+  }
+  for (const quality of [82, 70, 58, 46]) {
+    currentPath = await compressImage(currentPath, quality)
+    currentSize = await fileSize(currentPath)
+    if (currentSize <= TARGET_IMAGE_BYTES) {
+      return { path: currentPath, size: currentSize }
+    }
+  }
+  throw new Error('图片压缩后仍超过2MB，请裁剪图片后重试')
+}
+
 function today() {
   const now = new Date()
   const offset = now.getTimezoneOffset() * 60000
@@ -27,6 +72,7 @@ Page({
     provinceOptions: [],
     categoryIndex: 0,
     categoryOptions: [],
+    processingPhoto: false,
     photoPath: '',
     photoName: '',
     form: emptyForm()
@@ -109,20 +155,28 @@ Page({
   },
 
   chooseImage() {
+    if (this.data.processingPhoto) return
     wx.chooseMedia({
       count: 1,
       mediaType: ['image'],
       sizeType: ['compressed'],
-      success: (res) => {
+      success: async (res) => {
         const file = res.tempFiles[0]
-        if (file.size && file.size > 10 * 1024 * 1024) {
-          wx.showToast({ title: '图片不能超过 10MB', icon: 'none' })
-          return
+        this.setData({ processingPhoto: true, photoName: '正在优化图片…' })
+        wx.showLoading({ title: '正在优化图片', mask: true })
+        try {
+          const optimized = await optimizeImage(file)
+          this.setData({
+            photoPath: optimized.path,
+            photoName: `${Math.max(1, Math.round(optimized.size / 1024))}KB · 已优化`
+          })
+        } catch (error) {
+          this.setData({ photoPath: '', photoName: '' })
+          wx.showToast({ title: error.message || '图片处理失败', icon: 'none', duration: 3000 })
+        } finally {
+          this.setData({ processingPhoto: false })
+          wx.hideLoading()
         }
-        this.setData({
-          photoPath: file.tempFilePath,
-          photoName: file.size ? `${Math.max(1, Math.round(file.size / 1024))}KB` : '已选择'
-        })
       }
     })
   },
@@ -147,6 +201,10 @@ Page({
   async submitPost() {
     if (!getToken()) {
       wx.navigateTo({ url: '/pages/login/login' })
+      return
+    }
+    if (this.data.processingPhoto) {
+      wx.showToast({ title: '请等待图片优化完成', icon: 'none' })
       return
     }
     if (this.data.submitting || !this.validate()) return

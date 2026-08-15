@@ -37,10 +37,10 @@
       <view wx:else class="photo-picker" bindtap="chooseImage">
         <view class="photo-plus">＋</view>
         <view class="photo-title">添加一张旅途照片</view>
-        <view class="muted photo-note">建议使用横向图片，最大 10MB</view>
+        <view class="muted photo-note">支持25MB以内手机原图，上传前自动优化到2MB以内</view>
       </view>
     </view>
 
-    <button class="button-primary submit-button" loading="{{submitting}}" disabled="{{submitting}}" bindtap="submitPost">{{submitting ? '正在保存…' : '发布这条足迹'}}</button>
+    <button class="button-primary submit-button" loading="{{submitting || processingPhoto}}" disabled="{{submitting || processingPhoto}}" bindtap="submitPost">{{processingPhoto ? '正在优化图片…' : (submitting ? '正在保存…' : '发布这条足迹')}}</button>
   </view>
 </view>

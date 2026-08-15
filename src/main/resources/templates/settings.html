@@ -21,8 +21,9 @@
                 <label>
                     头像上传
                     <input type="file" name="avatar"
-                           accept="image/jpeg,image/png,image/gif,image/webp,.jpg,.jpeg,.png,.gif,.webp">
-                    <span class="field-hint">支持 JPG、PNG、GIF、WebP，最大 5MB</span>
+                           accept="image/jpeg,image/png,image/gif,image/webp,.jpg,.jpeg,.png,.gif,.webp"
+                           data-auto-compress-image>
+                    <span class="field-hint" data-image-upload-hint>支持 JPG、PNG、GIF、WebP；手机原图会自动压缩</span>
                 </label>
             </div>
             <label>
@@ -71,5 +72,7 @@
         </section>
     </section>
 </main>
+<script defer th:src="@{/js/image-compression.js(v='20260815-1')}"></script>
+<script defer th:src="@{/js/single-image-upload.js(v='20260815-1')}"></script>
 </body>
 </html>

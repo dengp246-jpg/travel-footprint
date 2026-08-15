@@ -1,5 +1,6 @@
 (() => {
-  const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+  const MAX_SOURCE_IMAGE_BYTES = 25 * 1024 * 1024;
+  const MAX_TOTAL_UPLOAD_BYTES = 8 * 1024 * 1024;
   const ALLOWED_IMAGE_TYPES = new Set([
     "image/jpeg",
     "image/png",
@@ -34,6 +35,8 @@
     const grid = form.querySelector("[data-gallery-grid]");
     const clearButton = form.querySelector("[data-clear-gallery]");
     const coverIndexInput = form.querySelector("[data-cover-photo-index]");
+    const uploadHint = form.querySelector("[data-gallery-hint]");
+    const originalUploadHint = uploadHint?.textContent || "";
     if (!input || !preview || !grid || !clearButton || !coverIndexInput) return;
 
     let selectedFiles = [];
@@ -100,7 +103,7 @@
       render();
     });
 
-    input.addEventListener("change", () => {
+    input.addEventListener("change", async () => {
       const files = Array.from(input.files || []);
       if (files.length > 9) {
         showFormError(form, "每篇足迹最多选择 9 张照片。");
@@ -108,22 +111,53 @@
         return;
       }
       const invalidType = files.find((file) => !ALLOWED_IMAGE_TYPES.has(file.type));
-      const oversized = files.find((file) => file.size > MAX_IMAGE_BYTES);
+      const oversized = files.find((file) => file.size > MAX_SOURCE_IMAGE_BYTES);
       if (invalidType) {
         showFormError(form, "请选择 JPG、PNG、GIF 或 WebP 图片。");
         input.value = "";
         return;
       }
       if (oversized) {
-        showFormError(form, `图片“${oversized.name}”超过 5MB。`);
+        showFormError(form, `图片“${oversized.name}”超过 25MB，请先裁剪后再上传。`);
         input.value = "";
         return;
       }
-      selectedFiles = files;
-      coverFile = selectedFiles[0] || null;
-      syncInputFiles();
-      render();
+      const submitButton = form.querySelector("[data-submit-button]");
+      input.disabled = true;
+      if (submitButton) submitButton.disabled = true;
+      if (uploadHint) uploadHint.textContent = `正在优化 ${files.length} 张图片，请稍候…`;
       clearFormError(form);
+      try {
+        const optimizedFiles = [];
+        for (const file of files) {
+          optimizedFiles.push(await window.TravelImageCompression.compress(file, {
+            targetBytes: 850 * 1024,
+            maxOutputBytes: 2 * 1024 * 1024,
+            maxDimension: 1920
+          }));
+        }
+        const totalBytes = optimizedFiles.reduce((sum, file) => sum + file.size, 0);
+        if (totalBytes > MAX_TOTAL_UPLOAD_BYTES) {
+          throw new Error("所选图片压缩后总量仍超过 8MB，请减少照片数量后重试。");
+        }
+        selectedFiles = optimizedFiles;
+        coverFile = selectedFiles[0] || null;
+        syncInputFiles();
+        render();
+        if (uploadHint) {
+          uploadHint.textContent = `${selectedFiles.length} 张图片已自动优化，共 ${(totalBytes / 1024 / 1024).toFixed(2)}MB`;
+        }
+      } catch (error) {
+        selectedFiles = [];
+        coverFile = null;
+        input.value = "";
+        render();
+        showFormError(form, error.message || "图片处理失败，请重新选择。");
+        if (uploadHint) uploadHint.textContent = originalUploadHint;
+      } finally {
+        input.disabled = false;
+        if (submitButton) submitButton.disabled = false;
+      }
     });
 
     clearButton.addEventListener("click", () => {
@@ -132,6 +166,7 @@
       input.value = "";
       coverIndexInput.value = "0";
       render();
+      if (uploadHint) uploadHint.textContent = originalUploadHint;
     });
     window.addEventListener("pagehide", releaseObjectUrls, { once: true });
   }

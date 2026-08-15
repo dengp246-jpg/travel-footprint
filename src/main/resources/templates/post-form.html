@@ -94,7 +94,7 @@
                     <input type="file" name="photos" multiple
                            accept="image/jpeg,image/png,image/gif,image/webp,.jpg,.jpeg,.png,.gif,.webp"
                            data-gallery-input>
-                    <span class="field-hint">最多 9 张；可拖动排序并选择封面，单张最大 5MB</span>
+                    <span class="field-hint" data-gallery-hint>最多 9 张；手机原图将自动压缩，单张原图最大 25MB</span>
                 </label>
             </div>
             <input type="hidden" name="latitude" th:value="${formPost.latitude}" data-latitude-input>
@@ -215,7 +215,7 @@
                     <input type="file" name="photos" multiple
                            accept="image/jpeg,image/png,image/gif,image/webp,.jpg,.jpeg,.png,.gif,.webp"
                            data-gallery-input>
-                    <span class="field-hint">整篇足迹最多 9 张；新照片可拖动排序并设为封面</span>
+                    <span class="field-hint" data-gallery-hint>整篇足迹最多 9 张；手机原图将自动压缩并可设为封面</span>
                 </label>
             </div>
             <input type="hidden" name="latitude" th:value="${formPost.latitude}" data-latitude-input>
@@ -280,6 +280,7 @@
         </ul>
     </aside>
 </main>
-<script defer th:src="@{/js/post-editor.js(v='20260808-2')}"></script>
+<script defer th:src="@{/js/image-compression.js(v='20260815-1')}"></script>
+<script defer th:src="@{/js/post-editor.js(v='20260815-1')}"></script>
 </body>
 </html>

@@ -227,7 +227,7 @@ src/main/resources
 - H2 数据库文件保存在项目根目录的 `data/`
 - 运行日志保存在项目根目录的 `run/`
 - 以上目录均已加入 `.gitignore`
-- 默认图片上传限制为 5MB，仅接受真实内容与声明类型一致的 JPG、PNG、GIF、WebP 文件
+- 默认图片上传限制为 5MB，仅接受真实内容与声明类型一致的 JPG、PNG、GIF、WebP 文件；网页端会在上传前自动压缩手机原图，云端 2MB 限制下无需手动处理普通照片
 - 可以通过环境变量 `APP_UPLOAD_MAX_IMAGE_SIZE_BYTES` 调整服务端图片大小限制
 - 项目默认使用相对路径，因此从 `D:\codex project\shujujiegoukeshe` 启动时，数据库、上传和日志都会保存在 D 盘
 

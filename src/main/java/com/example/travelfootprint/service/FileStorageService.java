@@ -61,7 +61,7 @@ public class FileStorageService {
         }
 
         if (file.getSize() > maxImageSize) {
-            throw new IOException("图片不能超过 5MB。");
+            throw new IOException("图片不能超过 " + readableSize(maxImageSize) + "。");
         }
 
         byte[] content = file.getBytes();
@@ -203,6 +203,13 @@ public class FileStorageService {
         contentTypes.put("image/gif", ".gif");
         contentTypes.put("image/webp", ".webp");
         return Map.copyOf(contentTypes);
+    }
+
+    private String readableSize(long bytes) {
+        if (bytes >= 1024L * 1024L && bytes % (1024L * 1024L) == 0) {
+            return (bytes / (1024L * 1024L)) + "MB";
+        }
+        return Math.max(1L, bytes / 1024L) + "KB";
     }
 
     public record StoredFile(byte[] content, String contentType) {

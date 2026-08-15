@@ -1,4 +1,4 @@
-const CACHE_VERSION = "travelfootprint-offline-v27";
+const CACHE_VERSION = "travelfootprint-offline-v28";
 const SHELL_CACHE = [
   "/",
   "/map",
@@ -8,7 +8,8 @@ const SHELL_CACHE = [
   "/css/style.css?v=20260808-16",
   "/css/premium.css?v=20260809-1",
   "/js/app-shell.js?v=20260809-1",
-  "/js/post-editor.js?v=20260808-2",
+  "/js/image-compression.js?v=20260815-1",
+  "/js/post-editor.js?v=20260815-1",
   "/manifest.webmanifest?v=20260808-2"
 ];
 const SENSITIVE_PATH_PREFIXES = [

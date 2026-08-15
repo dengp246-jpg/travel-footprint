@@ -74,4 +74,16 @@ class FileStorageServiceTests {
         assertEquals("image/png", loaded.contentType());
         assertArrayEquals(pngHeader, loaded.content());
     }
+
+    @Test
+    void sizeErrorUsesConfiguredCloudLimit() throws IOException {
+        FileStorageService storageService = new FileStorageService(uploadDirectory.toString(), 8);
+        MockMultipartFile image = new MockMultipartFile(
+                "photo", "photo.png", "image/png",
+                new byte[] {(byte) 0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00});
+
+        IOException exception = assertThrows(IOException.class, () -> storageService.store(image, "posts"));
+
+        assertTrue(exception.getMessage().contains("1KB"));
+    }
 }

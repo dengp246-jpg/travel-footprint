@@ -90,10 +90,31 @@ Page({
     ],
     privacyTitle: '所有人可查看',
     privacyText: '足迹会出现在公共动态中，地图展示具体点位。',
+    arrivalPrefill: false,
     form: emptyForm()
   },
 
-  onLoad() {
+  onLoad(options = {}) {
+    const latitude = Number(options.latitude)
+    const longitude = Number(options.longitude)
+    const hasCoordinates = Number.isFinite(latitude) && Number.isFinite(longitude)
+      && latitude >= -90 && latitude <= 90 && longitude >= -180 && longitude <= 180
+    if (options.arrival === '1' && hasCoordinates) {
+      const travelDate = /^\d{4}-\d{2}-\d{2}$/.test(options.date || '') ? options.date : today()
+      this.setData({
+        arrivalPrefill: true,
+        privacyText: '足迹会出现在公共动态与公共地图中。 对其他可见用户只展示省份范围，不显示具体点位。',
+        form: {
+          ...emptyForm(),
+          location: String(options.location || '当前位置').slice(0, 100),
+          province: String(options.province || ''),
+          travelDate,
+          latitude: String(latitude),
+          longitude: String(longitude),
+          approximateLocation: true
+        }
+      })
+    }
     this.loadCatalog()
   },
 
@@ -117,13 +138,19 @@ Page({
         request({ url: '/api/mini/catalog/upload-limits' })
       ])
       const maxVideoBytes = Number(uploadLimits.maxVideoSizeBytes) || DEFAULT_MAX_VIDEO_BYTES
+      const requestedProvince = this.data.form.province
+      const requestedCategory = this.data.form.category
+      const provinceIndex = Math.max(0, provinces.indexOf(requestedProvince))
+      const categoryIndex = Math.max(0, categories.indexOf(requestedCategory))
       this.setData({
         provinceOptions: provinces,
         categoryOptions: categories,
+        provinceIndex,
+        categoryIndex,
         maxVideoBytes,
         maxVideoLabel: formatFileSize(maxVideoBytes),
-        'form.province': this.data.form.province || provinces[0] || '',
-        'form.category': this.data.form.category || categories[0] || ''
+        'form.province': provinces[provinceIndex] || '',
+        'form.category': categories[categoryIndex] || ''
       })
     } catch (error) {
       wx.showToast({ title: '发布选项加载失败', icon: 'none' })
@@ -325,6 +352,7 @@ Page({
         videoPath: '',
         videoName: '',
         visibilityIndex: 0,
+        arrivalPrefill: false,
         privacyTitle: '所有人可查看',
         privacyText: '足迹会出现在公共动态中，地图展示具体点位。',
         form

@@ -1,0 +1,34 @@
+<view class="page-shell arrival-page">
+  <view class="arrival-hero">
+    <view class="arrival-symbol">⌖</view>
+    <view class="eyebrow">FOREGROUND ARRIVAL</view>
+    <view class="arrival-title">自动到访提醒</view>
+    <view class="arrival-copy">仅在本页面显示时检测位置。不会后台定位，不会保存轨迹，也不会自动发布足迹。</view>
+    <button class="arrival-toggle {{enabled ? 'is-enabled' : ''}}" bindtap="toggleReminder">
+      {{enabled ? '关闭到访提醒' : '允许定位并开启'}}
+    </button>
+  </view>
+
+  <view class="card status-card">
+    <view class="status-heading"><view class="status-dot {{enabled ? 'is-live' : ''}}"></view><view>{{status}}</view></view>
+    <view class="muted status-detail">{{statusDetail}}</view>
+    <button wx:if="{{!enabled}}" class="settings-link" bindtap="openSettings">检查小程序位置权限</button>
+  </view>
+
+  <view wx:if="{{promptVisible}}" class="card prompt-card">
+    <view class="prompt-symbol">迹</view>
+    <view class="eyebrow">LOCATION FOUND</view>
+    <view class="prompt-title">{{place}}</view>
+    <view class="prompt-copy">{{promptDetail}}</view>
+    <view class="prompt-accuracy">{{accuracyLabel}}</view>
+    <button class="button-primary" bindtap="addFootprint">加入足迹</button>
+    <button class="button-secondary" bindtap="ignoreArrival">这次忽略</button>
+  </view>
+
+  <view class="card privacy-card">
+    <view class="section-title">定位与隐私</view>
+    <view class="privacy-row"><text>01</text><view>只有你主动开启后才会读取位置。</view></view>
+    <view class="privacy-row"><text>02</text><view>坐标只发送到当前旅迹服务器匹配离线地点，不保存定位轨迹。</view></view>
+    <view class="privacy-row"><text>03</text><view>确认加入足迹后才进入发布页，并默认启用模糊位置。</view></view>
+  </view>
+</view>

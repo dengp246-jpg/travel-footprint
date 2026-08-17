@@ -17,6 +17,7 @@
 .quick-card { min-height: 190rpx; padding: 22rpx; }
 .quick-symbol { width: 58rpx; height: 58rpx; border-radius: 18rpx; background: #e6f0ec; color: #176557; font-size: 24rpx; font-weight: 720; line-height: 58rpx; text-align: center; }
 .warm-symbol { background: #fff0e3; color: #a76633; }
+.arrival-quick-symbol { background: #e3f5ef; color: #0f766e; }
 .blue-symbol { background: #e9f0f1; color: #3f7378; }
 .gray-symbol { background: #eeefeb; color: #69736d; }
 .quick-title { margin-top: 15rpx; font-weight: 680; }

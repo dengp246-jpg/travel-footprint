@@ -1,4 +1,8 @@
 .form-card { padding: 30rpx; }
+.arrival-prefill-banner { display: flex; align-items: flex-start; gap: 18rpx; margin: 0 0 22rpx; padding: 24rpx; border: 2rpx solid #cde4df; border-radius: 22rpx; background: linear-gradient(135deg,#effaf7,#fff); }
+.arrival-prefill-icon { display: flex; align-items: center; justify-content: center; flex: 0 0 64rpx; width: 64rpx; height: 64rpx; border-radius: 20rpx; background: #176557; color: #fff; font-size: 34rpx; }
+.arrival-prefill-title { color: #153f3a; font-size: 26rpx; font-weight: 720; }
+.arrival-prefill-copy { margin-top: 8rpx; color: #58716c; font-size: 21rpx; line-height: 1.55; }
 .step-index { color: #a8754d; font-size: 23rpx; font-weight: 720; letter-spacing: 2rpx; }
 .field { margin-bottom: 24rpx; }
 .field-grid { display: flex; gap: 16rpx; }

@@ -59,6 +59,26 @@ class MiniAppFeatureTests {
     }
 
     @Test
+    void miniForegroundArrivalReminderMatchesNearbyLocationAndRequiresLogin() throws Exception {
+        User user = createUser();
+        String token = tokenService.issueToken(user);
+
+        mockMvc.perform(get("/api/mini/location/arrival-match")
+                        .header("X-Mini-Token", token)
+                        .param("longitude", "120.1551")
+                        .param("latitude", "30.2741"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.location").value("杭州 西湖"))
+                .andExpect(jsonPath("$.province").value("浙江"))
+                .andExpect(jsonPath("$.matched").value(true));
+
+        mockMvc.perform(get("/api/mini/location/arrival-match")
+                        .param("longitude", "120.1551")
+                        .param("latitude", "30.2741"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
     void miniPersonalMapReturnsCoordinatesAndEnablesPublishOrderedRoute() throws Exception {
         User user = createUser();
         TravelPost post = new TravelPost();

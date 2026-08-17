@@ -226,6 +226,21 @@ public class MiniAppApiController {
         return Map.of("maxVideoSizeBytes", fileStorageService.maxVideoSizeBytes());
     }
 
+    @GetMapping("/location/arrival-match")
+    public ResponseEntity<?> arrivalMatch(
+            @RequestHeader(value = "X-Mini-Token", required = false) String token,
+            @RequestParam double latitude,
+            @RequestParam double longitude) {
+        if (resolveUser(token) == null) {
+            return unauthorized("请先登录后再使用到访提醒。");
+        }
+        try {
+            return ResponseEntity.ok(destinationMapService.matchArrival(longitude, latitude));
+        } catch (IllegalArgumentException exception) {
+            return badRequest(exception.getMessage());
+        }
+    }
+
     @GetMapping("/posts")
     public ResponseEntity<?> posts(
             @RequestHeader(value = "X-Mini-Token", required = false) String token,

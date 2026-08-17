@@ -45,12 +45,14 @@
   - 个人地图提供“时空旅行故事”，按实际旅行日期逐段播放路线，故事抽屉可直接查看照片或视频
   - 全国地图会自动聚合省内相邻地点，点击聚合点可进入省域视图
   - 发布与编辑足迹时提供离线地点建议，可自动填写省份、经纬度并预览地图落点
+  - 登录用户可在“记录”菜单开启前台自动到访提醒：移动超过 500 米并停留 2 分钟后提示记录足迹，同一地点 24 小时内不重复提醒
   - 地图点位支持故事预览抽屉，可直接查看照片、视频、摘要和详情入口
   - 旅行护照根据真实足迹自动生成省份印章、旅行勋章与最近旅程签注
   - 发布和编辑页提供隐私结果预览，提交前明确提示内容可见范围与地图点位精度
   - 顶部导航按“记录 / 计划 / 探索 / 我的”重新分组，降低功能查找成本
   - 微信小程序原生端同步提供旅行护照、时空故事、地图视频故事卡和隐私结果预览
-  - Android 应用通过安全 WebView 完整承载上述网站能力，并支持系统视频文件选择器
+  - 微信小程序“我的 → 到访提醒”提供同等的前台定位、停留判断和一键发布预填能力
+  - Android 应用通过安全 WebView 完整承载上述网站能力，支持系统视频文件选择器与可信服务器的前台定位授权
   - 行程计划管理
 
 以上体验创新均为本地确定性逻辑，不包含 AI 旅行助手，也不调用大模型服务。
@@ -240,6 +242,7 @@ src/main/resources
 - 每篇足迹可上传一个 MP4 或 WebM 视频，默认上限 20MB；服务端会校验真实视频文件头，并通过与足迹相同的审核和隐私规则提供访问
 - 可以通过环境变量 `APP_UPLOAD_MAX_VIDEO_SIZE_BYTES` 调整视频大小限制，网页端和微信小程序的提示与校验会自动同步该值
 - 视频能力覆盖网页/PWA、原生微信小程序与 Android 软件：均可上传和播放；网页与小程序还支持替换、删除，Android 软件通过同一网页流程完成管理
+- 到访提醒仅在用户主动开启且页面处于前台时读取位置。浏览器/Android 需使用 HTTPS（本机 `localhost` 调试除外）；坐标只发送到当前服务器做离线地点匹配，不调用外部地图或 AI 服务，也不会保存到提醒记录中
 - 项目默认使用相对路径，因此从 `D:\codex project\shujujiegoukeshe` 启动时，数据库、上传和日志都会保存在 D 盘
 
 ## 网页端优化说明
@@ -386,6 +389,7 @@ python scripts/generate_china_map_svg.py
   - username/password login and registration
   - premium travel feed, filtering, pull-to-refresh, post detail, likes, and favorites
   - travel-footprint publishing with photo upload and native location selection
+  - foreground arrival reminders with explicit opt-in, 500 m movement/2 min dwell checks, and one-tap publishing prefill
   - native map markers; the public map has no route line, while the personal map connects points by publish time
   - trip-plan browsing, creation, progress, and deletion
   - weekly, monthly, and yearly travel reports

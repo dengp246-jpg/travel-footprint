@@ -20,6 +20,7 @@
 
     <view class="quick-grid">
       <view class="card quick-card" bindtap="goPassport"><view class="quick-symbol">旅</view><view class="quick-title">旅行护照</view><view class="muted quick-note">印章、勋章与签注</view></view>
+      <view class="card quick-card" bindtap="goArrival"><view class="quick-symbol arrival-quick-symbol">到</view><view class="quick-title">到访提醒</view><view class="muted quick-note">前台定位与足迹预填</view></view>
       <view class="card quick-card" bindtap="goMap"><view class="quick-symbol">图</view><view class="quick-title">个人地图</view><view class="muted quick-note">查看旅行轨迹</view></view>
       <view class="card quick-card" bindtap="goPlans"><view class="quick-symbol warm-symbol">行</view><view class="quick-title">行程计划</view><view class="muted quick-note">准备下一次出发</view></view>
       <view class="card quick-card" bindtap="goReport"><view class="quick-symbol blue-symbol">报</view><view class="quick-title">旅行报告</view><view class="muted quick-note">周、月与年度回顾</view></view>

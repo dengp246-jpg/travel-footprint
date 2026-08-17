@@ -5702,6 +5702,43 @@ body.map-fullscreen-fallback {
 .privacy-preview-card strong { color: #153f3a; font-size: 1.02rem; }
 .privacy-preview-card p { margin: 0; color: #58716c; font-size: .9rem; line-height: 1.55; }
 
+/* Foreground arrival reminder */
+.arrival-nav-button { display: flex; width: 100%; align-items: center; gap: 8px; padding: 9px 11px; border: 0; border-radius: 9px; color: var(--text-soft); background: transparent; font: inherit; text-align: left; white-space: nowrap; cursor: pointer; }
+.arrival-nav-button:hover { color: #0f766e; background: #edf8f5; }
+.arrival-nav-button.is-enabled { color: #0b6a61; background: #e2f6f0; font-weight: 800; }
+.arrival-nav-button.is-enabled > span:first-child { color: #e48b27; animation: arrival-pulse 1.8s ease-in-out infinite; }
+.arrival-monitor-chip { position: fixed; right: 20px; bottom: 20px; z-index: 42; display: flex; align-items: center; gap: 9px; max-width: min(360px,calc(100vw - 32px)); padding: 10px 14px; border: 1px solid rgba(15,118,110,.22); border-radius: 999px; color: #22534d; background: rgba(245,255,252,.94); box-shadow: 0 12px 32px rgba(18,72,66,.16); font-size: .8rem; font-weight: 800; backdrop-filter: blur(14px); }
+.arrival-monitor-chip[hidden] { display: none; }
+.arrival-monitor-chip i { width: 8px; height: 8px; flex: 0 0 auto; border-radius: 50%; background: #11a579; box-shadow: 0 0 0 5px rgba(17,165,121,.12); animation: arrival-pulse 1.8s ease-in-out infinite; }
+.arrival-modal { position: fixed; inset: 0; z-index: 100; display: grid; overflow-y: auto; place-items: center; padding: 22px; background: rgba(3,22,24,.68); backdrop-filter: blur(9px); }
+.arrival-modal[hidden] { display: none; }
+.arrival-modal-card { position: relative; width: min(520px,100%); padding: clamp(25px,5vw,42px); border: 1px solid rgba(255,255,255,.55); border-radius: 28px; color: #244842; background: linear-gradient(155deg,#fff,#edf9f5); box-shadow: 0 32px 90px rgba(0,22,24,.35); }
+.arrival-modal-card h2 { margin: 8px 0 12px; color: #123f39; font-size: clamp(1.65rem,5vw,2.4rem); }
+.arrival-modal-card p { color: #58736d; line-height: 1.65; }
+.arrival-modal-card ul { display: grid; gap: 8px; margin: 19px 0 0; padding-left: 20px; color: #58736d; font-size: .88rem; line-height: 1.5; }
+.arrival-modal-close { position: absolute; top: 15px; right: 15px; display: grid; width: 34px; height: 34px; place-items: center; border: 0; border-radius: 50%; color: #54706a; background: #e5f0ed; font-size: 1.35rem; cursor: pointer; }
+.arrival-modal-icon { display: grid; width: 68px; height: 68px; margin-bottom: 18px; place-items: center; border-radius: 23px; color: #fff; background: linear-gradient(145deg,#0f766e,#22b28b); box-shadow: 0 13px 28px rgba(15,118,110,.26); font-size: 2.1rem; }
+.arrival-modal-icon.is-found { background: linear-gradient(145deg,#df8229,#f1ad4a); box-shadow: 0 13px 28px rgba(223,130,41,.25); }
+.arrival-found-card > strong { display: block; margin: 16px 0 6px; color: #0d685f; font-size: 1.35rem; }
+.arrival-found-card > small { display: block; margin-top: 13px; color: #7b8f8a; font-size: .76rem; }
+.arrival-modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 24px; }
+.arrival-modal-actions > a { text-align: center; }
+.arrival-disable-link { display: block; margin: 17px auto 0; border: 0; color: #788b87; background: transparent; font: inherit; font-size: .8rem; text-decoration: underline; cursor: pointer; }
+.arrival-modal-open { overflow: hidden; }
+.arrival-prefill-note { display: flex; align-items: flex-start; gap: 15px; margin: 16px 0; padding: 17px 19px; border: 1px solid #bfe1d8; border-radius: 17px; color: #25564f; background: linear-gradient(135deg,#eafaf5,#fff); }
+.arrival-prefill-note > span { display: grid; width: 38px; height: 38px; flex: 0 0 auto; place-items: center; border-radius: 13px; color: #fff; background: #0f766e; font-size: 1.25rem; }
+.arrival-prefill-note strong { color: #0b625a; }
+.arrival-prefill-note p { margin: 5px 0 0; color: #627b76; font-size: .86rem; line-height: 1.55; }
+@keyframes arrival-pulse { 50% { opacity: .45; transform: scale(.86); } }
+
+@media (max-width: 620px) {
+    .arrival-monitor-chip { right: 12px; bottom: 12px; }
+    .arrival-modal { padding: 12px; align-items: end; }
+    .arrival-modal-card { border-radius: 25px 25px 18px 18px; }
+    .arrival-modal-actions { align-items: stretch; flex-direction: column-reverse; }
+    .arrival-modal-actions > * { width: 100%; }
+}
+
 /* Real-data travel passport */
 .passport-page { background: #eef4f1; }
 .passport-shell { display: grid; gap: 22px; padding-block: 34px 72px; }

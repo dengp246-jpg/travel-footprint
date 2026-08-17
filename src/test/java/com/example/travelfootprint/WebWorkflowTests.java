@@ -9,6 +9,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 
 import com.example.travelfootprint.model.ContentReviewStatus;
@@ -318,6 +319,40 @@ class WebWorkflowTests {
         org.junit.jupiter.api.Assertions.assertEquals("浙江", westLake.province());
         org.junit.jupiter.api.Assertions.assertEquals(120.1551, westLake.longitude(), 0.0001);
         org.junit.jupiter.api.Assertions.assertEquals(30.2741, westLake.latitude(), 0.0001);
+    }
+
+    @Test
+    void foregroundArrivalReminderMatchesLocationAndPrefillsNewFootprint() throws Exception {
+        User user = createUser(true);
+        MockHttpSession session = new MockHttpSession();
+        session.setAttribute(CurrentUserService.SESSION_USER_ID, user.getId());
+
+        mockMvc.perform(get("/api/location/arrival-match")
+                        .session(session)
+                        .param("longitude", "120.1551")
+                        .param("latitude", "30.2741"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.location").value("杭州 西湖"))
+                .andExpect(jsonPath("$.province").value("浙江"))
+                .andExpect(jsonPath("$.matched").value(true));
+
+        mockMvc.perform(get("/posts/new")
+                        .session(session)
+                        .param("arrivalLocation", "杭州 西湖")
+                        .param("arrivalProvince", "浙江")
+                        .param("arrivalLatitude", "30.2741")
+                        .param("arrivalLongitude", "120.1551")
+                        .param("arrivalDate", "2026-08-17"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("已从到访提醒带入当前位置")))
+                .andExpect(content().string(containsString("杭州 西湖")))
+                .andExpect(content().string(containsString("2026-08-17")))
+                .andExpect(content().string(containsString("checked")));
+
+        mockMvc.perform(get("/api/location/arrival-match")
+                        .param("longitude", "120.1551")
+                        .param("latitude", "30.2741"))
+                .andExpect(status().isUnauthorized());
     }
 
     @Test

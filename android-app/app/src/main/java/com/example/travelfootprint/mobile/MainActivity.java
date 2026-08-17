@@ -1,10 +1,12 @@
 package com.example.travelfootprint.mobile;
 
+import android.Manifest;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.ActivityNotFoundException;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.net.Uri;
 import android.net.http.SslError;
@@ -13,6 +15,7 @@ import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
 import android.webkit.CookieManager;
+import android.webkit.GeolocationPermissions;
 import android.webkit.SslErrorHandler;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
@@ -35,6 +38,7 @@ import java.util.Locale;
 public class MainActivity extends Activity {
 
     private static final int FILE_CHOOSER_REQUEST = 501;
+    private static final int LOCATION_PERMISSION_REQUEST = 502;
     private static final String PREFERENCES = "travel_footprint_mobile";
     private static final String SERVER_URL_KEY = "server_url";
     private static final String SERVER_CONFIGURED_KEY = "server_configured";
@@ -44,6 +48,8 @@ public class MainActivity extends Activity {
     private LinearLayout offlinePanel;
     private TextView offlineMessage;
     private ValueCallback<Uri[]> fileCallback;
+    private GeolocationPermissions.Callback geolocationCallback;
+    private String geolocationOrigin;
     private String serverUrl;
 
     @Override
@@ -172,6 +178,7 @@ public class MainActivity extends Activity {
         settings.setJavaScriptEnabled(true);
         settings.setDomStorageEnabled(true);
         settings.setDatabaseEnabled(true);
+        settings.setGeolocationEnabled(true);
         settings.setAllowFileAccess(false);
         settings.setAllowContentAccess(true);
         settings.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
@@ -193,6 +200,28 @@ public class MainActivity extends Activity {
             public void onProgressChanged(WebView view, int progress) {
                 progressBar.setProgress(progress);
                 progressBar.setVisibility(progress >= 100 ? View.GONE : View.VISIBLE);
+            }
+
+            @Override
+            public void onGeolocationPermissionsShowPrompt(String origin, GeolocationPermissions.Callback callback) {
+                if (!isTrustedServerOrigin(origin)) {
+                    callback.invoke(origin, false, false);
+                    return;
+                }
+                if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+                        || checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+                    callback.invoke(origin, true, false);
+                    return;
+                }
+                if (geolocationCallback != null && geolocationOrigin != null) {
+                    geolocationCallback.invoke(geolocationOrigin, false, false);
+                }
+                geolocationCallback = callback;
+                geolocationOrigin = origin;
+                requestPermissions(new String[]{
+                        Manifest.permission.ACCESS_FINE_LOCATION,
+                        Manifest.permission.ACCESS_COARSE_LOCATION
+                }, LOCATION_PERMISSION_REQUEST);
             }
 
             @Override
@@ -243,6 +272,20 @@ public class MainActivity extends Activity {
         });
 
         webView.setDownloadListener((url, userAgent, contentDisposition, mimeType, contentLength) -> openExternal(Uri.parse(url)));
+    }
+
+    private boolean isTrustedServerOrigin(String origin) {
+        try {
+            URI requested = new URI(origin);
+            URI configured = new URI(serverUrl);
+            return requested.getScheme() != null
+                    && requested.getScheme().equalsIgnoreCase(configured.getScheme())
+                    && requested.getHost() != null
+                    && requested.getHost().equalsIgnoreCase(configured.getHost())
+                    && requested.getPort() == configured.getPort();
+        } catch (Exception ignored) {
+            return false;
+        }
     }
 
     private boolean handleNavigation(Uri uri) {
@@ -338,6 +381,22 @@ public class MainActivity extends Activity {
     }
 
     @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode != LOCATION_PERMISSION_REQUEST || geolocationCallback == null || geolocationOrigin == null) return;
+        boolean granted = false;
+        for (int result : grantResults) {
+            if (result == PackageManager.PERMISSION_GRANTED) {
+                granted = true;
+                break;
+            }
+        }
+        geolocationCallback.invoke(geolocationOrigin, granted, false);
+        geolocationCallback = null;
+        geolocationOrigin = null;
+    }
+
+    @Override
     protected void onSaveInstanceState(Bundle outState) {
         webView.saveState(outState);
         super.onSaveInstanceState(outState);
@@ -357,6 +416,11 @@ public class MainActivity extends Activity {
 
     @Override
     protected void onDestroy() {
+        if (geolocationCallback != null && geolocationOrigin != null) {
+            geolocationCallback.invoke(geolocationOrigin, false, false);
+            geolocationCallback = null;
+            geolocationOrigin = null;
+        }
         if (webView != null) {
             webView.stopLoading();
             webView.setWebChromeClient(null);

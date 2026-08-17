@@ -60,6 +60,10 @@ Page({
     wx.navigateTo({ url: '/pages/passport/passport' })
   },
 
+  goArrival() {
+    wx.navigateTo({ url: '/pages/arrival/arrival' })
+  },
+
   goServer() {
     wx.navigateTo({ url: '/pages/server/server' })
   },

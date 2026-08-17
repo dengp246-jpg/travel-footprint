@@ -21,6 +21,14 @@
             <span>断网时你仍然可以继续填写，系统会自动把草稿保存在本机，恢复联网后再提交。</span>
         </div>
 
+        <div class="arrival-prefill-note" th:if="${arrivalPrefill}">
+            <span aria-hidden="true">⌖</span>
+            <div>
+                <strong>已从到访提醒带入当前位置</strong>
+                <p>地点、坐标和当天日期已预填。请确认地点名称和省份；为保护隐私，默认仅在公共地图显示省份范围。</p>
+            </div>
+        </div>
+
         <form class="post-form offline-draft-form"
               th:if="${!editing}"
               th:action="@{/posts}"

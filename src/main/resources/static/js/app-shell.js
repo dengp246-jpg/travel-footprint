@@ -6,7 +6,268 @@
   setupMobileNavigation();
   setupPwaInstall();
   setupCopyControls();
+  setupArrivalReminders();
 })();
+
+function setupArrivalReminders() {
+  const toggle = document.querySelector("[data-arrival-toggle]");
+  const toggleLabel = document.querySelector("[data-arrival-toggle-label]");
+  const consent = document.querySelector("[data-arrival-consent]");
+  const dialog = document.querySelector("[data-arrival-dialog]");
+  const status = document.querySelector("[data-arrival-status]");
+  const statusText = document.querySelector("[data-arrival-status-text]");
+  if (!toggle || !consent || !dialog) return;
+
+  const storagePrefix = `travelFootprint.arrivalReminder.${toggle.dataset.arrivalUser || "user"}`;
+  const ENABLED_KEY = `${storagePrefix}.enabled`;
+  const LAST_PROMPT_KEY = `${storagePrefix}.lastPrompt`;
+  const CANDIDATE_KEY = `${storagePrefix}.candidate`;
+  const REMINDER_COOLDOWN_MS = 24 * 60 * 60 * 1000;
+  const DWELL_TIME_MS = 2 * 60 * 1000;
+  const NEW_PLACE_DISTANCE_METERS = 500;
+  let watchId = null;
+  let dwellTimer = null;
+  let resolving = false;
+  let interactiveStart = false;
+
+  const readJson = (key) => {
+    try {
+      return JSON.parse(localStorage.getItem(key) || "null");
+    } catch (error) {
+      try { localStorage.removeItem(key); } catch (storageError) { /* optional local state */ }
+      return null;
+    }
+  };
+  const writeJson = (key, value) => {
+    try { localStorage.setItem(key, JSON.stringify(value)); } catch (error) { /* optional local state */ }
+  };
+  const readValue = (key) => {
+    try { return localStorage.getItem(key); } catch (error) { return null; }
+  };
+  const removeValue = (key) => {
+    try { localStorage.removeItem(key); } catch (error) { /* optional local state */ }
+  };
+  const isEnabled = () => readValue(ENABLED_KEY) === "true";
+  const setEnabled = (enabled) => {
+    try { localStorage.setItem(ENABLED_KEY, String(enabled)); } catch (error) { /* current page still works */ }
+    toggle.classList.toggle("is-enabled", enabled);
+    if (toggleLabel) toggleLabel.textContent = enabled ? "关闭到访提醒" : "开启到访提醒";
+    if (status) status.hidden = !enabled;
+  };
+  const setArrivalStatus = (message) => {
+    if (statusText) statusText.textContent = message;
+  };
+  const closeModal = (modal) => {
+    modal.hidden = true;
+    if (consent.hidden && dialog.hidden) document.body.classList.remove("arrival-modal-open");
+  };
+  const openModal = (modal) => {
+    modal.hidden = false;
+    document.body.classList.add("arrival-modal-open");
+  };
+  const distanceMeters = (first, second) => {
+    const radius = 6371008.8;
+    const toRadians = (value) => value * Math.PI / 180;
+    const latitudeDelta = toRadians(second.latitude - first.latitude);
+    const longitudeDelta = toRadians(second.longitude - first.longitude);
+    const firstLatitude = toRadians(first.latitude);
+    const secondLatitude = toRadians(second.latitude);
+    const value = Math.sin(latitudeDelta / 2) ** 2
+      + Math.cos(firstLatitude) * Math.cos(secondLatitude) * Math.sin(longitudeDelta / 2) ** 2;
+    return radius * 2 * Math.atan2(Math.sqrt(value), Math.sqrt(1 - value));
+  };
+  const localDate = () => {
+    const now = new Date();
+    const offset = now.getTimezoneOffset() * 60000;
+    return new Date(now.getTime() - offset).toISOString().slice(0, 10);
+  };
+  const recentlyPrompted = (position) => {
+    const lastPrompt = readJson(LAST_PROMPT_KEY);
+    return lastPrompt && Date.now() - lastPrompt.promptedAt < REMINDER_COOLDOWN_MS
+      && distanceMeters(lastPrompt, position) < NEW_PLACE_DISTANCE_METERS;
+  };
+  const rememberPrompt = (position) => writeJson(LAST_PROMPT_KEY, {
+    latitude: position.latitude,
+    longitude: position.longitude,
+    promptedAt: Date.now()
+  });
+  const stopWatching = () => {
+    if (watchId !== null && navigator.geolocation) navigator.geolocation.clearWatch(watchId);
+    watchId = null;
+    window.clearTimeout(dwellTimer);
+    dwellTimer = null;
+  };
+  const disableReminder = () => {
+    stopWatching();
+    setEnabled(false);
+    removeValue(CANDIDATE_KEY);
+    closeModal(consent);
+    closeModal(dialog);
+  };
+  const createPostUrl = (position, match) => {
+    const parameters = new URLSearchParams({
+      arrivalLatitude: position.latitude.toFixed(6),
+      arrivalLongitude: position.longitude.toFixed(6),
+      arrivalDate: localDate(),
+      arrivalLocation: match.location || "当前位置"
+    });
+    if (match.province) parameters.set("arrivalProvince", match.province);
+    return `/posts/new?${parameters.toString()}`;
+  };
+  const resolveArrival = async (position) => {
+    if (resolving || !dialog.hidden || recentlyPrompted(position) || document.visibilityState !== "visible") return;
+    resolving = true;
+    window.clearTimeout(dwellTimer);
+    dwellTimer = null;
+    setArrivalStatus("正在识别当前地点…");
+    try {
+      const parameters = new URLSearchParams({
+        latitude: position.latitude.toFixed(6),
+        longitude: position.longitude.toFixed(6)
+      });
+      const response = await fetch(`/api/location/arrival-match?${parameters.toString()}`, {
+        credentials: "same-origin",
+        headers: { Accept: "application/json" },
+        cache: "no-store"
+      });
+      if (response.status === 401) {
+        disableReminder();
+        return;
+      }
+      const match = response.ok ? await response.json() : {
+        location: "当前位置", province: "", matched: false
+      };
+      const place = dialog.querySelector("[data-arrival-place]");
+      const detail = dialog.querySelector("[data-arrival-detail]");
+      const coordinates = dialog.querySelector("[data-arrival-coordinates]");
+      const addLink = dialog.querySelector("[data-arrival-add]");
+      if (place) place.textContent = match.province
+        ? `${match.province} · ${match.location}` : match.location || "当前位置";
+      if (detail) detail.textContent = match.matched
+        ? "检测到你来到新的地点。是否加入旅行足迹？确认后会自动填写地点、坐标和当天日期。"
+        : "暂未匹配到附近的离线地点。你仍可加入足迹，并在发布页面补充地点名称和省份。";
+      if (coordinates) coordinates.textContent = `定位精度约 ${Math.round(position.accuracy)} 米`;
+      if (addLink) addLink.href = createPostUrl(position, match);
+      dialog.dataset.latitude = String(position.latitude);
+      dialog.dataset.longitude = String(position.longitude);
+      setArrivalStatus(`已发现：${match.location || "当前位置"}`);
+      openModal(dialog);
+    } catch (error) {
+      setArrivalStatus(navigator.onLine ? "地点识别失败，等待下次定位" : "当前离线，等待网络恢复");
+    } finally {
+      resolving = false;
+      removeValue(CANDIDATE_KEY);
+    }
+  };
+  const scheduleCandidate = (position) => {
+    if (resolving || !dialog.hidden) return;
+    if (recentlyPrompted(position)) {
+      interactiveStart = false;
+      setArrivalStatus("到访提醒已开启 · 当前地点今天已提醒");
+      return;
+    }
+    const storedCandidate = readJson(CANDIDATE_KEY);
+    const sameCandidate = storedCandidate
+      && distanceMeters(storedCandidate, position) < NEW_PLACE_DISTANCE_METERS;
+    const candidate = sameCandidate ? storedCandidate : {
+      latitude: position.latitude,
+      longitude: position.longitude,
+      accuracy: position.accuracy,
+      startedAt: Date.now()
+    };
+    writeJson(CANDIDATE_KEY, candidate);
+    window.clearTimeout(dwellTimer);
+    const remaining = Math.max(0, DWELL_TIME_MS - (Date.now() - candidate.startedAt));
+    if (interactiveStart) {
+      interactiveStart = false;
+      resolveArrival(position);
+      return;
+    }
+    setArrivalStatus(remaining > 0 ? "检测到新位置，停留确认中…" : "正在确认新的到访地点…");
+    dwellTimer = window.setTimeout(() => resolveArrival(position), remaining);
+  };
+  const handlePosition = ({ coords }) => {
+    if (!Number.isFinite(coords.latitude) || !Number.isFinite(coords.longitude)) return;
+    if (coords.accuracy > 1000) {
+      setArrivalStatus("定位精度较低，正在重新定位…");
+      return;
+    }
+    scheduleCandidate({
+      latitude: coords.latitude,
+      longitude: coords.longitude,
+      accuracy: Math.max(1, coords.accuracy || 1)
+    });
+  };
+  const handleLocationError = (error) => {
+    if (error.code === error.PERMISSION_DENIED) {
+      disableReminder();
+      window.alert("定位权限未开启。请在浏览器地址栏的网站权限中允许定位后重试。");
+      return;
+    }
+    setArrivalStatus(error.code === error.TIMEOUT ? "定位超时，正在等待下一次定位…" : "暂时无法读取位置");
+  };
+  const startWatching = (fromUserAction) => {
+    if (!window.isSecureContext || !navigator.geolocation) {
+      window.alert("当前浏览器无法使用定位。请通过 HTTPS 或本机 localhost 打开旅迹，并确认浏览器支持定位。");
+      setEnabled(false);
+      return;
+    }
+    stopWatching();
+    interactiveStart = fromUserAction;
+    setEnabled(true);
+    setArrivalStatus("正在获取当前位置…");
+    watchId = navigator.geolocation.watchPosition(handlePosition, handleLocationError, {
+      enableHighAccuracy: true,
+      maximumAge: 60000,
+      timeout: 20000
+    });
+  };
+
+  toggle.addEventListener("click", () => {
+    if (isEnabled()) disableReminder();
+    else openModal(consent);
+  });
+  consent.querySelectorAll("[data-arrival-consent-close]").forEach((button) => {
+    button.addEventListener("click", () => closeModal(consent));
+  });
+  consent.querySelector("[data-arrival-enable]")?.addEventListener("click", () => {
+    closeModal(consent);
+    startWatching(true);
+  });
+  dialog.querySelectorAll("[data-arrival-dismiss]").forEach((button) => {
+    button.addEventListener("click", () => {
+      rememberPrompt({
+        latitude: Number(dialog.dataset.latitude),
+        longitude: Number(dialog.dataset.longitude)
+      });
+      closeModal(dialog);
+      setArrivalStatus("到访提醒已开启 · 本次地点已忽略");
+    });
+  });
+  dialog.querySelector("[data-arrival-add]")?.addEventListener("click", () => {
+    rememberPrompt({
+      latitude: Number(dialog.dataset.latitude),
+      longitude: Number(dialog.dataset.longitude)
+    });
+  });
+  dialog.querySelector("[data-arrival-disable]")?.addEventListener("click", disableReminder);
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible" && isEnabled()) startWatching(false);
+    else if (document.visibilityState !== "visible") {
+      stopWatching();
+      removeValue(CANDIDATE_KEY);
+    }
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+      if (!consent.hidden) closeModal(consent);
+      else if (!dialog.hidden) closeModal(dialog);
+    }
+  });
+
+  setEnabled(isEnabled());
+  if (isEnabled() && document.visibilityState === "visible") startWatching(false);
+}
 
 function setupActiveNavigation() {
   const currentPath = window.location.pathname;

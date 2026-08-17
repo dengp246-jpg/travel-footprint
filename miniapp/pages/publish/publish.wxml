@@ -5,6 +5,14 @@
     <view class="page-subtitle">不必写得完美，只要它仍然让你想起当时的风景。</view>
   </view>
 
+  <view wx:if="{{arrivalPrefill}}" class="arrival-prefill-banner">
+    <view class="arrival-prefill-icon">⌖</view>
+    <view>
+      <view class="arrival-prefill-title">已带入刚才识别的到访地点</view>
+      <view class="arrival-prefill-copy">地点、日期和坐标已预填；默认隐藏具体地图点位，请确认后再发布。</view>
+    </view>
+  </view>
+
   <view class="card form-card">
     <view class="form-section">
       <view class="section-head"><view class="section-title">旅行信息</view><view class="step-index">01</view></view>

@@ -7,9 +7,9 @@
     <title th:text="${title}">旅迹</title>
     <link rel="manifest" th:href="@{/manifest.webmanifest(v='20260808-2')}">
     <link rel="icon" type="image/svg+xml" th:href="@{/images/app-icon.svg(v='20260809-1')}">
-    <link rel="stylesheet" th:href="@{/css/style.css(v='20260817-2')}">
+    <link rel="stylesheet" th:href="@{/css/style.css(v='20260817-4')}">
     <link rel="stylesheet" th:href="@{/css/premium.css(v='20260809-1')}">
-    <script defer th:src="@{/js/app-shell.js(v='20260809-1')}"></script>
+    <script defer th:src="@{/js/app-shell.js(v='20260817-3')}"></script>
 </head>
 <body>
 <header th:fragment="nav" class="site-header">
@@ -37,6 +37,10 @@
                     <a th:href="@{/reports}">旅行报告</a>
                     <a th:href="@{/recap}">年度回顾</a>
                     <a th:href="@{/calendar}">旅行日历</a>
+                    <button type="button" class="arrival-nav-button" data-arrival-toggle
+                            th:attr="data-arrival-user=${currentUser.id}">
+                        <span aria-hidden="true">◎</span><span data-arrival-toggle-label>开启到访提醒</span>
+                    </button>
                 </div>
             </details>
             <details class="nav-more" th:if="${currentUser != null}">
@@ -85,6 +89,45 @@
             </form>
         </nav>
     </div>
+    <div class="arrival-monitor-chip" th:if="${currentUser != null}" data-arrival-status hidden>
+        <i></i><span data-arrival-status-text>正在监听页面内位置</span>
+    </div>
+    <section class="arrival-modal" th:if="${currentUser != null}" data-arrival-consent hidden
+             role="dialog" aria-modal="true" aria-labelledby="arrival-consent-title">
+        <div class="arrival-modal-card">
+            <button type="button" class="arrival-modal-close" data-arrival-consent-close aria-label="关闭">×</button>
+            <span class="arrival-modal-icon" aria-hidden="true">◎</span>
+            <span class="eyebrow">ARRIVAL REMINDER</span>
+            <h2 id="arrival-consent-title">开启到访提醒</h2>
+            <p>网页打开且可见时，旅迹会把当前位置发送到当前服务器完成离线地点匹配，但不会保存定位记录或自动发布内容。</p>
+            <ul>
+                <li>只在页面可见时定位，切到后台或关闭网页即停止</li>
+                <li>同一地点 24 小时内最多提醒一次</li>
+                <li>可随时从“记录”菜单关闭</li>
+            </ul>
+            <div class="arrival-modal-actions">
+                <button type="button" class="secondary-button" data-arrival-consent-close>暂不开启</button>
+                <button type="button" class="primary-button" data-arrival-enable>允许定位并开启</button>
+            </div>
+        </div>
+    </section>
+    <section class="arrival-modal" th:if="${currentUser != null}" data-arrival-dialog hidden
+             role="dialog" aria-modal="true" aria-labelledby="arrival-dialog-title" aria-live="polite">
+        <div class="arrival-modal-card arrival-found-card">
+            <button type="button" class="arrival-modal-close" data-arrival-dismiss aria-label="关闭">×</button>
+            <span class="arrival-modal-icon is-found" aria-hidden="true">⌖</span>
+            <span class="eyebrow">LOCATION FOUND</span>
+            <h2 id="arrival-dialog-title">发现新的旅行地点</h2>
+            <strong data-arrival-place>当前位置</strong>
+            <p data-arrival-detail>是否把这里加入你的旅行足迹？确认后会打开发布页面，并自动填写位置和日期。</p>
+            <small data-arrival-coordinates></small>
+            <div class="arrival-modal-actions">
+                <button type="button" class="secondary-button" data-arrival-dismiss>这次忽略</button>
+                <a class="primary-button" href="/posts/new" data-arrival-add>加入足迹</a>
+            </div>
+            <button type="button" class="arrival-disable-link" data-arrival-disable>关闭到访提醒</button>
+        </div>
+    </section>
 </header>
 
 <section th:fragment="flash" class="container flash-stack">

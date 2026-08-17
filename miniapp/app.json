@@ -8,6 +8,7 @@
     "pages/login/login",
     "pages/post-detail/post-detail",
     "pages/passport/passport",
+    "pages/arrival/arrival",
     "pages/report/report",
     "pages/server/server"
   ],
@@ -52,7 +53,8 @@
     }
   },
   "requiredPrivateInfos": [
-    "chooseLocation"
+    "chooseLocation",
+    "getLocation"
   ],
   "sitemapLocation": "sitemap.json",
   "style": "v2"

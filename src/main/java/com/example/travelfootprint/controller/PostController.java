@@ -116,6 +116,11 @@ public class PostController {
     @GetMapping("/posts/new")
     public String newPostPage(
             @RequestParam(required = false) Long planId,
+            @RequestParam(required = false) String arrivalLocation,
+            @RequestParam(required = false) String arrivalProvince,
+            @RequestParam(required = false) Double arrivalLatitude,
+            @RequestParam(required = false) Double arrivalLongitude,
+            @RequestParam(required = false) String arrivalDate,
             HttpSession session,
             RedirectAttributes redirectAttributes,
             Model model) {
@@ -126,8 +131,28 @@ public class PostController {
         TravelPost formPost = new TravelPost();
         User currentUser = currentUserService.getCurrentUser(session);
         formPost.setTripPlan(ownedTripPlan(planId, currentUser));
+        boolean arrivalPrefill = arrivalLatitude != null && arrivalLongitude != null
+                && Double.isFinite(arrivalLatitude) && Double.isFinite(arrivalLongitude)
+                && arrivalLatitude >= -90 && arrivalLatitude <= 90
+                && arrivalLongitude >= -180 && arrivalLongitude <= 180;
+        if (arrivalPrefill) {
+            formPost.setLatitude(arrivalLatitude);
+            formPost.setLongitude(arrivalLongitude);
+            String normalizedLocation = arrivalLocation == null ? "" : arrivalLocation.trim();
+            formPost.setLocation(normalizedLocation.isBlank() || normalizedLocation.length() > MAX_LOCATION_LENGTH
+                    ? "当前位置" : normalizedLocation);
+            provinceCatalogService.normalizeProvince(arrivalProvince).ifPresent(formPost::setProvince);
+            formPost.setApproximateLocation(true);
+            try {
+                formPost.setTravelDate(arrivalDate == null || arrivalDate.isBlank()
+                        ? LocalDate.now() : LocalDate.parse(arrivalDate));
+            } catch (DateTimeParseException exception) {
+                formPost.setTravelDate(LocalDate.now());
+            }
+        }
         model.addAttribute("formPost", formPost);
         model.addAttribute("editing", false);
+        model.addAttribute("arrivalPrefill", arrivalPrefill);
         model.addAttribute("locationSuggestions", destinationMapService.locationSuggestions());
         model.addAttribute("availablePlans", planAccessService.visiblePlans(currentUser));
         model.addAttribute("postPhotos", List.of());

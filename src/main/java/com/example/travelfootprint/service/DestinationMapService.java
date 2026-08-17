@@ -208,6 +208,28 @@ public class DestinationMapService {
         return List.copyOf(suggestions.values());
     }
 
+    public ArrivalMatch matchArrival(double longitude, double latitude) {
+        if (!Double.isFinite(longitude) || !Double.isFinite(latitude)
+                || longitude < -180 || longitude > 180 || latitude < -90 || latitude > 90) {
+            throw new IllegalArgumentException("定位坐标超出有效范围。");
+        }
+        LocationSuggestion nearest = locationSuggestions().stream()
+                .min(Comparator.comparingDouble(suggestion -> distanceKilometers(
+                        latitude, longitude, suggestion.latitude(), suggestion.longitude())))
+                .orElse(null);
+        if (nearest == null) {
+            return new ArrivalMatch("当前位置", "", false, 0);
+        }
+        double distance = distanceKilometers(
+                latitude, longitude, nearest.latitude(), nearest.longitude());
+        boolean matched = distance <= 30.0;
+        return new ArrivalMatch(
+                matched ? nearest.location() : "当前位置",
+                matched ? nearest.province() : "",
+                matched,
+                Math.round(distance * 10.0) / 10.0);
+    }
+
     public Optional<MapPoint> resolvePoint(TravelPost post) {
         return resolvePlacement(post).map(MapPlacement::point);
     }
@@ -320,6 +342,21 @@ public class DestinationMapService {
         return Math.round(value * 100.0) / 100.0;
     }
 
+    private static double distanceKilometers(
+            double firstLatitude,
+            double firstLongitude,
+            double secondLatitude,
+            double secondLongitude) {
+        double latitudeDelta = Math.toRadians(secondLatitude - firstLatitude);
+        double longitudeDelta = Math.toRadians(secondLongitude - firstLongitude);
+        double firstLatitudeRadians = Math.toRadians(firstLatitude);
+        double secondLatitudeRadians = Math.toRadians(secondLatitude);
+        double haversine = Math.sin(latitudeDelta / 2) * Math.sin(latitudeDelta / 2)
+                + Math.cos(firstLatitudeRadians) * Math.cos(secondLatitudeRadians)
+                * Math.sin(longitudeDelta / 2) * Math.sin(longitudeDelta / 2);
+        return 6371.0088 * 2 * Math.atan2(Math.sqrt(haversine), Math.sqrt(1 - haversine));
+    }
+
     private static DestinationAnchor destination(
             String province,
             double longitude,
@@ -383,5 +420,12 @@ public class DestinationMapService {
             double left,
             double top,
             String searchText) {
+    }
+
+    public record ArrivalMatch(
+            String location,
+            String province,
+            boolean matched,
+            double distanceKilometers) {
     }
 }

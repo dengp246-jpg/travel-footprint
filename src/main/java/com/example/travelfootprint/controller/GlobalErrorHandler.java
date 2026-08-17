@@ -24,7 +24,7 @@ public class GlobalErrorHandler {
     public String uploadTooLarge(HttpServletRequest request, RedirectAttributes redirectAttributes) {
         redirectAttributes.addFlashAttribute(
                 "errorMessage",
-                "所选图片总量过大。请等待页面完成自动压缩，或减少照片数量后重试。");
+                "上传内容总量过大。请压缩或减少图片、视频后重试。");
         String path = request.getRequestURI();
         if ("/settings".equals(path)) {
             return "redirect:/settings";

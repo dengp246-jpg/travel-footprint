@@ -122,7 +122,7 @@ function upload(options) {
       fail(error) {
         reject({
           ...error,
-          message: '图片上传失败，请检查网络后重试。'
+          message: '文件上传失败，请检查网络后重试。'
         })
       }
     })
@@ -133,7 +133,12 @@ function resolveAsset(path) {
   if (!path) {
     return ''
   }
-  return buildUrl(path)
+  const url = buildUrl(path)
+  const token = getToken()
+  if (!token || !String(path).startsWith('/uploads/')) {
+    return url
+  }
+  return `${url}${url.includes('?') ? '&' : '?'}miniToken=${encodeURIComponent(token)}`
 }
 
 module.exports = {

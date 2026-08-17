@@ -11,6 +11,27 @@
 .tag-list { margin-top: 18rpx; }
 .story-label { margin-top: 42rpx; color: #a4714b; font-size: 20rpx; font-weight: 720; letter-spacing: 3rpx; }
 .detail-story { margin-top: 16rpx; color: #46514c; font-size: 30rpx; line-height: 1.95; white-space: pre-wrap; }
+.detail-video-card { margin-top: 38rpx; }
+.video-label { margin-top: 0; }
+.detail-video { display: block; width: 100%; height: 420rpx; margin-top: 16rpx; border-radius: 24rpx; background: #071b1d; overflow: hidden; }
+.video-manager { display: flex; align-items: center; justify-content: space-between; gap: 18rpx; margin-top: 22rpx; padding: 22rpx; border: 2rpx solid #dce7e3; border-radius: 22rpx; background: #f1f7f5; }
+.manager-title { color: #24433d; font-weight: 680; }
+.manager-note { margin-top: 5rpx; font-size: 20rpx; }
+.manager-actions { display: flex; align-items: center; gap: 10rpx; }
+.manager-button, .delete-video-button { min-width: 138rpx; min-height: 68rpx; margin: 0; padding: 0 18rpx; border-radius: 16rpx; font-size: 22rpx; line-height: 68rpx; }
+.delete-video-button { min-width: 88rpx; background: #f7e8e4; color: #a44535; }
+.privacy-manager { margin-top: 22rpx; padding: 24rpx; border: 2rpx solid #dce7e3; border-radius: 22rpx; background: #f8fbfa; }
+.privacy-field { display: flex; align-items: center; justify-content: space-between; gap: 20rpx; margin-top: 20rpx; color: #52635e; font-size: 22rpx; }
+.privacy-picker { min-width: 270rpx; padding: 16rpx 18rpx; border: 2rpx solid #dce4e1; border-radius: 16rpx; background: #fff; color: #24433d; text-align: center; }
+.privacy-switch-row { display: flex; align-items: center; justify-content: space-between; gap: 16rpx; margin-top: 16rpx; }
+.privacy-switch-row view { display: flex; flex-direction: column; gap: 5rpx; }
+.privacy-switch-title { color: #304b45; font-size: 23rpx; font-weight: 700; }
+.privacy-switch-row text { color: #75827e; font-size: 19rpx; }
+.privacy-result { display: flex; flex-direction: column; gap: 6rpx; margin-top: 18rpx; padding: 20rpx; border-left: 7rpx solid #176557; border-radius: 17rpx; background: #edf7f4; }
+.privacy-result > text { color: #176557; font-size: 17rpx; letter-spacing: 2rpx; }
+.privacy-result-title { color: #21423c; font-size: 26rpx; font-weight: 700; }
+.privacy-result view { color: #647773; font-size: 20rpx; line-height: 1.55; }
+.privacy-save { margin-top: 18rpx; }
 .interaction-card { display: flex; align-items: center; margin-top: 42rpx; padding: 22rpx 16rpx; border: 2rpx solid #e7e5df; border-radius: 24rpx; background: #fff; box-shadow: 0 14rpx 40rpx rgba(35,48,43,.06); }
 .action { display: flex; align-items: center; justify-content: center; flex: 1; gap: 12rpx; color: #68716d; }
 .action-icon { font-size: 38rpx; }

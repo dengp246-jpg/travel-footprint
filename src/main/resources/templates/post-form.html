@@ -80,14 +80,14 @@
                 </label>
                 <label>
                     谁可以查看
-                    <select name="visibility">
+                    <select name="visibility" data-visibility-select>
                         <option th:each="visibility : ${postVisibilities}" th:value="${visibility}" th:text="${visibility.label}"
                                 th:selected="${formPost.visibility == visibility}">公开</option>
                     </select>
                 </label>
                 <label class="privacy-location-option">
                     <span>地图隐私</span>
-                    <span><input type="checkbox" name="approximateLocation" value="true" th:checked="${formPost.approximateLocation}"> 对其他用户隐藏具体点位，仅显示省份范围</span>
+                    <span><input type="checkbox" name="approximateLocation" value="true" th:checked="${formPost.approximateLocation}" data-approximate-location-input> 对其他用户隐藏具体点位，仅显示省份范围</span>
                 </label>
                 <label class="image-upload-field">
                     旅行相册
@@ -96,13 +96,26 @@
                            data-gallery-input>
                     <span class="field-hint" data-gallery-hint>最多 9 张；手机原图将自动压缩，单张原图最大 25MB</span>
                 </label>
+                <label class="video-upload-field">
+                    旅行视频（可选）
+                    <input type="file" name="video" accept="video/mp4,video/webm,.mp4,.webm"
+                           th:attr="data-max-video-bytes=${maxVideoUploadBytes}" data-video-input>
+                    <span class="field-hint" data-video-hint
+                          th:text="${'支持 MP4、WebM，最多 ' + maxVideoUploadLabel + '；每篇足迹可上传 1 个视频'}">支持 MP4、WebM，最多 20MB；每篇足迹可上传 1 个视频</span>
+                    <video controls playsinline preload="metadata" data-video-preview hidden></video>
+                </label>
             </div>
+            <section class="privacy-preview-card" data-privacy-preview aria-live="polite">
+                <span>发布前隐私预览</span>
+                <strong data-privacy-preview-title>所有人可查看</strong>
+                <p data-privacy-preview-text>足迹内容与具体地图点位将按当前设置展示。</p>
+            </section>
             <input type="hidden" name="latitude" th:value="${formPost.latitude}" data-latitude-input>
             <input type="hidden" name="longitude" th:value="${formPost.longitude}" data-longitude-input>
             <section class="smart-location-assistant" data-location-assistant>
                 <div class="smart-location-copy">
-                    <span>SMART LOCATION</span>
-                    <strong>智能定位助手</strong>
+                    <span>LOCAL POSITION</span>
+                    <strong>精准定位工具</strong>
                     <small data-location-status>输入城市或景点名称，选择建议后自动填写省份和精准坐标。</small>
                     <div class="smart-location-suggestions" data-location-suggestions>
                         <button type="button" th:each="suggestion : ${locationSuggestions}"
@@ -201,14 +214,14 @@
                 </label>
                 <label>
                     谁可以查看
-                    <select name="visibility">
+                    <select name="visibility" data-visibility-select>
                         <option th:each="visibility : ${postVisibilities}" th:value="${visibility}" th:text="${visibility.label}"
                                 th:selected="${formPost.visibility == visibility}">公开</option>
                     </select>
                 </label>
                 <label class="privacy-location-option">
                     <span>地图隐私</span>
-                    <span><input type="checkbox" name="approximateLocation" value="true" th:checked="${formPost.approximateLocation}"> 对其他用户隐藏具体点位，仅显示省份范围</span>
+                    <span><input type="checkbox" name="approximateLocation" value="true" th:checked="${formPost.approximateLocation}" data-approximate-location-input> 对其他用户隐藏具体点位，仅显示省份范围</span>
                 </label>
                 <label class="image-upload-field">
                     继续添加照片
@@ -217,13 +230,26 @@
                            data-gallery-input>
                     <span class="field-hint" data-gallery-hint>整篇足迹最多 9 张；手机原图将自动压缩并可设为封面</span>
                 </label>
+                <label class="video-upload-field">
+                    <span th:text="${formPost.videoPath != null ? '替换旅行视频' : '添加旅行视频（可选）'}">添加旅行视频</span>
+                    <input type="file" name="video" accept="video/mp4,video/webm,.mp4,.webm"
+                           th:attr="data-max-video-bytes=${maxVideoUploadBytes}" data-video-input>
+                    <span class="field-hint" data-video-hint
+                          th:text="${'支持 MP4、WebM，最多 ' + maxVideoUploadLabel + '；选择新视频会替换当前视频'}">支持 MP4、WebM，最多 20MB；选择新视频会替换当前视频</span>
+                    <video controls playsinline preload="metadata" data-video-preview hidden></video>
+                </label>
             </div>
+            <section class="privacy-preview-card" data-privacy-preview aria-live="polite">
+                <span>发布前隐私预览</span>
+                <strong data-privacy-preview-title>所有人可查看</strong>
+                <p data-privacy-preview-text>足迹内容与具体地图点位将按当前设置展示。</p>
+            </section>
             <input type="hidden" name="latitude" th:value="${formPost.latitude}" data-latitude-input>
             <input type="hidden" name="longitude" th:value="${formPost.longitude}" data-longitude-input>
             <section class="smart-location-assistant" data-location-assistant>
                 <div class="smart-location-copy">
-                    <span>SMART LOCATION</span>
-                    <strong>智能定位助手</strong>
+                    <span>LOCAL POSITION</span>
+                    <strong>精准定位工具</strong>
                     <small data-location-status>输入城市或景点名称，选择建议后自动填写省份和精准坐标。</small>
                     <div class="smart-location-suggestions" data-location-suggestions>
                         <button type="button" th:each="suggestion : ${locationSuggestions}"
@@ -255,6 +281,11 @@
                 <div><img th:each="photo : ${postPhotos}" th:src="@{${photo.path}}" th:alt="${formPost.title}"></div>
                 <small>保存后可在足迹详情页更换已有照片的封面。</small>
             </section>
+            <section class="existing-video-panel" th:if="${formPost.videoPath != null}">
+                <strong>当前视频</strong>
+                <video controls playsinline preload="metadata" th:src="@{${formPost.videoPath}}"></video>
+                <label><input type="checkbox" name="removeVideo" value="true"> 保存时删除当前视频</label>
+            </section>
             <input type="hidden" name="coverPhotoIndex" value="0" data-cover-photo-index>
             <div class="gallery-upload-preview" data-gallery-preview hidden>
                 <div class="gallery-upload-heading"><strong>新增照片预览</strong><span>拖动照片调整顺序，点击“设为封面”选择新封面</span></div>
@@ -275,12 +306,12 @@
         <ul class="feature-list">
             <li>省份会直接用于地图点亮和省份筛选，建议按真实旅行地点选择。</li>
             <li>地图会根据“省份 + 目的地第一个层级”自动落点，例如“长沙 岳麓山”会按长沙定位，不需要手动填写经纬度。</li>
-            <li>断网时你仍然可以继续编辑文字草稿，但图片上传和最终提交需要恢复联网。</li>
+            <li>断网时你仍然可以继续编辑文字草稿，但图片、视频上传和最终提交需要恢复联网。</li>
             <li>正文可以写风景、交通建议、感受和避坑提醒，图文越完整越容易获得互动。</li>
         </ul>
     </aside>
 </main>
 <script defer th:src="@{/js/image-compression.js(v='20260815-1')}"></script>
-<script defer th:src="@{/js/post-editor.js(v='20260815-1')}"></script>
+<script defer th:src="@{/js/post-editor.js(v='20260817-2')}"></script>
 </body>
 </html>

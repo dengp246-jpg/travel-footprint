@@ -38,6 +38,7 @@ import com.example.travelfootprint.repository.TripChecklistItemRepository;
 import com.example.travelfootprint.repository.RecommendationDismissalRepository;
 import com.example.travelfootprint.service.CurrentUserService;
 import com.example.travelfootprint.service.DestinationMapService;
+import com.example.travelfootprint.service.FileStorageService;
 import com.example.travelfootprint.service.MiniAppTokenService;
 import com.example.travelfootprint.service.SmartItineraryService;
 import com.example.travelfootprint.service.TripReadinessService;
@@ -113,6 +114,9 @@ class WebWorkflowTests {
 
     @Autowired
     private RecommendationDismissalRepository recommendationDismissalRepository;
+
+    @Autowired
+    private FileStorageService fileStorageService;
 
     @Test
     void ordinaryUserEditReturnsApprovedPostToPendingReview() throws Exception {
@@ -211,9 +215,11 @@ class WebWorkflowTests {
     }
 
     @Test
-    void travelRoutesOnlyAppearOnPersonalMapAndExposePublicationTime() throws Exception {
+    void travelRoutesOnlyAppearOnPersonalMapAndUseActualTravelDate() throws Exception {
         User user = createUser(true);
         TravelPost personalPost = createPost(user, ContentReviewStatus.APPROVED);
+        personalPost.setVideoPath("/uploads/test-map-story-video.mp4");
+        postRepository.saveAndFlush(personalPost);
         MockHttpSession session = new MockHttpSession();
         session.setAttribute(CurrentUserService.SESSION_USER_ID, user.getId());
 
@@ -222,9 +228,36 @@ class WebWorkflowTests {
                 .andExpect(content().string(containsString(personalPost.getTitle())))
                 .andExpect(content().string(containsString("data-map-routes")))
                 .andExpect(content().string(containsString("data-map-timeline")))
-                .andExpect(content().string(containsString("足迹时间轴")))
-                .andExpect(content().string(containsString("data-published-at")))
-                .andExpect(content().string(containsString("按照足迹发布时间")));
+                .andExpect(content().string(containsString("时空旅行故事")))
+                .andExpect(content().string(containsString("data-travel-date")))
+                .andExpect(content().string(containsString("data-video-path")))
+                .andExpect(content().string(containsString("按照实际旅行日期")));
+    }
+
+    @Test
+    void travelPassportBuildsAchievementsFromRealFootprintsAndRequiresLogin() throws Exception {
+        User user = createUser(true);
+        TravelPost first = createPost(user, ContentReviewStatus.APPROVED, "杭州春日", "浙江 杭州 西湖", "浙江",
+                "自然风光", LocalDate.of(2025, 3, 12));
+        TravelPost second = createPost(user, ContentReviewStatus.APPROVED, "杭州再见", "浙江 杭州 西湖", "浙江",
+                "城市漫游", LocalDate.of(2026, 8, 1));
+        second.setVideoPath("/uploads/test-passport-video.mp4");
+        postRepository.saveAndFlush(second);
+        MockHttpSession session = new MockHttpSession();
+        session.setAttribute(CurrentUserService.SESSION_USER_ID, user.getId());
+
+        mockMvc.perform(get("/passport").session(session))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("旅行护照")))
+                .andExpect(content().string(containsString(user.getNickname())))
+                .andExpect(content().string(containsString("动态旅行家")))
+                .andExpect(content().string(containsString("故地重游")))
+                .andExpect(content().string(containsString(first.getTitle())))
+                .andExpect(content().string(containsString("播放我的旅行故事")));
+
+        mockMvc.perform(get("/passport"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/login"));
     }
 
     @Test
@@ -263,7 +296,7 @@ class WebWorkflowTests {
     }
 
     @Test
-    void postEditorProvidesSmartOfflineLocationSuggestions() throws Exception {
+    void postEditorProvidesDeterministicOfflineLocationSuggestions() throws Exception {
         User user = createUser(true);
         MockHttpSession session = new MockHttpSession();
         session.setAttribute(CurrentUserService.SESSION_USER_ID, user.getId());
@@ -274,7 +307,9 @@ class WebWorkflowTests {
                 .andExpect(content().string(containsString("data-location-suggestion")))
                 .andExpect(content().string(containsString("杭州 西湖")))
                 .andExpect(content().string(containsString("data-latitude-input")))
-                .andExpect(content().string(containsString("data-longitude-input")));
+                .andExpect(content().string(containsString("data-longitude-input")))
+                .andExpect(content().string(containsString("发布前隐私预览")))
+                .andExpect(content().string(containsString("data-visibility-select")));
 
         DestinationMapService.LocationSuggestion westLake = destinationMapService.locationSuggestions().stream()
                 .filter(suggestion -> suggestion.location().contains("西湖"))
@@ -417,6 +452,52 @@ class WebWorkflowTests {
         org.junit.jupiter.api.Assertions.assertTrue(photos.get(1).isCover());
         org.junit.jupiter.api.Assertions.assertEquals(photos.get(1).getPhotoPath(), saved.getPhotoPath());
         org.junit.jupiter.api.Assertions.assertEquals(plan.getId(), saved.getTripPlan().getId());
+    }
+
+    @Test
+    void footprintVideoUploadUsesPostVisibilityAndRendersPlayer() throws Exception {
+        User user = createUser(true);
+        MockHttpSession session = new MockHttpSession();
+        session.setAttribute(CurrentUserService.SESSION_USER_ID, user.getId());
+        String title = "视频足迹-" + UUID.randomUUID().toString().substring(0, 8);
+        MockMultipartFile video = new MockMultipartFile(
+                "video",
+                "journey.mp4",
+                "video/mp4",
+                new byte[] {0x00, 0x00, 0x00, 0x18, 'f', 't', 'y', 'p', 'i', 's', 'o', 'm'});
+
+        mockMvc.perform(multipart("/posts")
+                        .file(video)
+                        .with(csrf())
+                        .session(session)
+                        .param("title", title)
+                        .param("location", "浙江 杭州 西湖")
+                        .param("province", "浙江")
+                        .param("content", "带有旅行视频的足迹内容。")
+                        .param("travelDate", "2026-08-17")
+                        .param("category", "自然风光")
+                        .param("tags", "视频,旅行"))
+                .andExpect(status().is3xxRedirection());
+
+        TravelPost post = postRepository.findAll().stream()
+                .filter(item -> title.equals(item.getTitle()))
+                .findFirst()
+                .orElseThrow();
+        String videoPath = post.getVideoPath();
+        org.junit.jupiter.api.Assertions.assertNotNull(videoPath);
+        try {
+            mockMvc.perform(get(videoPath)).andExpect(status().isNotFound());
+            mockMvc.perform(get(videoPath).session(session))
+                    .andExpect(status().isOk())
+                    .andExpect(header().string("Content-Type", "video/mp4"))
+                    .andExpect(header().string("Cache-Control", containsString("no-store")));
+            mockMvc.perform(get("/posts/{id}", post.getId()).session(session))
+                    .andExpect(status().isOk())
+                    .andExpect(content().string(containsString("<video")))
+                    .andExpect(content().string(containsString(videoPath)));
+        } finally {
+            fileStorageService.delete(videoPath);
+        }
     }
 
     @Test

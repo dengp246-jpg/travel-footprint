@@ -1,19 +1,47 @@
 (() => {
   const MAX_SOURCE_IMAGE_BYTES = 25 * 1024 * 1024;
   const MAX_TOTAL_UPLOAD_BYTES = 8 * 1024 * 1024;
+  const DEFAULT_MAX_VIDEO_BYTES = 20 * 1024 * 1024;
   const ALLOWED_IMAGE_TYPES = new Set([
     "image/jpeg",
     "image/png",
     "image/gif",
     "image/webp"
   ]);
+  const ALLOWED_VIDEO_TYPES = new Set(["video/mp4", "video/webm"]);
 
   document.querySelectorAll("[data-post-editor]").forEach((form) => {
     setupCharacterCounters(form);
     setupGalleryUpload(form);
+    setupVideoUpload(form);
+    setupPrivacyPreview(form);
     setupLocationAssistant(form);
     setupValidationFeedback(form);
   });
+
+  function setupPrivacyPreview(form) {
+    const select = form.querySelector("[data-visibility-select]");
+    const approximateInput = form.querySelector("[data-approximate-location-input]");
+    const title = form.querySelector("[data-privacy-preview-title]");
+    const text = form.querySelector("[data-privacy-preview-text]");
+    if (!select || !title || !text) return;
+
+    const visibilityCopy = {
+      PUBLIC: ["所有人可查看", "这条足迹会出现在公共动态与公共地图中。"],
+      FOLLOWERS: ["仅关注者可查看", "只有关注你的人能看到足迹内容与地图信息。"],
+      PRIVATE: ["仅自己可查看", "这条足迹只会保存在你的个人空间中。"]
+    };
+    const update = () => {
+      const copy = visibilityCopy[select.value] || visibilityCopy.PUBLIC;
+      title.textContent = copy[0];
+      text.textContent = copy[1] + (approximateInput?.checked
+        ? " 对其他可见用户仅展示省份范围，不显示具体点位。"
+        : " 地图将按权限展示你填写的具体点位。");
+    };
+    select.addEventListener("change", update);
+    approximateInput?.addEventListener("change", update);
+    update();
+  }
 
   function setupCharacterCounters(form) {
     form.querySelectorAll("[data-counted-field]").forEach((field) => {
@@ -27,6 +55,64 @@
       field.addEventListener("input", update);
       update();
     });
+  }
+
+  function setupVideoUpload(form) {
+    const input = form.querySelector("[data-video-input]");
+    const hint = form.querySelector("[data-video-hint]");
+    const preview = form.querySelector("[data-video-preview]");
+    if (!input) return;
+    const originalHint = hint?.textContent || "";
+    const configuredMax = Number(input.dataset.maxVideoBytes);
+    const maxVideoBytes = Number.isFinite(configuredMax) && configuredMax > 0
+      ? configuredMax
+      : DEFAULT_MAX_VIDEO_BYTES;
+    const maxVideoLabel = formatFileSize(maxVideoBytes);
+    let objectUrl = "";
+
+    const clearPreview = () => {
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+      objectUrl = "";
+      if (preview) {
+        preview.removeAttribute("src");
+        preview.load();
+        preview.hidden = true;
+      }
+    };
+
+    input.addEventListener("change", () => {
+      clearPreview();
+      clearFormError(form);
+      const file = input.files?.[0];
+      if (!file) {
+        if (hint) hint.textContent = originalHint;
+        return;
+      }
+      if (!ALLOWED_VIDEO_TYPES.has(file.type)) {
+        input.value = "";
+        showFormError(form, "请选择 MP4 或 WebM 视频。");
+        if (hint) hint.textContent = originalHint;
+        return;
+      }
+      if (file.size > maxVideoBytes) {
+        input.value = "";
+        showFormError(form, `视频“${file.name}”超过 ${maxVideoLabel}，请压缩或裁剪后重试。`);
+        if (hint) hint.textContent = originalHint;
+        return;
+      }
+      if (hint) hint.textContent = `已选择 ${file.name} · ${formatFileSize(file.size)}`;
+      if (preview) {
+        objectUrl = URL.createObjectURL(file);
+        preview.src = objectUrl;
+        preview.hidden = false;
+      }
+    });
+    window.addEventListener("pagehide", clearPreview, { once: true });
+  }
+
+  function formatFileSize(bytes) {
+    if (bytes >= 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(bytes % (1024 * 1024) === 0 ? 0 : 2)}MB`;
+    return `${Math.max(1, Math.ceil(bytes / 1024))}KB`;
   }
 
   function setupGalleryUpload(form) {

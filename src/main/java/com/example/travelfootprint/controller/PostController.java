@@ -25,6 +25,7 @@ import com.example.travelfootprint.service.LocationNormalizationService;
 import com.example.travelfootprint.service.NotificationService;
 import com.example.travelfootprint.service.ProvinceCatalogService;
 import com.example.travelfootprint.service.PostPhotoService;
+import com.example.travelfootprint.service.PostVideoService;
 import com.example.travelfootprint.service.TripPlanAccessService;
 import com.example.travelfootprint.service.ViewDataService;
 import jakarta.servlet.http.HttpSession;
@@ -61,6 +62,7 @@ public class PostController {
     private final RecommendationDismissalRepository recommendationDismissalRepository;
     private final CurrentUserService currentUserService;
     private final PostPhotoService postPhotoService;
+    private final PostVideoService postVideoService;
     private final NotificationService notificationService;
     private final ViewDataService viewDataService;
     private final ProvinceCatalogService provinceCatalogService;
@@ -81,6 +83,7 @@ public class PostController {
             RecommendationDismissalRepository recommendationDismissalRepository,
             CurrentUserService currentUserService,
             PostPhotoService postPhotoService,
+            PostVideoService postVideoService,
             NotificationService notificationService,
             ViewDataService viewDataService,
             ProvinceCatalogService provinceCatalogService,
@@ -99,6 +102,7 @@ public class PostController {
         this.recommendationDismissalRepository = recommendationDismissalRepository;
         this.currentUserService = currentUserService;
         this.postPhotoService = postPhotoService;
+        this.postVideoService = postVideoService;
         this.notificationService = notificationService;
         this.viewDataService = viewDataService;
         this.provinceCatalogService = provinceCatalogService;
@@ -143,6 +147,7 @@ public class PostController {
             @RequestParam(required = false) String latitude,
             @RequestParam(required = false) String longitude,
             @RequestParam(required = false) List<MultipartFile> photos,
+            @RequestParam(required = false) MultipartFile video,
             @RequestParam(required = false) Integer coverPhotoIndex,
             @RequestParam(required = false) Long tripPlanId,
             @RequestParam(defaultValue = "PUBLIC") PostVisibility visibility,
@@ -172,8 +177,11 @@ public class PostController {
         post.setReviewStatus(contentVisibilityService.defaultPostStatus(currentUser, false));
         postRepository.save(post);
         try {
+            postVideoService.updateVideo(post, video, false);
             postPhotoService.addPhotos(post, photos, coverPhotoIndex);
         } catch (IOException exception) {
+            postPhotoService.deleteByPostId(post.getId());
+            postVideoService.deleteVideo(post);
             postRepository.delete(post);
             redirectAttributes.addFlashAttribute("errorMessage", exception.getMessage());
             return "redirect:/posts/new";
@@ -257,6 +265,8 @@ public class PostController {
             @RequestParam(required = false) String latitude,
             @RequestParam(required = false) String longitude,
             @RequestParam(required = false) List<MultipartFile> photos,
+            @RequestParam(required = false) MultipartFile video,
+            @RequestParam(defaultValue = "false") boolean removeVideo,
             @RequestParam(required = false) Integer coverPhotoIndex,
             @RequestParam(required = false) Long tripPlanId,
             @RequestParam(defaultValue = "PUBLIC") PostVisibility visibility,
@@ -286,6 +296,7 @@ public class PostController {
         postRepository.save(post);
         try {
             postPhotoService.addPhotos(post, photos, coverPhotoIndex);
+            postVideoService.updateVideo(post, video, removeVideo);
         } catch (IOException exception) {
             redirectAttributes.addFlashAttribute("errorMessage", exception.getMessage());
             return "redirect:/posts/" + id + "/edit";
@@ -316,6 +327,7 @@ public class PostController {
         linkedExpenses.forEach(expense -> expense.setTravelPost(null));
         expenseRepository.saveAll(linkedExpenses);
         postPhotoService.deleteByPostId(id);
+        postVideoService.deleteVideo(post);
         postRepository.delete(post);
         redirectAttributes.addFlashAttribute("successMessage", "足迹已删除。");
         return "redirect:/me";

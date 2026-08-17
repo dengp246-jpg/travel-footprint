@@ -1,0 +1,65 @@
+<view class="passport-page page-shell">
+  <view wx:if="{{loading && !passport}}" class="loading-state">正在整理你的旅行护照…</view>
+  <block wx:if="{{passport}}">
+    <view class="passport-cover">
+      <view class="passport-kicker">TRAVEL PASSPORT · 真实足迹生成</view>
+      <view class="passport-title">旅行护照</view>
+      <view class="passport-copy">每一次真实记录都会点亮印章、推进勋章，并成为你的长期旅行档案。</view>
+      <view class="passport-identity">
+        <view><text>持有人</text><text class="identity-value">{{passport.nickname}}</text></view>
+        <view><text>护照编号</text><text class="identity-value">{{passport.passportNumber}}</text></view>
+        <view wx:if="{{passport.joinedLabel}}"><text>加入日期</text><text class="identity-value">{{passport.joinedLabel}}</text></view>
+      </view>
+      <view class="passport-seal">旅<text>TRAVEL</text></view>
+    </view>
+
+    <view class="passport-metrics">
+      <view><text class="metric-value">{{passport.postCount}}</text><text>真实足迹</text></view>
+      <view><text class="metric-value">{{passport.provinceCount}}</text><text>点亮省份</text></view>
+      <view><text class="metric-value">{{passport.travelDayCount}}</text><text>旅行日</text></view>
+      <view><text class="metric-value">{{passport.photoCount}}</text><text>旅行照片</text></view>
+      <view><text class="metric-value">{{passport.videoCount}}</text><text>旅行视频</text></view>
+      <view><text class="metric-value">{{passport.travelYearCount}}</text><text>跨越年份</text></view>
+    </view>
+
+    <view class="story-action" bindtap="goStory">
+      <view><text>TIME JOURNEY</text><text class="story-action-title">播放我的时空旅行故事</text></view><view>›</view>
+    </view>
+
+    <view class="passport-section">
+      <view class="section-head"><view><view class="eyebrow">ACHIEVEMENTS</view><view class="section-title">旅行勋章</view></view><view class="section-note">{{passport.earnedBadgeCount}} / {{passport.badges.length}} 已解锁</view></view>
+      <view class="badge-grid">
+        <view class="badge-card {{item.earned ? 'earned' : 'locked'}}" wx:for="{{passport.badges}}" wx:key="name">
+          <view class="badge-symbol">{{item.symbol}}</view>
+          <view class="badge-copy"><text class="badge-name">{{item.name}}</text><text>{{item.description}}</text></view>
+          <view class="badge-progress"><view style="width: {{item.progressPercent}}%"></view></view>
+          <text class="badge-state">{{item.earned ? '已解锁' : item.current + ' / ' + item.target}}</text>
+        </view>
+      </view>
+    </view>
+
+    <view class="passport-section">
+      <view class="section-head"><view><view class="eyebrow">PROVINCE STAMPS</view><view class="section-title">省份印章册</view></view></view>
+      <view class="stamp-grid">
+        <view class="stamp {{item.visited ? 'visited' : ''}}" wx:for="{{passport.stamps}}" wx:key="province">
+          <text class="stamp-name">{{item.province}}</text>
+          <text wx:if="{{item.visited}}">{{item.visitCount}} 次</text>
+          <text wx:else>等待点亮</text>
+          <text class="stamp-date" wx:if="{{item.firstVisitedLabel}}">{{item.firstVisitedLabel}}</text>
+        </view>
+      </view>
+    </view>
+
+    <view class="passport-section">
+      <view class="section-head"><view><view class="eyebrow">JOURNEY LOG</view><view class="section-title">最近旅程签注</view></view></view>
+      <view wx:if="{{passport.milestones.length === 0}}" class="empty-state compact-empty"><view class="empty-title">护照还没有签注</view><view class="empty-copy">发布第一条旅行足迹，就会自动生成第一枚印章。</view></view>
+      <view class="journey-item" wx:for="{{passport.milestones}}" wx:key="postId" bindtap="openDetail" data-id="{{item.postId}}">
+        <view class="journey-date">{{item.dateLabel}}</view>
+        <view class="journey-copy"><text class="journey-title">{{item.title}}</text><text>{{item.province}} · {{item.location}}</text></view>
+        <view wx:if="{{item.videoPath}}" class="video-pill">▶ 视频</view><view class="point-arrow">›</view>
+      </view>
+    </view>
+
+    <view class="passport-footer">数据仅来自你的真实足迹，不调用 AI 服务。</view>
+  </block>
+</view>

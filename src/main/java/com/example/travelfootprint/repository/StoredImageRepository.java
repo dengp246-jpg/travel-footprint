@@ -7,4 +7,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 public interface StoredImageRepository extends JpaRepository<StoredImage, Long> {
 
     Optional<StoredImage> findByPublicPath(String publicPath);
+
+    void deleteByPublicPath(String publicPath);
 }

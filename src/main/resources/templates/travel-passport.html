@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('旅行护照 - 旅迹')}"></head>
+<body class="passport-page">
+<header th:replace="~{fragments :: nav}"></header>
+<section th:replace="~{fragments :: flash}"></section>
+
+<main class="container passport-shell">
+    <section class="passport-cover">
+        <div class="passport-cover-copy">
+            <span class="eyebrow">TRAVEL PASSPORT · 真实足迹生成</span>
+            <h1>旅行护照</h1>
+            <p>每一次真实记录都会点亮印章、推进勋章，并成为你的长期旅行档案。</p>
+            <div class="passport-identity">
+                <span>持有人 <strong th:text="${passportUser.nickname}">旅行者</strong></span>
+                <span>护照编号 <strong th:text="${passportNumber}">TF-000001</strong></span>
+                <span th:if="${passportUser.joinedAt != null}">加入日期 <strong th:text="${#temporals.format(passportUser.joinedAt, 'yyyy.MM.dd')}">2026.08.17</strong></span>
+            </div>
+        </div>
+        <div class="passport-seal" aria-hidden="true"><span>旅</span><small>TRAVEL<br>PASSPORT</small></div>
+    </section>
+
+    <section class="passport-metrics" aria-label="旅行数据概览">
+        <article><strong th:text="${postCount}">0</strong><span>真实足迹</span></article>
+        <article><strong th:text="${provinceCount}">0</strong><span>点亮省份</span></article>
+        <article><strong th:text="${travelDayCount}">0</strong><span>旅行日</span></article>
+        <article><strong th:text="${photoCount}">0</strong><span>旅行照片</span></article>
+        <article><strong th:text="${videoCount}">0</strong><span>旅行视频</span></article>
+        <article><strong th:text="${travelYearCount}">0</strong><span>跨越年份</span></article>
+    </section>
+
+    <div class="passport-action-row">
+        <div><span>TIME JOURNEY</span><strong>把护照里的足迹连成一段时空故事</strong></div>
+        <a class="primary-button" th:href="@{/map(mode='personal',sort='oldest')}">播放我的旅行故事</a>
+    </div>
+
+    <section class="passport-section">
+        <div class="section-heading passport-section-heading">
+            <div><span class="eyebrow">ACHIEVEMENTS</span><h2>旅行勋章</h2></div>
+            <p><strong th:text="${earnedBadgeCount}">0</strong> / <span th:text="${badges.size()}">7</span> 已解锁</p>
+        </div>
+        <div class="passport-badge-grid">
+            <article th:each="badge : ${badges}" th:classappend="${badge.earned ? 'is-earned' : 'is-locked'}">
+                <div class="passport-badge-symbol" th:text="${badge.symbol}">✦</div>
+                <div><strong th:text="${badge.name}">第一枚脚印</strong><p th:text="${badge.description}">发布足迹</p></div>
+                <small th:text="${badge.earned ? '已解锁' : badge.current + ' / ' + badge.target}">0 / 1</small>
+                <span class="passport-progress"><i th:style="|width:${badge.progressPercent()}%;|"></i></span>
+            </article>
+        </div>
+    </section>
+
+    <section class="passport-section">
+        <div class="section-heading passport-section-heading">
+            <div><span class="eyebrow">PROVINCE STAMPS</span><h2>省份印章册</h2></div>
+            <p>只根据已发布足迹中的省份和地点自动点亮</p>
+        </div>
+        <div class="passport-stamp-grid">
+            <article th:each="stamp : ${stamps}" th:classappend="${stamp.visited ? 'is-visited' : 'is-unvisited'}">
+                <span th:text="${stamp.visited ? '✓' : '·'}">·</span>
+                <strong th:text="${stamp.province}">浙江</strong>
+                <small th:if="${stamp.visited}" th:text="|${stamp.visitCount} 次 · 首次 ${#temporals.format(stamp.firstVisitedOn, 'yyyy.MM.dd')}|">1 次</small>
+                <small th:unless="${stamp.visited}">等待点亮</small>
+            </article>
+        </div>
+    </section>
+
+    <section class="passport-section">
+        <div class="section-heading passport-section-heading">
+            <div><span class="eyebrow">JOURNEY LOG</span><h2>最近旅程签注</h2></div>
+            <a th:href="@{/posts/new}">继续记录一段旅程 →</a>
+        </div>
+        <div class="passport-empty" th:if="${#lists.isEmpty(milestones)}">
+            <strong>护照还没有签注</strong><p>发布第一条旅行足迹，就会自动生成第一枚印章。</p>
+        </div>
+        <div class="passport-journey-list" th:unless="${#lists.isEmpty(milestones)}">
+            <a th:each="item : ${milestones}" th:href="@{/posts/{id}(id=${item.postId})}">
+                <time th:text="${item.journeyDate != null ? #temporals.format(item.journeyDate, 'yyyy.MM.dd') : '日期待补充'}">2026.08.17</time>
+                <div><strong th:text="${item.title}">旅行标题</strong><span th:text="|${item.province} · ${item.location}|">浙江 · 杭州</span></div>
+                <small th:if="${item.dateEstimated}">按发布日期暂代</small>
+                <b th:if="${item.hasVideo}" title="包含旅行视频">▶ 视频</b>
+            </a>
+        </div>
+    </section>
+</main>
+
+<footer class="site-footer"><div class="container">旅行护照中的数据仅来自你的真实足迹记录，不调用 AI 服务。</div></footer>
+</body>
+</html>

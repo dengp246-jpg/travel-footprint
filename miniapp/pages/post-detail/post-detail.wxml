@@ -18,6 +18,27 @@
       <view class="story-label">TRAVEL NOTE</view>
       <view class="detail-story">{{post.content}}</view>
 
+      <view wx:if="{{post.videoUrl}}" class="detail-video-card">
+        <view class="story-label video-label">TRAVEL VIDEO</view>
+        <video class="detail-video" src="{{post.videoUrl}}" controls="{{true}}" show-center-play-btn="{{true}}" enable-play-gesture="{{true}}" object-fit="contain"></video>
+      </view>
+
+      <view wx:if="{{post.owned}}" class="video-manager">
+        <view><view class="manager-title">管理旅行视频</view><view class="muted manager-note">支持 MP4、WebM，最大{{maxVideoLabel}}</view></view>
+        <view class="manager-actions">
+          <button class="button-secondary manager-button" loading="{{updatingVideo}}" disabled="{{updatingVideo}}" bindtap="replaceVideo">{{post.videoPath ? '替换视频' : '添加视频'}}</button>
+          <button wx:if="{{post.videoPath}}" class="delete-video-button" disabled="{{updatingVideo}}" bindtap="removeVideo">删除</button>
+        </view>
+      </view>
+
+      <view wx:if="{{post.owned}}" class="privacy-manager">
+        <view class="manager-title">管理可见范围与地图隐私</view>
+        <view class="privacy-field"><text>谁可以查看</text><picker mode="selector" range="{{visibilityOptions}}" range-key="label" value="{{visibilityIndex}}" bindchange="onPrivacyVisibilityChange"><view class="privacy-picker">{{visibilityOptions[visibilityIndex].label}}</view></picker></view>
+        <view class="privacy-switch-row"><view><view class="privacy-switch-title">隐藏具体地图点位</view><text>对其他可见用户只展示省份范围</text></view><switch color="#176557" checked="{{post.approximateLocation}}" bindchange="onPrivacyApproximateChange" /></view>
+        <view class="privacy-result"><text>隐私结果预览</text><view class="privacy-result-title">{{privacyTitle}}</view><view>{{privacyText}}</view></view>
+        <button class="button-primary privacy-save" loading="{{updatingPrivacy}}" disabled="{{updatingPrivacy}}" bindtap="savePrivacy">保存隐私设置</button>
+      </view>
+
       <view class="interaction-card">
         <view class="action {{post.liked ? 'active' : ''}}" bindtap="toggleLike"><view class="action-icon">♡</view><view><view class="action-value">{{post.likeCount}}</view><view class="action-label">点赞</view></view></view>
         <view class="action-divider"></view>

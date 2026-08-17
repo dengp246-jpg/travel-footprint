@@ -7,7 +7,7 @@
     <title th:text="${title}">旅迹</title>
     <link rel="manifest" th:href="@{/manifest.webmanifest(v='20260808-2')}">
     <link rel="icon" type="image/svg+xml" th:href="@{/images/app-icon.svg(v='20260809-1')}">
-    <link rel="stylesheet" th:href="@{/css/style.css(v='20260808-16')}">
+    <link rel="stylesheet" th:href="@{/css/style.css(v='20260817-2')}">
     <link rel="stylesheet" th:href="@{/css/premium.css(v='20260809-1')}">
     <script defer th:src="@{/js/app-shell.js(v='20260809-1')}"></script>
 </head>
@@ -28,33 +28,46 @@
         </button>
         <nav class="nav-links" id="primary-navigation" data-primary-navigation>
             <a th:href="@{/}">首页</a>
-            <a th:href="@{/map}">地图</a>
-            <a th:href="@{/search}" aria-label="全局搜索">搜索</a>
-            <a th:if="${currentUser != null}" th:href="@{/posts/new}">发布</a>
-            <a th:if="${currentUser != null}" th:href="@{/plans}">计划</a>
-            <a th:if="${currentUser != null}" th:href="@{/reports}">报告</a>
-            <a th:if="${currentUser != null}" th:href="@{/messages}">
-                私信
-                <span class="badge" th:if="${unreadMessageCount > 0}" th:text="${unreadMessageCount}">0</span>
-            </a>
-            <a th:if="${currentUser != null}" th:href="@{/notifications}">
-                通知
-                <span class="badge" th:if="${unreadNotificationCount > 0}" th:text="${unreadNotificationCount}">0</span>
-            </a>
-            <a th:if="${currentUser != null and currentUser.admin}" th:href="@{/admin}">审核台</a>
             <details class="nav-more" th:if="${currentUser != null}">
-                <summary>更多</summary>
+                <summary>记录</summary>
                 <div>
+                    <a th:href="@{/posts/new}">发布足迹</a>
+                    <a th:href="@{/map(mode='personal',sort='oldest')}">时空故事</a>
+                    <a th:href="@{/passport}">旅行护照</a>
+                    <a th:href="@{/reports}">旅行报告</a>
+                    <a th:href="@{/recap}">年度回顾</a>
+                    <a th:href="@{/calendar}">旅行日历</a>
+                </div>
+            </details>
+            <details class="nav-more" th:if="${currentUser != null}">
+                <summary>计划</summary>
+                <div>
+                    <a th:href="@{/plans}">行程计划</a>
+                    <a th:href="@{/wishlist}">想去清单</a>
+                    <a th:href="@{/expenses}">旅行账本</a>
+                    <a th:href="@{/goals}">旅行目标</a>
+                </div>
+            </details>
+            <details class="nav-more" th:if="${currentUser != null}">
+                <summary>探索</summary>
+                <div>
+                    <a th:href="@{/map}">足迹地图</a>
+                    <a th:href="@{/search}">全局搜索</a>
                     <a th:href="@{/guides}">目的地攻略</a>
                     <a th:href="@{/recommendations}">为你推荐</a>
                     <a th:href="@{/insights}">高级洞察</a>
                     <a th:href="@{/discover}">旅行同好</a>
-                    <a th:href="@{/wishlist}">想去清单</a>
-                    <a th:href="@{/calendar}">旅行日历</a>
-                    <a th:href="@{/expenses}">旅行账本</a>
-                    <a th:href="@{/goals}">旅行目标</a>
+                </div>
+            </details>
+            <details class="nav-more" th:if="${currentUser != null}">
+                <summary>我的</summary>
+                <div>
+                    <a th:href="@{/me}">个人主页</a>
                     <a th:href="@{/favorites}">我的收藏</a>
+                    <a th:href="@{/messages}">私信 <span class="badge" th:if="${unreadMessageCount > 0}" th:text="${unreadMessageCount}">0</span></a>
+                    <a th:href="@{/notifications}">通知 <span class="badge" th:if="${unreadNotificationCount > 0}" th:text="${unreadNotificationCount}">0</span></a>
                     <a th:href="@{/settings}">资料与数据</a>
+                    <a th:if="${currentUser.admin}" th:href="@{/admin}">审核台</a>
                 </div>
             </details>
             <a th:if="${currentUser != null}" th:href="@{/me}" class="nav-user">
@@ -63,6 +76,8 @@
                       th:text="${#strings.substring(currentUser.nickname, 0, 1)}">旅</span>
                 <span th:text="${currentUser.nickname}">我的主页</span>
             </a>
+            <a th:if="${currentUser == null}" th:href="@{/map}">地图</a>
+            <a th:if="${currentUser == null}" th:href="@{/search}">搜索</a>
             <a th:if="${currentUser == null}" th:href="@{/login}">登录</a>
             <a th:if="${currentUser == null}" th:href="@{/register}" class="nav-accent">注册</a>
             <form th:if="${currentUser != null}" th:action="@{/logout}" method="post">

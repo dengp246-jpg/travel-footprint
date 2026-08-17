@@ -1,15 +1,15 @@
-const CACHE_VERSION = "travelfootprint-offline-v28";
+const CACHE_VERSION = "travelfootprint-offline-v30";
 const SHELL_CACHE = [
   "/",
   "/map",
   "/login",
   "/register",
   "/offline.html",
-  "/css/style.css?v=20260808-16",
+  "/css/style.css?v=20260817-2",
   "/css/premium.css?v=20260809-1",
   "/js/app-shell.js?v=20260809-1",
   "/js/image-compression.js?v=20260815-1",
-  "/js/post-editor.js?v=20260815-1",
+  "/js/post-editor.js?v=20260817-2",
   "/manifest.webmanifest?v=20260808-2"
 ];
 const SENSITIVE_PATH_PREFIXES = [
@@ -18,6 +18,17 @@ const SENSITIVE_PATH_PREFIXES = [
   "/search",
   "/recommendations",
   "/insights",
+  "/passport",
+  "/reports",
+  "/recap",
+  "/plans",
+  "/calendar",
+  "/expenses",
+  "/goals",
+  "/wishlist",
+  "/me",
+  "/favorites",
+  "/discover",
   "/settings",
   "/admin",
   "/api/",
@@ -49,8 +60,16 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
+  if (url.pathname.startsWith("/uploads/")) {
+    event.respondWith(networkOnly(request));
+    return;
+  }
+
   if (request.mode === "navigate") {
-    if (SENSITIVE_PATH_PREFIXES.some((prefix) => url.pathname.startsWith(prefix))) {
+    const personalMap = url.pathname === "/map" && url.searchParams.get("mode") === "personal";
+    const privatePostEditor = url.pathname === "/posts/new" || /^\/posts\/\d+\/edit$/.test(url.pathname);
+    if (personalMap || privatePostEditor
+        || SENSITIVE_PATH_PREFIXES.some((prefix) => url.pathname.startsWith(prefix))) {
       event.respondWith(networkOnly(request));
       return;
     }

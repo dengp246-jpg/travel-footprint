@@ -2,6 +2,7 @@ package com.example.travelfootprint;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -23,6 +24,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -71,6 +73,19 @@ class MiniAppFeatureTests {
         post.setLongitude(120.1551);
         post.setReviewStatus(ContentReviewStatus.APPROVED);
         postRepository.saveAndFlush(post);
+        TravelPost earlierPost = new TravelPost();
+        earlierPost.setAuthor(user);
+        earlierPost.setTitle("更早的旅行故事");
+        earlierPost.setLocation("宁波东钱湖");
+        earlierPost.setProvince("浙江");
+        earlierPost.setCategory("自然风光");
+        earlierPost.setContent("用于验证按真实旅行日期排序和地图视频故事。");
+        earlierPost.setTravelDate(LocalDate.of(2025, 5, 1));
+        earlierPost.setLatitude(29.79);
+        earlierPost.setLongitude(121.66);
+        earlierPost.setVideoPath("/uploads/mini-map-story.mp4");
+        earlierPost.setReviewStatus(ContentReviewStatus.APPROVED);
+        postRepository.saveAndFlush(earlierPost);
         String token = tokenService.issueToken(user);
 
         mockMvc.perform(get("/api/mini/map/overview")
@@ -78,8 +93,11 @@ class MiniAppFeatureTests {
                         .param("mine", "true"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.routeEnabled").value(true))
-                .andExpect(jsonPath("$.points[0].latitude").value(30.2741))
-                .andExpect(jsonPath("$.points[0].longitude").value(120.1551));
+                .andExpect(jsonPath("$.points[0].postId").value(earlierPost.getId()))
+                .andExpect(jsonPath("$.points[0].travelDate").value("2025-05-01"))
+                .andExpect(jsonPath("$.points[0].videoPath").value("/uploads/mini-map-story.mp4"))
+                .andExpect(jsonPath("$.points[1].latitude").value(30.2741))
+                .andExpect(jsonPath("$.points[1].longitude").value(120.1551));
 
         mockMvc.perform(get("/api/mini/map/overview"))
                 .andExpect(status().isOk())
@@ -134,7 +152,7 @@ class MiniAppFeatureTests {
         User user = createUser();
         String token = tokenService.issueToken(user);
 
-        mockMvc.perform(post("/api/mini/posts")
+        String response = mockMvc.perform(post("/api/mini/posts")
                         .header("X-Mini-Token", token)
                         .contentType(MediaType.APPLICATION_FORM_URLENCODED)
                         .param("title", "不带照片的小程序足迹")
@@ -145,9 +163,101 @@ class MiniAppFeatureTests {
                         .param("category", "自然风光")
                         .param("tags", "小程序,测试")
                         .param("latitude", "30.2741")
-                        .param("longitude", "120.1551"))
+                        .param("longitude", "120.1551")
+                        .param("visibility", "PRIVATE")
+                        .param("approximateLocation", "true"))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.title").value("不带照片的小程序足迹"));
+                .andExpect(jsonPath("$.title").value("不带照片的小程序足迹"))
+                .andExpect(jsonPath("$.visibility").value("PRIVATE"))
+                .andExpect(jsonPath("$.approximateLocation").value(true))
+                .andReturn().getResponse().getContentAsString();
+        long postId = objectMapper.readTree(response).get("id").asLong();
+
+        mockMvc.perform(post("/api/mini/posts/{id}/privacy", postId)
+                        .header("X-Mini-Token", token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"visibility":"FOLLOWERS","approximateLocation":false}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.visibility").value("FOLLOWERS"))
+                .andExpect(jsonPath("$.approximateLocation").value(false));
+    }
+
+    @Test
+    void miniPassportUsesRealFootprintsForBadgesStampsAndVideoCount() throws Exception {
+        User user = createUser();
+        TravelPost first = createPost(user, "杭州春日", "杭州西湖", LocalDate.of(2025, 3, 12));
+        TravelPost second = createPost(user, "杭州再见", "杭州西湖", LocalDate.of(2026, 8, 1));
+        second.setVideoPath("/uploads/passport-video.mp4");
+        postRepository.saveAndFlush(second);
+        String token = tokenService.issueToken(user);
+
+        mockMvc.perform(get("/api/mini/passport").header("X-Mini-Token", token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.postCount").value(2))
+                .andExpect(jsonPath("$.provinceCount").value(1))
+                .andExpect(jsonPath("$.videoCount").value(1))
+                .andExpect(jsonPath("$.badges[1].name").value("动态旅行家"))
+                .andExpect(jsonPath("$.badges[1].earned").value(true))
+                .andExpect(jsonPath("$.stamps[?(@.province == '浙江')].visited")
+                        .value(org.hamcrest.Matchers.contains(true)))
+                .andExpect(jsonPath("$.milestones[0].postId").value(second.getId()))
+                .andExpect(jsonPath("$.milestones[1].postId").value(first.getId()));
+
+        mockMvc.perform(get("/api/mini/passport"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void miniPostSupportsVideoUploadPlaybackReplacementAndRemoval() throws Exception {
+        User user = createUser();
+        String token = tokenService.issueToken(user);
+        MockMultipartFile mp4 = new MockMultipartFile(
+                "video", "journey.mp4", "video/mp4",
+                new byte[] {0x00, 0x00, 0x00, 0x18, 'f', 't', 'y', 'p', 'i', 's', 'o', 'm'});
+
+        String createResponse = mockMvc.perform(multipart("/api/mini/posts")
+                        .file(mp4)
+                        .header("X-Mini-Token", token)
+                        .param("title", "小程序视频足迹")
+                        .param("location", "杭州西湖")
+                        .param("province", "浙江")
+                        .param("content", "验证小程序视频上传与鉴权播放。")
+                        .param("travelDate", "2026-08-17")
+                        .param("category", "自然风光")
+                        .param("tags", "小程序,视频"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.videoPath").isNotEmpty())
+                .andExpect(jsonPath("$.owned").value(true))
+                .andReturn().getResponse().getContentAsString();
+        JsonNode created = objectMapper.readTree(createResponse);
+        long postId = created.get("id").asLong();
+        String firstVideoPath = created.get("videoPath").asText();
+
+        mockMvc.perform(get(firstVideoPath)).andExpect(status().isNotFound());
+        mockMvc.perform(get(firstVideoPath).param("miniToken", token))
+                .andExpect(status().isOk())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.header()
+                        .string("Content-Type", "video/mp4"));
+
+        MockMultipartFile webm = new MockMultipartFile(
+                "video", "replacement.webm", "video/webm",
+                new byte[] {0x1a, 0x45, (byte) 0xdf, (byte) 0xa3});
+        String replacementResponse = mockMvc.perform(multipart("/api/mini/posts/{id}/video", postId)
+                        .file(webm)
+                        .header("X-Mini-Token", token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.videoPath").value(org.hamcrest.Matchers.endsWith(".webm")))
+                .andReturn().getResponse().getContentAsString();
+        String replacementPath = objectMapper.readTree(replacementResponse).get("videoPath").asText();
+        mockMvc.perform(get(firstVideoPath).param("miniToken", token)).andExpect(status().isNotFound());
+
+        mockMvc.perform(delete("/api/mini/posts/{id}/video", postId)
+                        .header("X-Mini-Token", token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.videoPath").doesNotExist());
+        mockMvc.perform(get(replacementPath).param("miniToken", token)).andExpect(status().isNotFound());
     }
 
     @Test
@@ -171,5 +281,18 @@ class MiniAppFeatureTests {
         user.setEnabled(true);
         user.setAdmin(false);
         return userRepository.saveAndFlush(user);
+    }
+
+    private TravelPost createPost(User user, String title, String location, LocalDate travelDate) {
+        TravelPost post = new TravelPost();
+        post.setAuthor(user);
+        post.setTitle(title);
+        post.setLocation(location);
+        post.setProvince("浙江");
+        post.setCategory("自然风光");
+        post.setContent("小程序旅行护照测试内容。");
+        post.setTravelDate(travelDate);
+        post.setReviewStatus(ContentReviewStatus.APPROVED);
+        return postRepository.saveAndFlush(post);
     }
 }

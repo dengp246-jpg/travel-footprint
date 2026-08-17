@@ -20,10 +20,13 @@ import org.springframework.web.multipart.MultipartFile;
 public class FileStorageService {
 
     private static final long DEFAULT_MAX_IMAGE_SIZE = 5L * 1024L * 1024L;
+    private static final long DEFAULT_MAX_VIDEO_SIZE = 20L * 1024L * 1024L;
     private static final Map<String, String> CONTENT_TYPE_EXTENSIONS = allowedContentTypes();
+    private static final Map<String, String> VIDEO_CONTENT_TYPE_EXTENSIONS = allowedVideoContentTypes();
 
     private final Path uploadRoot;
     private final long maxImageSize;
+    private final long maxVideoSize;
     private final StoredImageRepository storedImageRepository;
     private final boolean databaseStorage;
 
@@ -31,10 +34,12 @@ public class FileStorageService {
     public FileStorageService(
             @Value("${app.upload-dir:uploads}") String uploadDir,
             @Value("${app.upload.max-image-size-bytes:5242880}") long maxImageSize,
+            @Value("${app.upload.max-video-size-bytes:20971520}") long maxVideoSize,
             @Value("${app.upload.storage-mode:filesystem}") String storageMode,
             StoredImageRepository storedImageRepository) throws IOException {
         this.uploadRoot = Paths.get(uploadDir).toAbsolutePath().normalize();
         this.maxImageSize = maxImageSize > 0 ? maxImageSize : DEFAULT_MAX_IMAGE_SIZE;
+        this.maxVideoSize = maxVideoSize > 0 ? maxVideoSize : DEFAULT_MAX_VIDEO_SIZE;
         this.storedImageRepository = storedImageRepository;
         this.databaseStorage = "database".equalsIgnoreCase(storageMode);
         if (!databaseStorage) {
@@ -43,11 +48,15 @@ public class FileStorageService {
     }
 
     public FileStorageService(String uploadDir, long maxImageSize) throws IOException {
-        this.uploadRoot = Paths.get(uploadDir).toAbsolutePath().normalize();
-        this.maxImageSize = maxImageSize > 0 ? maxImageSize : DEFAULT_MAX_IMAGE_SIZE;
-        this.storedImageRepository = null;
-        this.databaseStorage = false;
-        Files.createDirectories(uploadRoot);
+        this(uploadDir, maxImageSize, DEFAULT_MAX_VIDEO_SIZE, "filesystem", null);
+    }
+
+    public FileStorageService(
+            String uploadDir,
+            long maxImageSize,
+            String storageMode,
+            StoredImageRepository storedImageRepository) throws IOException {
+        this(uploadDir, maxImageSize, DEFAULT_MAX_VIDEO_SIZE, storageMode, storedImageRepository);
     }
 
     public String store(MultipartFile file) throws IOException {
@@ -72,8 +81,34 @@ public class FileStorageService {
             throw new IOException("仅支持 JPG、PNG、GIF 或 WebP 图片。");
         }
 
+        return storeContent(content, detectedContentType, CONTENT_TYPE_EXTENSIONS.get(detectedContentType), subDirectory);
+    }
+
+    @Transactional
+    public String storeVideo(MultipartFile file, String subDirectory) throws IOException {
+        if (file == null || file.isEmpty()) {
+            return null;
+        }
+        if (file.getSize() > maxVideoSize) {
+            throw new IOException("视频不能超过 " + readableSize(maxVideoSize) + "。");
+        }
+        byte[] content = file.getBytes();
+        String detectedContentType = detectVideoType(content);
+        String declaredContentType = normalizeContentType(file.getContentType());
+        if (detectedContentType == null || !VIDEO_CONTENT_TYPE_EXTENSIONS.containsKey(declaredContentType)
+                || !detectedContentType.equals(declaredContentType)) {
+            throw new IOException("仅支持 MP4 或 WebM 视频，且文件内容必须与格式一致。");
+        }
+        return storeContent(
+                content,
+                detectedContentType,
+                VIDEO_CONTENT_TYPE_EXTENSIONS.get(detectedContentType),
+                subDirectory);
+    }
+
+    private String storeContent(byte[] content, String contentType, String extension, String subDirectory)
+            throws IOException {
         String safeSubDirectory = normalizeSubDirectory(subDirectory);
-        String extension = CONTENT_TYPE_EXTENSIONS.get(detectedContentType);
         String newFilename = UUID.randomUUID() + extension;
         String publicPath = safeSubDirectory.isBlank()
                 ? "/uploads/" + newFilename
@@ -81,7 +116,7 @@ public class FileStorageService {
         if (databaseStorage) {
             StoredImage image = new StoredImage();
             image.setPublicPath(publicPath);
-            image.setContentType(detectedContentType);
+            image.setContentType(contentType);
             image.setContent(content);
             storedImageRepository.save(image);
             return publicPath;
@@ -96,6 +131,21 @@ public class FileStorageService {
 
         Files.write(destination, content, StandardOpenOption.CREATE_NEW);
         return publicPath;
+    }
+
+    @Transactional
+    public void delete(String publicPath) throws IOException {
+        if (publicPath == null || !publicPath.startsWith("/uploads/")
+                || publicPath.contains("%") || publicPath.contains("\\")) {
+            return;
+        }
+        if (databaseStorage) {
+            storedImageRepository.deleteByPublicPath(publicPath);
+            return;
+        }
+        Path candidate = uploadRoot.resolve(publicPath.substring("/uploads/".length())).normalize();
+        ensureInsideUploadRoot(candidate);
+        Files.deleteIfExists(candidate);
     }
 
     @Transactional(readOnly = true)
@@ -129,6 +179,10 @@ public class FileStorageService {
 
     public boolean isReady() {
         return databaseStorage || (Files.isDirectory(uploadRoot) && Files.isWritable(uploadRoot));
+    }
+
+    public long maxVideoSizeBytes() {
+        return maxVideoSize;
     }
 
     private String normalizeSubDirectory(String subDirectory) throws IOException {
@@ -196,12 +250,37 @@ public class FileStorageService {
         return null;
     }
 
+    private String detectVideoType(byte[] content) {
+        if (content.length >= 12
+                && content[4] == 'f'
+                && content[5] == 't'
+                && content[6] == 'y'
+                && content[7] == 'p') {
+            return "video/mp4";
+        }
+        if (content.length >= 4
+                && (content[0] & 0xff) == 0x1a
+                && (content[1] & 0xff) == 0x45
+                && (content[2] & 0xff) == 0xdf
+                && (content[3] & 0xff) == 0xa3) {
+            return "video/webm";
+        }
+        return null;
+    }
+
     private static Map<String, String> allowedContentTypes() {
         Map<String, String> contentTypes = new LinkedHashMap<>();
         contentTypes.put("image/jpeg", ".jpg");
         contentTypes.put("image/png", ".png");
         contentTypes.put("image/gif", ".gif");
         contentTypes.put("image/webp", ".webp");
+        return Map.copyOf(contentTypes);
+    }
+
+    private static Map<String, String> allowedVideoContentTypes() {
+        Map<String, String> contentTypes = new LinkedHashMap<>();
+        contentTypes.put("video/mp4", ".mp4");
+        contentTypes.put("video/webm", ".webm");
         return Map.copyOf(contentTypes);
     }
 

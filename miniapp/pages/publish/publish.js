@@ -1,4 +1,5 @@
 const { getToken, request, upload } = require('../../utils/request')
+const { DEFAULT_MAX_VIDEO_BYTES, chooseVideo, formatFileSize } = require('../../utils/video')
 
 const MAX_SOURCE_IMAGE_BYTES = 25 * 1024 * 1024
 const TARGET_IMAGE_BYTES = 1800 * 1024
@@ -61,7 +62,9 @@ function emptyForm() {
     travelDate: today(),
     content: '',
     latitude: '',
-    longitude: ''
+    longitude: '',
+    visibility: 'PUBLIC',
+    approximateLocation: false
   }
 }
 
@@ -75,6 +78,18 @@ Page({
     processingPhoto: false,
     photoPath: '',
     photoName: '',
+    videoPath: '',
+    videoName: '',
+    maxVideoBytes: DEFAULT_MAX_VIDEO_BYTES,
+    maxVideoLabel: formatFileSize(DEFAULT_MAX_VIDEO_BYTES),
+    visibilityIndex: 0,
+    visibilityOptions: [
+      { value: 'PUBLIC', label: '所有人可查看' },
+      { value: 'FOLLOWERS', label: '仅关注者可查看' },
+      { value: 'PRIVATE', label: '仅自己可查看' }
+    ],
+    privacyTitle: '所有人可查看',
+    privacyText: '足迹会出现在公共动态中，地图展示具体点位。',
     form: emptyForm()
   },
 
@@ -96,13 +111,17 @@ Page({
 
   async loadCatalog() {
     try {
-      const [provinces, categories] = await Promise.all([
+      const [provinces, categories, uploadLimits] = await Promise.all([
         request({ url: '/api/mini/catalog/provinces' }),
-        request({ url: '/api/mini/catalog/categories' })
+        request({ url: '/api/mini/catalog/categories' }),
+        request({ url: '/api/mini/catalog/upload-limits' })
       ])
+      const maxVideoBytes = Number(uploadLimits.maxVideoSizeBytes) || DEFAULT_MAX_VIDEO_BYTES
       this.setData({
         provinceOptions: provinces,
         categoryOptions: categories,
+        maxVideoBytes,
+        maxVideoLabel: formatFileSize(maxVideoBytes),
         'form.province': this.data.form.province || provinces[0] || '',
         'form.category': this.data.form.category || categories[0] || ''
       })
@@ -134,6 +153,33 @@ Page({
 
   onDateChange(event) {
     this.setData({ 'form.travelDate': event.detail.value })
+  },
+
+  onVisibilityChange(event) {
+    const visibilityIndex = Number(event.detail.value)
+    const visibility = this.data.visibilityOptions[visibilityIndex].value
+    this.setData({ visibilityIndex, 'form.visibility': visibility })
+    this.updatePrivacyPreview(visibility, this.data.form.approximateLocation)
+  },
+
+  onApproximateChange(event) {
+    const approximateLocation = Boolean(event.detail.value)
+    this.setData({ 'form.approximateLocation': approximateLocation })
+    this.updatePrivacyPreview(this.data.form.visibility, approximateLocation)
+  },
+
+  updatePrivacyPreview(visibility, approximateLocation) {
+    const copy = {
+      PUBLIC: ['所有人可查看', '足迹会出现在公共动态与公共地图中。'],
+      FOLLOWERS: ['仅关注者可查看', '只有关注你的人能看到足迹内容与地图信息。'],
+      PRIVATE: ['仅自己可查看', '足迹只会保存在你的个人空间中。']
+    }[visibility] || ['所有人可查看', '足迹会出现在公共动态与公共地图中。']
+    this.setData({
+      privacyTitle: copy[0],
+      privacyText: copy[1] + (approximateLocation
+        ? ' 对其他可见用户只展示省份范围，不显示具体点位。'
+        : ' 地图将按权限展示你填写的具体点位。')
+    })
   },
 
   chooseLocation() {
@@ -185,6 +231,20 @@ Page({
     this.setData({ photoPath: '', photoName: '' })
   },
 
+  async chooseVideo() {
+    try {
+      const selected = await chooseVideo(this.data.maxVideoBytes)
+      if (!selected) return
+      this.setData({ videoPath: selected.path, videoName: selected.label })
+    } catch (error) {
+      wx.showToast({ title: error.message || '视频选择失败', icon: 'none', duration: 3000 })
+    }
+  },
+
+  removeVideo() {
+    this.setData({ videoPath: '', videoName: '' })
+  },
+
   validate() {
     const { title, location, province, category, travelDate, content } = this.data.form
     if (![title, location, province, category, travelDate, content].every((value) => String(value || '').trim())) {
@@ -211,22 +271,64 @@ Page({
 
     this.setData({ submitting: true })
     try {
-      const formData = { ...this.data.form }
+      const formData = {
+        ...this.data.form,
+        approximateLocation: this.data.form.approximateLocation ? 'true' : 'false'
+      }
+      let createdPost
       if (this.data.photoPath) {
-        await upload({ url: '/api/mini/posts', filePath: this.data.photoPath, formData })
+        createdPost = await upload({
+          url: '/api/mini/posts',
+          filePath: this.data.photoPath,
+          name: 'photo',
+          formData
+        })
+      } else if (this.data.videoPath) {
+        createdPost = await upload({
+          url: '/api/mini/posts',
+          filePath: this.data.videoPath,
+          name: 'video',
+          formData,
+          timeout: 60000
+        })
       } else {
-        await request({
+        createdPost = await request({
           url: '/api/mini/posts',
           method: 'POST',
           header: { 'Content-Type': 'application/x-www-form-urlencoded' },
           data: formData
         })
       }
+      if (this.data.photoPath && this.data.videoPath) {
+        try {
+          await upload({
+            url: `/api/mini/posts/${createdPost.id}/video`,
+            filePath: this.data.videoPath,
+            name: 'video',
+            timeout: 60000
+          })
+        } catch (error) {
+          wx.showModal({
+            title: '足迹已保存，视频上传失败',
+            content: `${error.message || '请稍后在详情页重新上传视频。'}\n可在“我的足迹”中打开并重试。`,
+            showCancel: false
+          })
+        }
+      }
       wx.showToast({ title: '足迹已发布', icon: 'success' })
       const form = emptyForm()
       form.province = this.data.provinceOptions[this.data.provinceIndex] || ''
       form.category = this.data.categoryOptions[this.data.categoryIndex] || ''
-      this.setData({ photoPath: '', photoName: '', form })
+      this.setData({
+        photoPath: '',
+        photoName: '',
+        videoPath: '',
+        videoName: '',
+        visibilityIndex: 0,
+        privacyTitle: '所有人可查看',
+        privacyText: '足迹会出现在公共动态中，地图展示具体点位。',
+        form
+      })
       setTimeout(() => wx.switchTab({ url: '/pages/feed/feed' }), 500)
     } catch (error) {
       wx.showToast({ title: error.message || '发布失败', icon: 'none' })

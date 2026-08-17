@@ -39,6 +39,7 @@
     <view class="card post-card" wx:for="{{posts}}" wx:key="id" bindtap="openDetail" data-id="{{item.id}}">
       <image wx:if="{{item.photoUrl}}" class="post-photo" mode="aspectFill" src="{{item.photoUrl}}"></image>
       <view wx:else class="post-placeholder"><text>{{item.province}}</text></view>
+      <view wx:if="{{item.videoPath}}" class="video-badge">▶ 视频</view>
       <view class="post-content">
         <view class="post-author">
           <view class="avatar small-avatar">{{item.authorInitial}}</view>

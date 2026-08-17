@@ -42,6 +42,9 @@ public class TravelPost extends BaseEntity {
     private String photoPath;
 
     @Column(length = 255)
+    private String videoPath;
+
+    @Column(length = 255)
     private String sourceName;
 
     @Column(length = 500, unique = true)
@@ -134,6 +137,14 @@ public class TravelPost extends BaseEntity {
 
     public void setPhotoPath(String photoPath) {
         this.photoPath = photoPath;
+    }
+
+    public String getVideoPath() {
+        return videoPath;
+    }
+
+    public void setVideoPath(String videoPath) {
+        this.videoPath = videoPath;
     }
 
     public String getTags() {

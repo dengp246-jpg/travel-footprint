@@ -8,6 +8,7 @@ import com.example.travelfootprint.service.CurrentUserService;
 import com.example.travelfootprint.service.ProvinceCatalogService;
 import jakarta.servlet.http.HttpSession;
 import java.util.List;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ModelAttribute;
 
@@ -19,18 +20,21 @@ public class GlobalModelAttributes {
     private final ProvinceCatalogService provinceCatalogService;
     private final NotificationRepository notificationRepository;
     private final PrivateMessageRepository messageRepository;
+    private final long maxVideoUploadBytes;
 
     public GlobalModelAttributes(
             CurrentUserService currentUserService,
             AppCatalogService appCatalogService,
             ProvinceCatalogService provinceCatalogService,
             NotificationRepository notificationRepository,
-            PrivateMessageRepository messageRepository) {
+            PrivateMessageRepository messageRepository,
+            @Value("${app.upload.max-video-size-bytes:20971520}") long maxVideoUploadBytes) {
         this.currentUserService = currentUserService;
         this.appCatalogService = appCatalogService;
         this.provinceCatalogService = provinceCatalogService;
         this.notificationRepository = notificationRepository;
         this.messageRepository = messageRepository;
+        this.maxVideoUploadBytes = maxVideoUploadBytes > 0 ? maxVideoUploadBytes : 20L * 1024L * 1024L;
     }
 
     @ModelAttribute("currentUser")
@@ -46,6 +50,19 @@ public class GlobalModelAttributes {
     @ModelAttribute("provinces")
     public List<String> provinces() {
         return provinceCatalogService.provinceNames();
+    }
+
+    @ModelAttribute("maxVideoUploadBytes")
+    public long maxVideoUploadBytes() {
+        return maxVideoUploadBytes;
+    }
+
+    @ModelAttribute("maxVideoUploadLabel")
+    public String maxVideoUploadLabel() {
+        long megabyte = 1024L * 1024L;
+        return maxVideoUploadBytes % megabyte == 0
+                ? (maxVideoUploadBytes / megabyte) + "MB"
+                : Math.max(1L, maxVideoUploadBytes / 1024L) + "KB";
     }
 
     @ModelAttribute("unreadNotificationCount")

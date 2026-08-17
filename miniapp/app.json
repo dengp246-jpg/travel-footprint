@@ -7,6 +7,7 @@
     "pages/mine/mine",
     "pages/login/login",
     "pages/post-detail/post-detail",
+    "pages/passport/passport",
     "pages/report/report",
     "pages/server/server"
   ],

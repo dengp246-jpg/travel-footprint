@@ -11,9 +11,10 @@
 .search-button { width: 116rpx; min-height: 76rpx; margin: 0; border-radius: 18rpx; padding: 0; }
 .province-select { padding: 18rpx 6rpx 2rpx; color: #5f6964; font-size: 23rpx; }
 .feed-heading { display: flex; align-items: end; justify-content: space-between; margin: 0 4rpx 20rpx; }
-.post-card { overflow: hidden; margin-bottom: 24rpx; padding: 0; }
+.post-card { position: relative; overflow: hidden; margin-bottom: 24rpx; padding: 0; }
 .post-photo, .post-placeholder { width: 100%; height: 340rpx; }
 .post-photo { background: #dfe4df; }
+.video-badge { position: absolute; top: 22rpx; right: 22rpx; padding: 9rpx 15rpx; border-radius: 999rpx; background: rgba(7,27,29,.78); color: #fff; font-size: 20rpx; font-weight: 650; backdrop-filter: blur(8rpx); }
 .post-placeholder { display: flex; align-items: center; justify-content: center; background: linear-gradient(140deg, #174d45, #438174); color: rgba(255,255,255,.84); font-size: 42rpx; letter-spacing: 8rpx; }
 .post-content { padding: 26rpx; }
 .post-author { display: flex; align-items: center; gap: 14rpx; }

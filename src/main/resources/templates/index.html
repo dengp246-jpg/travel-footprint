@@ -69,6 +69,12 @@
                 <p>公共地图默认只展示审核通过并已上图的内容。</p>
                 <a class="inline-link" th:href="@{/map}">打开地图</a>
             </article>
+            <article class="quick-action-card" th:if="${currentUser != null}">
+                <span class="card-label">收藏人生</span>
+                <strong>打开我的旅行护照</strong>
+                <p>用真实足迹点亮省份印章、旅行勋章和时空旅程。</p>
+                <a class="inline-link" th:href="@{/passport}">查看旅行护照</a>
+            </article>
             <article class="quick-action-card" th:if="${currentUser != null and currentUser.admin}">
                 <span class="card-label">审核</span>
                 <strong>管理员待处理队列</strong>

@@ -11,6 +11,7 @@
 - 旅游足迹发布
   - 标题、地点、分类、标签、出行日期
   - 景点照片上传
+  - MP4/WebM 旅行视频上传与在线播放
   - 旅行感悟填写
   - 经纬度录入并接入旅行地图
 - 足迹管理
@@ -39,13 +40,20 @@
   - 景点评分
   - 旅行地图展示
   - 全国地图按实际地点显示与定位针完全重合的热度光晕，省份总量在侧栏排行展示
-  - 个人地图按照足迹发布时间绘制旅行路线
+  - 个人地图按照实际旅行日期绘制旅行路线（缺少日期时才使用发布日期兜底）
   - 地图支持浏览器全屏与 `Esc` 退出，不支持原生全屏时自动使用沉浸模式
-  - 个人地图支持按足迹发布时间播放时间轴，并逐段绘制旅行路线
+  - 个人地图提供“时空旅行故事”，按实际旅行日期逐段播放路线，故事抽屉可直接查看照片或视频
   - 全国地图会自动聚合省内相邻地点，点击聚合点可进入省域视图
   - 发布与编辑足迹时提供离线地点建议，可自动填写省份、经纬度并预览地图落点
-  - 地图点位支持故事预览抽屉，可直接查看照片、摘要和详情入口
+  - 地图点位支持故事预览抽屉，可直接查看照片、视频、摘要和详情入口
+  - 旅行护照根据真实足迹自动生成省份印章、旅行勋章与最近旅程签注
+  - 发布和编辑页提供隐私结果预览，提交前明确提示内容可见范围与地图点位精度
+  - 顶部导航按“记录 / 计划 / 探索 / 我的”重新分组，降低功能查找成本
+  - 微信小程序原生端同步提供旅行护照、时空故事、地图视频故事卡和隐私结果预览
+  - Android 应用通过安全 WebView 完整承载上述网站能力，并支持系统视频文件选择器
   - 行程计划管理
+
+以上体验创新均为本地确定性逻辑，不包含 AI 旅行助手，也不调用大模型服务。
 - 公开网页数据导入
   - 可从公开 Wikipedia 景点页面抓取基础景点信息
   - 导入字段包括标题、简介、地点、分类、标签、坐标和来源链接
@@ -229,6 +237,9 @@ src/main/resources
 - 以上目录均已加入 `.gitignore`
 - 默认图片上传限制为 5MB，仅接受真实内容与声明类型一致的 JPG、PNG、GIF、WebP 文件；网页端会在上传前自动压缩手机原图，云端 2MB 限制下无需手动处理普通照片
 - 可以通过环境变量 `APP_UPLOAD_MAX_IMAGE_SIZE_BYTES` 调整服务端图片大小限制
+- 每篇足迹可上传一个 MP4 或 WebM 视频，默认上限 20MB；服务端会校验真实视频文件头，并通过与足迹相同的审核和隐私规则提供访问
+- 可以通过环境变量 `APP_UPLOAD_MAX_VIDEO_SIZE_BYTES` 调整视频大小限制，网页端和微信小程序的提示与校验会自动同步该值
+- 视频能力覆盖网页/PWA、原生微信小程序与 Android 软件：均可上传和播放；网页与小程序还支持替换、删除，Android 软件通过同一网页流程完成管理
 - 项目默认使用相对路径，因此从 `D:\codex project\shujujiegoukeshe` 启动时，数据库、上传和日志都会保存在 D 盘
 
 ## 网页端优化说明
@@ -281,6 +292,7 @@ python scripts/generate_china_map_svg.py
 ## Photo Albums, Calendar, and Travel Ledger
 
 - A footprint can contain up to nine JPG, PNG, GIF, or WebP images. In the post editor, drag selected photos to reorder them and choose the cover before publishing.
+- A footprint can also contain one MP4 or WebM travel video up to 20 MB. Videos use the same moderation and visibility checks as the footprint.
 - Existing single-photo posts remain compatible. Album covers can be changed later from the footprint detail page.
 - Footprints can be linked to one of the current user's trip plans. The plan page shows linked footprints, completed travel days, progress, and linked spending.
 - Open `日历` after logging in to browse personal footprints by their actual travel date and move between months.

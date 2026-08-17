@@ -86,4 +86,41 @@ class FileStorageServiceTests {
 
         assertTrue(exception.getMessage().contains("1KB"));
     }
+
+    @Test
+    void storesValidatedMp4Video() throws IOException {
+        FileStorageService storageService = new FileStorageService(uploadDirectory.toString(), 5 * 1024 * 1024);
+        byte[] mp4Header = new byte[] {
+                0x00, 0x00, 0x00, 0x18, 'f', 't', 'y', 'p', 'i', 's', 'o', 'm'
+        };
+        MockMultipartFile video = new MockMultipartFile("video", "journey.mp4", "video/mp4", mp4Header);
+
+        String storedPath = storageService.storeVideo(video, "posts");
+
+        assertTrue(storedPath.startsWith("/uploads/posts/"));
+        assertTrue(storedPath.endsWith(".mp4"));
+        assertTrue(java.nio.file.Files.exists(
+                uploadDirectory.resolve(storedPath.substring("/uploads/".length()).replace('/', java.io.File.separatorChar))));
+    }
+
+    @Test
+    void storesValidatedWebmVideo() throws IOException {
+        FileStorageService storageService = new FileStorageService(uploadDirectory.toString(), 5 * 1024 * 1024);
+        byte[] webmHeader = new byte[] {0x1a, 0x45, (byte) 0xdf, (byte) 0xa3};
+        MockMultipartFile video = new MockMultipartFile("video", "journey.webm", "video/webm", webmHeader);
+
+        String storedPath = storageService.storeVideo(video, "posts");
+
+        assertTrue(storedPath.endsWith(".webm"));
+    }
+
+    @Test
+    void rejectsVideoWhoseContentDoesNotMatchDeclaredType() throws IOException {
+        FileStorageService storageService = new FileStorageService(uploadDirectory.toString(), 5 * 1024 * 1024);
+        MockMultipartFile fakeVideo = new MockMultipartFile(
+                "video", "journey.mp4", "video/mp4",
+                "this is not a video".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+
+        assertThrows(IOException.class, () -> storageService.storeVideo(fakeVideo, "posts"));
+    }
 }

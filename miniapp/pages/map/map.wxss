@@ -21,3 +21,18 @@
 .point-note { overflow: hidden; margin-top: 7rpx; font-size: 21rpx; text-overflow: ellipsis; white-space: nowrap; }
 .point-arrow { color: #a3aaa6; font-size: 38rpx; }
 .compact-empty { padding: 40rpx 20rpx; }
+.time-story-panel { margin-top: 22rpx; padding: 28rpx; }
+.story-current { display: flex; flex-direction: column; gap: 8rpx; padding: 20rpx; border-radius: 20rpx; background: #f1f7f5; }
+.story-current-title { color: #21423c; font-size: 28rpx; font-weight: 700; }
+.story-current text { color: #70817d; font-size: 21rpx; }
+.story-actions { display: grid; grid-template-columns: repeat(4,1fr); gap: 10rpx; margin-top: 12rpx; }
+.story-button { min-height: 68rpx; margin: 0; padding: 0 8rpx; border-radius: 16rpx; background: #edf3f1; color: #49645e; font-size: 20rpx; line-height: 68rpx; }
+.story-button.primary { background: #176557; color: #fff; }
+.story-button.reset { background: #fff2e5; color: #9b653a; }
+.map-story-card { overflow: hidden; margin-top: 22rpx; padding: 0; }
+.story-media { display: block; width: 100%; height: 380rpx; background: #071b1d; }
+.story-card-copy { padding: 28rpx; }
+.story-card-title { margin-top: 8rpx; color: #20342f; font-size: 34rpx; font-weight: 720; }
+.story-card-meta { margin-top: 8rpx; font-size: 21rpx; }
+.story-excerpt { margin-top: 18rpx; color: #53625d; font-size: 24rpx; line-height: 1.7; }
+.story-detail-button { margin-top: 22rpx; }

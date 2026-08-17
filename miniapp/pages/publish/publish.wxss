@@ -17,4 +17,16 @@
 .photo-preview { display: block; width: 100%; height: 340rpx; }
 .photo-meta { display: flex; justify-content: space-between; padding: 18rpx 20rpx; color: #737b77; font-size: 22rpx; }
 .remove-photo { color: #a44535; font-weight: 650; }
+.video-picker { background: #f1f6f4; border-color: #b9d2ca; }
+.video-plus { background: #dcece7; font-size: 30rpx; }
+.video-preview-wrap { overflow: hidden; border-radius: 22rpx; background: #071b1d; }
+.video-preview { display: block; width: 100%; height: 390rpx; background: #071b1d; }
+.video-preview-wrap .photo-meta { background: #f7f6f2; }
+.privacy-switch-row { display: flex; align-items: center; justify-content: space-between; gap: 20rpx; padding: 22rpx; border: 2rpx solid #e1e7e4; border-radius: 20rpx; background: #f8faf9; }
+.privacy-switch-title { color: #314a44; font-size: 25rpx; font-weight: 650; }
+.privacy-switch-note { max-width: 500rpx; margin-top: 7rpx; font-size: 20rpx; }
+.privacy-preview { margin-top: 18rpx; padding: 24rpx; border: 2rpx solid #cde4df; border-left: 8rpx solid #176557; border-radius: 20rpx; background: linear-gradient(135deg,#effaf7,#fff); }
+.privacy-preview-kicker { color: #176557; font-size: 18rpx; font-weight: 720; letter-spacing: 2rpx; }
+.privacy-preview-title { margin-top: 8rpx; color: #153f3a; font-size: 28rpx; font-weight: 720; }
+.privacy-preview-copy { margin-top: 8rpx; color: #58716c; font-size: 21rpx; line-height: 1.6; }
 .submit-button { margin-top: 36rpx; }

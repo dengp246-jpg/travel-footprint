@@ -19,6 +19,7 @@
     </view>
 
     <view class="quick-grid">
+      <view class="card quick-card" bindtap="goPassport"><view class="quick-symbol">旅</view><view class="quick-title">旅行护照</view><view class="muted quick-note">印章、勋章与签注</view></view>
       <view class="card quick-card" bindtap="goMap"><view class="quick-symbol">图</view><view class="quick-title">个人地图</view><view class="muted quick-note">查看旅行轨迹</view></view>
       <view class="card quick-card" bindtap="goPlans"><view class="quick-symbol warm-symbol">行</view><view class="quick-title">行程计划</view><view class="muted quick-note">准备下一次出发</view></view>
       <view class="card quick-card" bindtap="goReport"><view class="quick-symbol blue-symbol">报</view><view class="quick-title">旅行报告</view><view class="muted quick-note">周、月与年度回顾</view></view>
@@ -28,7 +29,7 @@
     <view class="section-head archive-head"><view class="section-title">我的足迹</view><view class="section-note">{{posts.length}} 条记录</view></view>
     <view class="card my-post" wx:for="{{posts}}" wx:key="id" bindtap="openDetail" data-id="{{item.id}}">
       <view class="post-date"><text>{{item.dateLabel}}</text><label>{{item.province}}</label></view>
-      <view class="post-copy"><view class="post-title">{{item.title}}</view><view class="muted post-location">{{item.location}} · {{item.category}}</view></view>
+      <view class="post-copy"><view class="post-title">{{item.title}}</view><view class="muted post-location">{{item.location}} · {{item.category}}{{item.videoPath ? ' · 视频' : ''}}</view></view>
       <view class="post-arrow">›</view>
     </view>
     <view wx:if="{{posts.length === 0}}" class="card empty-state"><view class="empty-symbol">迹</view><view class="empty-title">还没有留下足迹</view><view class="empty-copy">去发布页记录第一段旅程吧。</view></view>

@@ -21,7 +21,7 @@ public class StoredImage extends BaseEntity {
     private String contentType;
 
     @JdbcTypeCode(SqlTypes.VARBINARY)
-    @Column(nullable = false, length = 5 * 1024 * 1024)
+    @Column(nullable = false, length = 25 * 1024 * 1024)
     private byte[] content;
 
     @Column(nullable = false)

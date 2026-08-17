@@ -2,6 +2,7 @@ package com.example.travelfootprint.controller;
 
 import com.example.travelfootprint.model.PostFavorite;
 import com.example.travelfootprint.model.PostLike;
+import com.example.travelfootprint.model.PostVisibility;
 import com.example.travelfootprint.model.TravelPost;
 import com.example.travelfootprint.model.TripPlan;
 import com.example.travelfootprint.model.TripPlanStatus;
@@ -11,6 +12,7 @@ import com.example.travelfootprint.repository.PostFavoriteRepository;
 import com.example.travelfootprint.repository.PostLikeRepository;
 import com.example.travelfootprint.repository.PostRatingRepository;
 import com.example.travelfootprint.repository.TravelPostRepository;
+import com.example.travelfootprint.repository.TravelPostPhotoRepository;
 import com.example.travelfootprint.repository.TravelExpenseRepository;
 import com.example.travelfootprint.repository.TripPlanMemberRepository;
 import com.example.travelfootprint.repository.TripPlanRepository;
@@ -22,6 +24,7 @@ import com.example.travelfootprint.service.DestinationMapService;
 import com.example.travelfootprint.service.FileStorageService;
 import com.example.travelfootprint.service.LocationNormalizationService;
 import com.example.travelfootprint.service.MiniAppTokenService;
+import com.example.travelfootprint.service.PostVideoService;
 import com.example.travelfootprint.service.ProvinceCatalogService;
 import com.example.travelfootprint.service.TravelReportService;
 import com.example.travelfootprint.service.TripPlanWorkspaceService;
@@ -31,11 +34,14 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -65,6 +71,7 @@ public class MiniAppApiController {
 
     private final UserRepository userRepository;
     private final TravelPostRepository postRepository;
+    private final TravelPostPhotoRepository photoRepository;
     private final CommentRepository commentRepository;
     private final PostLikeRepository likeRepository;
     private final PostFavoriteRepository favoriteRepository;
@@ -74,6 +81,7 @@ public class MiniAppApiController {
     private final MiniAppTokenService miniAppTokenService;
     private final ProvinceCatalogService provinceCatalogService;
     private final FileStorageService fileStorageService;
+    private final PostVideoService postVideoService;
     private final ViewDataService viewDataService;
     private final ContentVisibilityService contentVisibilityService;
     private final LocationNormalizationService locationNormalizationService;
@@ -88,6 +96,7 @@ public class MiniAppApiController {
     public MiniAppApiController(
             UserRepository userRepository,
             TravelPostRepository postRepository,
+            TravelPostPhotoRepository photoRepository,
             CommentRepository commentRepository,
             PostLikeRepository likeRepository,
             PostFavoriteRepository favoriteRepository,
@@ -97,6 +106,7 @@ public class MiniAppApiController {
             MiniAppTokenService miniAppTokenService,
             ProvinceCatalogService provinceCatalogService,
             FileStorageService fileStorageService,
+            PostVideoService postVideoService,
             ViewDataService viewDataService,
             ContentVisibilityService contentVisibilityService,
             LocationNormalizationService locationNormalizationService,
@@ -109,6 +119,7 @@ public class MiniAppApiController {
             TripPlanWorkspaceService tripPlanWorkspaceService) {
         this.userRepository = userRepository;
         this.postRepository = postRepository;
+        this.photoRepository = photoRepository;
         this.commentRepository = commentRepository;
         this.likeRepository = likeRepository;
         this.favoriteRepository = favoriteRepository;
@@ -118,6 +129,7 @@ public class MiniAppApiController {
         this.miniAppTokenService = miniAppTokenService;
         this.provinceCatalogService = provinceCatalogService;
         this.fileStorageService = fileStorageService;
+        this.postVideoService = postVideoService;
         this.viewDataService = viewDataService;
         this.contentVisibilityService = contentVisibilityService;
         this.locationNormalizationService = locationNormalizationService;
@@ -209,6 +221,11 @@ public class MiniAppApiController {
         return appCatalogService.categories();
     }
 
+    @GetMapping("/catalog/upload-limits")
+    public Map<String, Long> uploadLimits() {
+        return Map.of("maxVideoSizeBytes", fileStorageService.maxVideoSizeBytes());
+    }
+
     @GetMapping("/posts")
     public ResponseEntity<?> posts(
             @RequestHeader(value = "X-Mini-Token", required = false) String token,
@@ -263,7 +280,10 @@ public class MiniAppApiController {
             @RequestParam(required = false) String tags,
             @RequestParam(required = false) String latitude,
             @RequestParam(required = false) String longitude,
-            @RequestParam(required = false) MultipartFile photo) {
+            @RequestParam(defaultValue = "PUBLIC") String visibility,
+            @RequestParam(defaultValue = "false") boolean approximateLocation,
+            @RequestParam(required = false) MultipartFile photo,
+            @RequestParam(required = false) MultipartFile video) {
         User currentUser = resolveUser(token);
         if (currentUser == null) {
             return unauthorized("请先登录后再发布足迹。");
@@ -291,6 +311,10 @@ public class MiniAppApiController {
         if (!appCatalogService.categories().contains(normalizedCategory)) {
             return badRequest("请选择有效的足迹分类。");
         }
+        Optional<PostVisibility> parsedVisibility = parsePostVisibility(visibility);
+        if (parsedVisibility.isEmpty()) {
+            return badRequest("请选择有效的可见范围。");
+        }
 
         TravelPost post = new TravelPost();
         post.setAuthor(currentUser);
@@ -301,6 +325,7 @@ public class MiniAppApiController {
         post.setContent(normalizedContent);
         post.setCategory(normalizedCategory);
         post.setTags(normalizedTags);
+        post.setVisibility(parsedVisibility.get());
         post.setReviewStatus(contentVisibilityService.defaultPostStatus(currentUser, false));
 
         try {
@@ -317,22 +342,90 @@ public class MiniAppApiController {
             }
             post.setLatitude(parsedLatitude);
             post.setLongitude(parsedLongitude);
-            post.setApproximateLocation(parsedLatitude == null);
+            post.setApproximateLocation(approximateLocation || parsedLatitude == null);
         } catch (IllegalArgumentException exception) {
             return badRequest(exception.getMessage());
         }
 
+        String storedPhoto = null;
+        String storedVideo = null;
         try {
-            String storedPhoto = fileStorageService.store(photo, "posts");
+            storedPhoto = fileStorageService.store(photo, "posts");
             if (storedPhoto != null) {
                 post.setPhotoPath(storedPhoto);
             }
+            storedVideo = fileStorageService.storeVideo(video, "posts");
+            if (storedVideo != null) {
+                post.setVideoPath(storedVideo);
+            }
         } catch (IOException exception) {
+            deleteQuietly(storedPhoto);
+            deleteQuietly(storedVideo);
             return badRequest(exception.getMessage());
         }
 
         postRepository.save(post);
         return ResponseEntity.status(HttpStatus.CREATED).body(toPostDetail(post, currentUser));
+    }
+
+    @PostMapping(value = "/posts/{id}/video", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<?> updatePostVideo(
+            @PathVariable Long id,
+            @RequestHeader(value = "X-Mini-Token", required = false) String token,
+            @RequestParam MultipartFile video) {
+        User currentUser = resolveUser(token);
+        if (currentUser == null) {
+            return unauthorized("请先登录后再管理视频。");
+        }
+        TravelPost post = postRepository.findById(id).orElse(null);
+        if (post == null || !post.getAuthor().getId().equals(currentUser.getId())) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new MiniErrorResponse("未找到这条足迹。"));
+        }
+        try {
+            postVideoService.updateVideo(post, video, false);
+            return ResponseEntity.ok(toPostDetail(post, currentUser));
+        } catch (IOException exception) {
+            return badRequest(exception.getMessage());
+        }
+    }
+
+    @DeleteMapping("/posts/{id}/video")
+    public ResponseEntity<?> deletePostVideo(
+            @PathVariable Long id,
+            @RequestHeader(value = "X-Mini-Token", required = false) String token) {
+        User currentUser = resolveUser(token);
+        if (currentUser == null) {
+            return unauthorized("请先登录后再管理视频。");
+        }
+        TravelPost post = postRepository.findById(id).orElse(null);
+        if (post == null || !post.getAuthor().getId().equals(currentUser.getId())) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new MiniErrorResponse("未找到这条足迹。"));
+        }
+        postVideoService.deleteVideo(post);
+        return ResponseEntity.ok(toPostDetail(post, currentUser));
+    }
+
+    @PostMapping("/posts/{id}/privacy")
+    public ResponseEntity<?> updatePostPrivacy(
+            @PathVariable Long id,
+            @RequestHeader(value = "X-Mini-Token", required = false) String token,
+            @RequestBody MiniPrivacyRequest request) {
+        User currentUser = resolveUser(token);
+        if (currentUser == null) {
+            return unauthorized("请先登录后再管理隐私设置。");
+        }
+        TravelPost post = postRepository.findById(id).orElse(null);
+        if (post == null || !post.getAuthor().getId().equals(currentUser.getId())) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new MiniErrorResponse("未找到这条足迹。"));
+        }
+        Optional<PostVisibility> visibility = parsePostVisibility(request == null ? null : request.visibility());
+        if (visibility.isEmpty()) {
+            return badRequest("请选择有效的可见范围。");
+        }
+        post.setVisibility(visibility.get());
+        post.setApproximateLocation(request.approximateLocation());
+        postRepository.save(post);
+        return ResponseEntity.ok(toPostDetail(post, currentUser));
     }
 
     @PostMapping("/posts/{id}/like")
@@ -416,8 +509,9 @@ public class MiniAppApiController {
 
         List<MiniMapPoint> points = validPosts.stream()
                 .sorted(Comparator.comparing(
-                                TravelPost::getCreatedAt,
+                                this::journeyDate,
                                 Comparator.nullsLast(Comparator.naturalOrder()))
+                        .thenComparing(TravelPost::getCreatedAt, Comparator.nullsLast(Comparator.naturalOrder()))
                         .thenComparing(TravelPost::getId))
                 .flatMap(post -> destinationMapService.resolveCoordinates(post).stream()
                         .map(point -> new MiniMapPoint(
@@ -427,10 +521,81 @@ public class MiniAppApiController {
                                 post.getTitle(),
                                 post.getTravelDate(),
                                 post.getCreatedAt(),
+                                post.getPhotoPath(),
+                                post.getVideoPath(),
+                                excerpt(post.getContent()),
                                 point.latitude(),
                                 point.longitude())))
                 .toList();
         return ResponseEntity.ok(new MiniMapOverviewResponse(provinces, points, mine));
+    }
+
+    @GetMapping("/passport")
+    public ResponseEntity<?> passport(
+            @RequestHeader(value = "X-Mini-Token", required = false) String token) {
+        User currentUser = resolveUser(token);
+        if (currentUser == null) {
+            return unauthorized("请先登录后再查看旅行护照。");
+        }
+
+        List<TravelPost> posts = postRepository.findByAuthorIdOrderByCreatedAtDesc(currentUser.getId()).stream()
+                .sorted(Comparator.comparing(this::journeyDate, Comparator.nullsLast(Comparator.naturalOrder()))
+                        .thenComparing(TravelPost::getCreatedAt, Comparator.nullsLast(Comparator.naturalOrder())))
+                .toList();
+        Map<String, List<TravelPost>> provincePosts = posts.stream()
+                .map(post -> Map.entry(resolveProvince(post), post))
+                .filter(entry -> !entry.getKey().isBlank())
+                .collect(Collectors.groupingBy(Map.Entry::getKey, LinkedHashMap::new,
+                        Collectors.mapping(Map.Entry::getValue, Collectors.toList())));
+        Map<String, Long> locationCounts = posts.stream()
+                .map(TravelPost::getLocation)
+                .filter(value -> value != null && !value.isBlank())
+                .map(String::trim)
+                .collect(Collectors.groupingBy(Function.identity(), LinkedHashMap::new, Collectors.counting()));
+
+        long photoCount = posts.stream().mapToLong(post -> {
+            long albumCount = photoRepository.countByPostId(post.getId());
+            return Math.max(albumCount, isBlank(post.getPhotoPath()) ? 0 : 1);
+        }).sum();
+        long videoCount = posts.stream().filter(post -> !isBlank(post.getVideoPath())).count();
+        long travelDayCount = posts.stream().map(this::journeyDate).filter(java.util.Objects::nonNull).distinct().count();
+        long travelYearCount = posts.stream().map(this::journeyDate).filter(java.util.Objects::nonNull)
+                .map(LocalDate::getYear).distinct().count();
+        long travelMonthCount = posts.stream().map(this::journeyDate).filter(java.util.Objects::nonNull)
+                .map(LocalDate::getMonthValue).distinct().count();
+        boolean revisited = locationCounts.values().stream().anyMatch(count -> count >= 2);
+
+        List<MiniPassportStamp> stamps = provinceCatalogService.provinceNames().stream()
+                .map(province -> {
+                    List<TravelPost> visits = provincePosts.getOrDefault(province, List.of());
+                    LocalDate firstVisit = visits.stream().map(this::journeyDate).filter(java.util.Objects::nonNull)
+                            .min(LocalDate::compareTo).orElse(null);
+                    return new MiniPassportStamp(province, !visits.isEmpty(), visits.size(), firstVisit);
+                })
+                .toList();
+        List<MiniPassportBadge> badges = new ArrayList<>();
+        badges.add(passportBadge("第一枚脚印", "发布第 1 条旅行足迹", posts.size(), 1, "01"));
+        badges.add(passportBadge("动态旅行家", "上传第 1 段旅行视频", videoCount, 1, "▶"));
+        badges.add(passportBadge("影像记录者", "累计记录 10 张旅行照片", photoCount, 10, "▧"));
+        badges.add(passportBadge("跨省探索者", "点亮 5 个省级区域", provincePosts.size(), 5, "✦"));
+        badges.add(passportBadge("足迹收藏家", "累计发布 10 条足迹", posts.size(), 10, "10"));
+        badges.add(passportBadge("四季行者", "在 4 个不同月份留下足迹", travelMonthCount, 4, "四"));
+        badges.add(new MiniPassportBadge("故地重游", "同一地点留下至少 2 次足迹", revisited,
+                revisited ? 2 : 0, 2, revisited ? 100 : 0, "↻"));
+
+        List<MiniJourneyMilestone> milestones = posts.stream()
+                .sorted(Comparator.comparing(this::journeyDate, Comparator.nullsLast(Comparator.reverseOrder()))
+                        .thenComparing(TravelPost::getCreatedAt, Comparator.nullsLast(Comparator.reverseOrder())))
+                .limit(10)
+                .map(post -> new MiniJourneyMilestone(
+                        post.getId(), post.getTitle(), post.getLocation(), resolveProvince(post), journeyDate(post),
+                        post.getTravelDate() == null, post.getPhotoPath(), post.getVideoPath()))
+                .toList();
+
+        return ResponseEntity.ok(new MiniPassportResponse(
+                currentUser.getNickname(), "TF-%06d".formatted(currentUser.getId()), currentUser.getJoinedAt(),
+                posts.size(), provincePosts.size(), travelDayCount, photoCount, videoCount, travelYearCount,
+                badges.stream().filter(MiniPassportBadge::earned).count(), badges, stamps, milestones));
     }
 
     @GetMapping("/plans")
@@ -611,6 +776,35 @@ public class MiniAppApiController {
         };
     }
 
+    private Optional<PostVisibility> parsePostVisibility(String value) {
+        if (isBlank(value)) {
+            return Optional.of(PostVisibility.PUBLIC);
+        }
+        try {
+            return Optional.of(PostVisibility.valueOf(value.trim().toUpperCase()));
+        } catch (IllegalArgumentException exception) {
+            return Optional.empty();
+        }
+    }
+
+    private LocalDate journeyDate(TravelPost post) {
+        if (post.getTravelDate() != null) {
+            return post.getTravelDate();
+        }
+        return post.getCreatedAt() == null ? null : post.getCreatedAt().toLocalDate();
+    }
+
+    private String resolveProvince(TravelPost post) {
+        return provinceCatalogService.resolveProvince(post.getProvince(), post.getLocation()).orElse("");
+    }
+
+    private MiniPassportBadge passportBadge(
+            String name, String description, long current, long target, String symbol) {
+        long normalizedCurrent = Math.min(current, target);
+        long progress = target <= 0 ? 100 : Math.min(100, normalizedCurrent * 100 / target);
+        return new MiniPassportBadge(name, description, current >= target, normalizedCurrent, target, progress, symbol);
+    }
+
     private Double parseCoordinate(String rawValue, double min, double max) {
         if (isBlank(rawValue)) {
             return null;
@@ -657,6 +851,7 @@ public class MiniAppApiController {
                         post.getCreatedAt(),
                         excerpt(post.getContent()),
                         post.getPhotoPath(),
+                        post.getVideoPath(),
                         toAuthorSnippet(post.getAuthor()),
                         likeCounts.getOrDefault(post.getId(), 0L),
                         commentCounts.getOrDefault(post.getId(), 0L),
@@ -680,13 +875,17 @@ public class MiniAppApiController {
                 post.getCreatedAt(),
                 post.getContent(),
                 post.getPhotoPath(),
+                post.getVideoPath(),
+                post.getVisibility().name(),
+                post.isApproximateLocation(),
                 toAuthorSnippet(post.getAuthor()),
                 viewDataService.approvedCommentCount(post.getId()),
                 likeRepository.countByPostId(post.getId()),
                 favoriteRepository.countByPostId(post.getId()),
                 viewDataService.ratingAverages(singlePost).getOrDefault(post.getId(), 0.0),
                 currentUser != null && likeRepository.existsByPostIdAndUserId(post.getId(), currentUser.getId()),
-                currentUser != null && favoriteRepository.existsByPostIdAndUserId(post.getId(), currentUser.getId()));
+                currentUser != null && favoriteRepository.existsByPostIdAndUserId(post.getId(), currentUser.getId()),
+                currentUser != null && post.getAuthor().getId().equals(currentUser.getId()));
     }
 
     private MiniUserProfile toUserProfile(User user) {
@@ -727,6 +926,14 @@ public class MiniAppApiController {
 
     private boolean isBlank(String value) {
         return value == null || value.isBlank();
+    }
+
+    private void deleteQuietly(String publicPath) {
+        try {
+            fileStorageService.delete(publicPath);
+        } catch (IOException ignored) {
+            // A failed request must not hide the original validation message because cleanup also failed.
+        }
     }
 
     private record MiniLoginRequest(String username, String password) {
@@ -771,6 +978,7 @@ public class MiniAppApiController {
             java.time.LocalDateTime createdAt,
             String excerpt,
             String photoPath,
+            String videoPath,
             MiniAuthorSnippet author,
             long likeCount,
             long commentCount,
@@ -791,13 +999,17 @@ public class MiniAppApiController {
             java.time.LocalDateTime createdAt,
             String content,
             String photoPath,
+            String videoPath,
+            String visibility,
+            boolean approximateLocation,
             MiniAuthorSnippet author,
             long commentCount,
             long likeCount,
             long favoriteCount,
             double ratingAverage,
             boolean liked,
-            boolean favorited) {
+            boolean favorited,
+            boolean owned) {
     }
 
     private record MiniInteractionResponse(boolean active, long count) {
@@ -813,6 +1025,9 @@ public class MiniAppApiController {
             String title,
             LocalDate travelDate,
             java.time.LocalDateTime createdAt,
+            String photoPath,
+            String videoPath,
+            String excerpt,
             double latitude,
             double longitude) {
     }
@@ -821,6 +1036,50 @@ public class MiniAppApiController {
             List<MiniProvinceCount> provinces,
             List<MiniMapPoint> points,
             boolean routeEnabled) {
+    }
+
+    private record MiniPrivacyRequest(String visibility, boolean approximateLocation) {
+    }
+
+    private record MiniPassportStamp(
+            String province, boolean visited, int visitCount, LocalDate firstVisitedOn) {
+    }
+
+    private record MiniPassportBadge(
+            String name,
+            String description,
+            boolean earned,
+            long current,
+            long target,
+            long progressPercent,
+            String symbol) {
+    }
+
+    private record MiniJourneyMilestone(
+            Long postId,
+            String title,
+            String location,
+            String province,
+            LocalDate journeyDate,
+            boolean dateEstimated,
+            String photoPath,
+            String videoPath) {
+    }
+
+    private record MiniPassportResponse(
+            String nickname,
+            String passportNumber,
+            java.time.LocalDateTime joinedAt,
+            long postCount,
+            long provinceCount,
+            long travelDayCount,
+            long photoCount,
+            long videoCount,
+            long travelYearCount,
+            long earnedBadgeCount,
+            List<MiniPassportBadge> badges,
+            List<MiniPassportStamp> stamps,
+            List<MiniJourneyMilestone> milestones) {
     }
 
     private record MiniPlanRequest(

@@ -37,6 +37,7 @@ Back4app 官方免费容器目前为 0.25 CPU、256 MB RAM、100 GB 流量，支
    | `APP_UPLOAD_STORAGE_MODE` | `database` |
    | `APP_DEMO_SEED_ENABLED` | `false` |
    | `APP_UPLOAD_MAX_IMAGE_SIZE_BYTES` | `2097152` |
+   | `APP_UPLOAD_MAX_VIDEO_SIZE_BYTES` | `20971520` |
 
    `DATABASE_URL` 和管理员密码属于秘密，只填写在 Back4app 环境变量页面，不要发到聊天、截图或提交进 GitHub。
 

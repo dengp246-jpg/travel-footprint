@@ -56,6 +56,10 @@ Page({
     wx.navigateTo({ url: '/pages/report/report' })
   },
 
+  goPassport() {
+    wx.navigateTo({ url: '/pages/passport/passport' })
+  },
+
   goServer() {
     wx.navigateTo({ url: '/pages/server/server' })
   },

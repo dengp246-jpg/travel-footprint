@@ -21,4 +21,6 @@ public interface TravelPostRepository extends JpaRepository<TravelPost, Long> {
     Optional<TravelPost> findBySourceUrl(String sourceUrl);
 
     Optional<TravelPost> findFirstByPhotoPath(String photoPath);
+
+    Optional<TravelPost> findFirstByVideoPath(String videoPath);
 }

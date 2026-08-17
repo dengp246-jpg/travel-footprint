@@ -2,7 +2,37 @@
   <view class="page-hero">
     <view class="eyebrow">LIVE ATLAS</view>
     <view class="page-title">旅行地图</view>
-    <view class="page-subtitle">公共地图看见旅行分布，个人地图按发布时间连接你的每一站。</view>
+    <view class="page-subtitle">公共地图看见旅行分布，个人地图按实际旅行日期连接你的每一站。</view>
+  </view>
+
+  <view wx:if="{{mine && visiblePoints.length}}" class="card time-story-panel">
+    <view class="section-head">
+      <view><view class="eyebrow">TIME JOURNEY</view><view class="section-title">时空旅行故事</view></view>
+      <view class="section-note">{{storyIndex < 0 ? '准备播放' : (storyIndex + 1) + ' / ' + visiblePoints.length}}</view>
+    </view>
+    <view class="story-current">
+      <view class="story-current-title">{{storyPoint ? storyPoint.title : '从第一段旅程开始'}}</view>
+      <text>{{storyPoint ? storyPoint.dateLabel + ' · ' + storyPoint.province + ' · ' + storyPoint.location : '路线将按照实际旅行日期依次出现'}}</text>
+    </view>
+    <slider min="0" max="{{storyMax}}" value="{{storyIndex < 0 ? 0 : storyIndex}}" activeColor="#176557" backgroundColor="#dce8e4" block-size="18" disabled="{{storyMax === 0}}" bindchange="onStorySlider" />
+    <view class="story-actions">
+      <button class="story-button" bindtap="previousStory" disabled="{{storyIndex <= 0}}">上一站</button>
+      <button class="story-button primary" bindtap="playStory">{{storyPlaying ? '暂停旅程' : '播放旅程'}}</button>
+      <button class="story-button" bindtap="nextStory" disabled="{{storyIndex >= storyMax}}">下一站</button>
+      <button class="story-button reset" bindtap="resetStory">重置</button>
+    </view>
+  </view>
+
+  <view wx:if="{{storyPoint}}" class="card map-story-card">
+    <video wx:if="{{storyPoint.videoUrl}}" class="story-media" src="{{storyPoint.videoUrl}}" controls="{{true}}" show-center-play-btn="{{true}}" object-fit="contain"></video>
+    <image wx:elif="{{storyPoint.photoUrl}}" class="story-media" src="{{storyPoint.photoUrl}}" mode="aspectFill"></image>
+    <view class="story-card-copy">
+      <view class="eyebrow">{{storyPoint.province}} · {{storyPoint.dateLabel}}</view>
+      <view class="story-card-title">{{storyPoint.title}}</view>
+      <view class="muted story-card-meta">{{storyPoint.location}}{{storyPoint.videoPath ? ' · 含旅行视频' : ''}}</view>
+      <view class="story-excerpt">{{storyPoint.excerpt}}</view>
+      <button class="button-primary story-detail-button" bindtap="openStoryDetail">查看完整足迹</button>
+    </view>
   </view>
 
   <view class="scope-switch">
@@ -40,13 +70,13 @@
   <view class="card point-card">
     <view class="section-head">
       <view class="section-title">{{selectedProvince || '全部地点'}}</view>
-      <view class="section-note">{{mine ? '依发布时间排序' : '点选查看详情'}}</view>
+      <view class="section-note">{{mine ? '依实际旅行日期排序' : '点选查看故事'}}</view>
     </view>
     <view wx:for="{{visiblePoints}}" wx:key="postId" class="point-item" bindtap="openDetail" data-id="{{item.postId}}">
       <view class="route-index">{{index + 1}}</view>
       <view class="point-copy">
         <view class="point-title">{{item.location}}</view>
-        <view class="muted point-note">{{item.title}} · {{item.travelDate}}</view>
+        <view class="muted point-note">{{item.title}} · {{item.dateLabel}}{{item.videoPath ? ' · 视频' : ''}}</view>
       </view>
       <view class="point-arrow">›</view>
     </view>

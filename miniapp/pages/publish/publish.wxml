@@ -41,6 +41,34 @@
       </view>
     </view>
 
+    <view class="divider"></view>
+
+    <view class="form-section">
+      <view class="section-head"><view class="section-title">旅行视频</view><view class="step-index">04</view></view>
+      <view wx:if="{{videoPath}}" class="video-preview-wrap">
+        <video class="video-preview" src="{{videoPath}}" controls="{{true}}" show-center-play-btn="{{true}}" object-fit="contain"></video>
+        <view class="photo-meta"><text>{{videoName}}</text><text class="remove-photo" bindtap="removeVideo">移除</text></view>
+      </view>
+      <view wx:else class="photo-picker video-picker" bindtap="chooseVideo">
+        <view class="photo-plus video-plus">▶</view>
+        <view class="photo-title">添加一段旅行视频</view>
+        <view class="muted photo-note">支持 MP4、WebM，最多{{maxVideoLabel}}；可从相册选择或拍摄</view>
+      </view>
+    </view>
+
+    <view class="divider"></view>
+
+    <view class="form-section">
+      <view class="section-head"><view class="section-title">隐私与地图</view><view class="step-index">05</view></view>
+      <view class="field"><text class="field-label">谁可以查看</text><picker mode="selector" range="{{visibilityOptions}}" range-key="label" value="{{visibilityIndex}}" bindchange="onVisibilityChange"><view class="picker">{{visibilityOptions[visibilityIndex].label}}</view></picker></view>
+      <view class="privacy-switch-row"><view><view class="privacy-switch-title">隐藏具体地图点位</view><view class="muted privacy-switch-note">开启后，对其他可见用户只展示省份范围</view></view><switch color="#176557" checked="{{form.approximateLocation}}" bindchange="onApproximateChange" /></view>
+      <view class="privacy-preview">
+        <view class="privacy-preview-kicker">发布前隐私预览</view>
+        <view class="privacy-preview-title">{{privacyTitle}}</view>
+        <view class="privacy-preview-copy">{{privacyText}}</view>
+      </view>
+    </view>
+
     <button class="button-primary submit-button" loading="{{submitting || processingPhoto}}" disabled="{{submitting || processingPhoto}}" bindtap="submitPost">{{processingPhoto ? '正在优化图片…' : (submitting ? '正在保存…' : '发布这条足迹')}}</button>
   </view>
 </view>

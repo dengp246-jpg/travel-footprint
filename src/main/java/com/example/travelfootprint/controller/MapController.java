@@ -201,6 +201,7 @@ public class MapController {
                         marker.post().getCategory(),
                         marker.post().getTravelDate(),
                         marker.post().getPhotoPath(),
+                        marker.post().getVideoPath(),
                         excerpt(marker.post().getContent())))
                 .toList();
 
@@ -436,6 +437,7 @@ public class MapController {
             String category,
             LocalDate travelDate,
             String photoPath,
+            String videoPath,
             String excerpt) {
     }
 

@@ -55,6 +55,7 @@ public class PersonalDataExportService {
                     "province", post.getProvince(), "content", post.getContent(), "travelDate", post.getTravelDate(),
                     "category", post.getCategory(), "tags", post.getTags(), "visibility", post.getVisibility(),
                     "approximateLocation", post.isApproximateLocation(), "coverPhotoPath", post.getPhotoPath(),
+                    "videoPath", post.getVideoPath(),
                     "createdAt", post.getCreatedAt());
             item.put("photos", photoRepository.findByPostIdOrderBySortOrderAscIdAsc(post.getId()).stream()
                     .map(photo -> map("path", photo.getPhotoPath(), "sortOrder", photo.getSortOrder(), "cover", photo.isCover())).toList());

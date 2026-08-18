@@ -1,4 +1,4 @@
-const CACHE_VERSION = "travelfootprint-offline-v31";
+const CACHE_VERSION = "travelfootprint-offline-v32";
 const SHELL_CACHE = [
   "/",
   "/map",
@@ -7,7 +7,7 @@ const SHELL_CACHE = [
   "/offline.html",
   "/css/style.css?v=20260817-4",
   "/css/premium.css?v=20260809-1",
-  "/js/app-shell.js?v=20260817-3",
+  "/js/app-shell.js?v=20260818-1",
   "/js/image-compression.js?v=20260815-1",
   "/js/post-editor.js?v=20260817-2",
   "/manifest.webmanifest?v=20260808-2"

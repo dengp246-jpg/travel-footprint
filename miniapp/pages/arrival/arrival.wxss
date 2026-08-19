@@ -4,13 +4,16 @@
 .arrival-hero .eyebrow { margin-top: 28rpx; color: #a9ddd2; }
 .arrival-title { margin-top: 10rpx; font-size: 48rpx; font-weight: 760; }
 .arrival-copy { margin-top: 16rpx; color: rgba(255,255,255,.72); line-height: 1.7; }
-.arrival-toggle { margin-top: 30rpx; border-radius: 20rpx; color: #176557; background: #fff; font-weight: 700; }
+.arrival-toggle { display: flex; align-items: center; justify-content: center; min-height: 88rpx; margin-top: 30rpx; border-radius: 20rpx; color: #176557; background: #fff; font-weight: 700; }
 .arrival-toggle.is-enabled { color: #8b4d26; background: #fff1e3; }
+.arrival-toggle-pressed { opacity: .72; transform: scale(.99); }
 .status-card, .prompt-card, .privacy-card { margin-top: 22rpx; }
 .status-heading { display: flex; align-items: center; gap: 14rpx; font-size: 29rpx; font-weight: 700; }
 .status-dot { width: 16rpx; height: 16rpx; border-radius: 50%; background: #a8aeaa; }
 .status-dot.is-live { background: #19a47e; box-shadow: 0 0 0 9rpx rgba(25,164,126,.12); }
 .status-detail { margin-top: 15rpx; line-height: 1.65; }
+.location-error-box { margin-top: 18rpx; padding: 20rpx; border: 2rpx solid #efd2c5; border-radius: 18rpx; color: #8b4935; background: #fff7f3; font-size: 22rpx; line-height: 1.65; }
+.retry-location { margin: 20rpx 0 0; border-radius: 18rpx; color: #fff; background: #176557; font-size: 24rpx; font-weight: 700; }
 .settings-link { margin: 20rpx 0 0; padding: 0; color: #176557; background: transparent; font-size: 23rpx; text-align: left; }
 .settings-link::after { border: 0; }
 .prompt-card { border: 2rpx solid #c9e5dd; background: linear-gradient(145deg,#fff,#eef9f6); }

@@ -49,7 +49,7 @@
   },
   "permission": {
     "scope.userLocation": {
-      "desc": "用于选择旅行地点并在地图中显示当前位置"
+      "desc": "用于地图选点、显示当前位置，并在用户主动开启时识别到访地点"
     }
   },
   "requiredPrivateInfos": [

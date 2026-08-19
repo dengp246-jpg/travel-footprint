@@ -53,16 +53,79 @@ function today() {
   return new Date(now.getTime() - offset).toISOString().slice(0, 10)
 }
 
-function getLocation() {
+function ensurePrivacyAuthorized() {
+  if (typeof wx.getPrivacySetting !== 'function') return Promise.resolve()
+  return new Promise((resolve, reject) => {
+    wx.getPrivacySetting({
+      success: (result) => {
+        if (!result.needAuthorization) {
+          resolve()
+          return
+        }
+        if (typeof wx.requirePrivacyAuthorize !== 'function') {
+          reject({ errMsg: 'privacy authorization required' })
+          return
+        }
+        wx.requirePrivacyAuthorize({ success: resolve, fail: reject })
+      },
+      fail: reject
+    })
+  })
+}
+
+function requestLocation(isHighAccuracy) {
   return new Promise((resolve, reject) => {
     wx.getLocation({
       type: 'gcj02',
-      isHighAccuracy: true,
-      highAccuracyExpireTime: 5000,
+      isHighAccuracy,
+      highAccuracyExpireTime: isHighAccuracy ? 8000 : 3000,
       success: resolve,
       fail: reject
     })
   })
+}
+
+async function getLocation() {
+  await ensurePrivacyAuthorized()
+  try {
+    return await requestLocation(true)
+  } catch (error) {
+    const message = String(error.errMsg || '').toLowerCase()
+    if (!message.includes('timeout')) throw error
+    return requestLocation(false)
+  }
+}
+
+function locationFailure(error) {
+  const rawMessage = String(error && (error.errMsg || error.message) || 'unknown error')
+  const message = rawMessage.toLowerCase()
+  if (message.includes('privacy') || message.includes('privateinfo') || message.includes('requiredprivateinfos')) {
+    return {
+      type: 'privacy',
+      title: '位置隐私接口尚未授权',
+      detail: '请在微信公众平台完成用户隐私保护指引，并声明 wx.getLocation 与 wx.chooseLocation 后重新提交开发版。'
+    }
+  }
+  if (message.includes('auth deny') || message.includes('auth denied')
+      || message.includes('permission denied') || message.includes('authorize:fail')) {
+    return {
+      type: 'permission',
+      title: '位置权限未开启',
+      detail: '请在小程序右上角“··· → 设置”以及手机系统的微信权限中允许位置信息。'
+    }
+  }
+  if (message.includes('timeout')) {
+    return {
+      type: 'timeout',
+      title: '定位超时',
+      detail: '请确认手机定位服务已开启，移动到网络或 GPS 信号较好的位置后重新尝试。'
+    }
+  }
+  return {
+    type: 'unavailable',
+    title: '暂时无法读取位置',
+    detail: `微信未能提供位置，请检查权限和网络后重试。（${rawMessage.slice(0, 120)}）`
+  }
 }
 
 Page({
@@ -71,6 +134,7 @@ Page({
     checking: false,
     status: '到访提醒尚未开启',
     statusDetail: '开启后仅在本页面保持显示时读取位置。',
+    errorDetail: '',
     promptVisible: false,
     place: '当前位置',
     promptDetail: '',
@@ -107,19 +171,21 @@ Page({
     removeValue('candidate')
   },
 
-  toggleReminder() {
+  handleReminderTap() {
+    console.info('[arrival-reminder] primary control tapped', {
+      enabled: this.data.enabled,
+      checking: this.data.checking
+    })
     if (this.data.enabled) {
       this.disableReminder()
       return
     }
-    wx.showModal({
-      title: '开启到访提醒',
-      content: '小程序仅在本页面显示时读取位置，并发送到当前服务器匹配离线地点；不会保存定位轨迹或自动发布。',
-      confirmText: '允许并开启',
-      success: (result) => {
-        if (result.confirm) this.startMonitoring(true)
-      }
+    this.setData({
+      status: '已收到开启请求',
+      statusDetail: '正在请求微信位置权限…',
+      errorDetail: ''
     })
+    this.startMonitoring(true)
   },
 
   startMonitoring(interactive) {
@@ -128,7 +194,8 @@ Page({
     this.setData({
       enabled: true,
       status: '到访提醒已开启',
-      statusDetail: '正在读取当前位置…'
+      statusDetail: '正在读取当前位置…',
+      errorDetail: ''
     })
     this.checkPosition(interactive)
     this.pollTimer = setInterval(() => this.checkPosition(false), POLL_INTERVAL_MS)
@@ -139,7 +206,7 @@ Page({
     this.pollTimer = null
   },
 
-  disableReminder() {
+  disableReminder(statusDetail = '不会继续读取当前位置。', status = '到访提醒已关闭', errorDetail = '') {
     this.stopMonitoring()
     writeJson('enabled', false)
     removeValue('candidate')
@@ -147,8 +214,9 @@ Page({
       enabled: false,
       checking: false,
       promptVisible: false,
-      status: '到访提醒已关闭',
-      statusDetail: '不会继续读取当前位置。'
+      status,
+      statusDetail,
+      errorDetail
     })
   },
 
@@ -169,15 +237,27 @@ Page({
       }
       this.scheduleCandidate(position, interactive)
     } catch (error) {
-      const denied = String(error.errMsg || '').includes('auth deny')
-        || String(error.errMsg || '').includes('auth denied')
-      this.setData({
-        statusDetail: denied ? '位置权限未开启，请在小程序设置中允许定位。' : '暂时无法读取位置，稍后会自动重试。'
+      console.error('[arrival-reminder] location failed', error)
+      const failure = locationFailure(error)
+      this.disableReminder(failure.detail, failure.title, failure.detail)
+      const canOpenSettings = failure.type === 'permission'
+      wx.showModal({
+        title: failure.title,
+        content: failure.detail,
+        showCancel: canOpenSettings,
+        confirmText: canOpenSettings ? '检查权限' : '我知道了',
+        cancelText: '稍后处理',
+        success: (result) => {
+          if (canOpenSettings && result.confirm) this.openSettings()
+        }
       })
-      if (denied) this.disableReminder()
     } finally {
       this.setData({ checking: false })
     }
+  },
+
+  retryLocation() {
+    this.startMonitoring(true)
   },
 
   scheduleCandidate(position, interactive) {
@@ -262,6 +342,12 @@ Page({
   },
 
   openSettings() {
-    wx.openSetting()
+    wx.openSetting({
+      success: (result) => {
+        if (result.authSetting && result.authSetting['scope.userLocation']) {
+          this.setData({ statusDetail: '位置权限已允许，请点击“重新尝试定位”。', errorDetail: '' })
+        }
+      }
+    })
   }
 })

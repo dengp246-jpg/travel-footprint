@@ -39,7 +39,7 @@
 - 旅行辅助功能
   - 景点评分
   - 旅行地图展示
-  - 全国地图按实际地点显示与定位针完全重合的热度光晕，省份总量在侧栏排行展示
+  - 网页版地图使用高德地图 JS API 2.0，支持道路底图、缩放拖动、地图类型切换、足迹聚合与高德导航
   - 个人地图按照实际旅行日期绘制旅行路线（缺少日期时才使用发布日期兜底）
   - 地图支持浏览器全屏与 `Esc` 退出，不支持原生全屏时自动使用沉浸模式
   - 个人地图提供“时空旅行故事”，按实际旅行日期逐段播放路线，故事抽屉可直接查看照片或视频
@@ -127,6 +127,16 @@ D:\codex project\shujujiegoukeshe
 ```bash
 mvn spring-boot:run
 ```
+
+首次使用网页版地图时，复制 `.env.example` 为 `.env`，填写 `AMAP_JS_KEY` 和 `AMAP_SECURITY_JS_CODE`。项目默认通过 Spring Boot 内置的 `/_AMapService` 同源代理保护安全密钥：
+
+```properties
+AMAP_JS_KEY=你的Web端Key
+AMAP_SECURITY_JS_CODE=你的安全密钥
+AMAP_PROXY_ENABLED=true
+```
+
+Back4app 使用同名环境变量即可，不要把真实密钥写入源码、Dockerfile 或提交到 GitHub。完整说明见 `高德地图配置说明.md`。
 
 ### 方式二：一键脚本启动
 

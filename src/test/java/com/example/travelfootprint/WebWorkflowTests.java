@@ -206,13 +206,26 @@ class WebWorkflowTests {
                 .andExpect(content().string(containsString(expected.getTitle())))
                 .andExpect(content().string(not(containsString(excluded.getTitle()))))
                 .andExpect(content().string(containsString("data-focus-map")))
-                .andExpect(content().string(not(containsString("data-map-routes"))))
-                .andExpect(content().string(containsString("map-heat-layer")))
-                .andExpect(content().string(containsString("data-map-clusters")))
+                .andExpect(content().string(not(containsString("data-amap-timeline"))))
+                .andExpect(content().string(containsString("data-amap-marker")))
+                .andExpect(content().string(containsString("data-amap-config-message")))
                 .andExpect(content().string(containsString("data-map-story-drawer")))
                 .andExpect(content().string(containsString("data-map-fullscreen")))
                 .andExpect(content().string(containsString("全屏地图")))
                 .andExpect(content().string(containsString("map-intelligence-panel")));
+    }
+
+    @Test
+    void amapContentSecurityPolicyIsLimitedToTheMapPage() throws Exception {
+        mockMvc.perform(get("/map"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Content-Security-Policy", containsString("https://*.amap.com")))
+                .andExpect(header().string("Content-Security-Policy", containsString("'unsafe-eval'")));
+
+        mockMvc.perform(get("/"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Content-Security-Policy", not(containsString("https://*.amap.com"))))
+                .andExpect(header().string("Content-Security-Policy", not(containsString("'unsafe-eval'"))));
     }
 
     @Test
@@ -227,10 +240,11 @@ class WebWorkflowTests {
         mockMvc.perform(get("/map").param("mode", "personal").session(session))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString(personalPost.getTitle())))
-                .andExpect(content().string(containsString("data-map-routes")))
-                .andExpect(content().string(containsString("data-map-timeline")))
+                .andExpect(content().string(containsString("data-amap-timeline")))
                 .andExpect(content().string(containsString("时空旅行故事")))
                 .andExpect(content().string(containsString("data-travel-date")))
+                .andExpect(content().string(containsString("data-longitude")))
+                .andExpect(content().string(containsString("data-latitude")))
                 .andExpect(content().string(containsString("data-video-path")))
                 .andExpect(content().string(containsString("按照实际旅行日期")));
     }
@@ -262,7 +276,7 @@ class WebWorkflowTests {
     }
 
     @Test
-    void mapPlacementRejectsLandmarkAnchorsFromConflictingProvince() {
+    void mapPlacementUsesProvinceExplicitlyNamedInLocationOverStaleProvinceField() {
         TravelPost conflictingPost = new TravelPost();
         conflictingPost.setProvince("江西");
         conflictingPost.setLocation("湖南长沙");
@@ -274,7 +288,38 @@ class WebWorkflowTests {
         DestinationMapService.MapPoint correctedPoint = destinationMapService.resolvePoint(conflictingPost).orElseThrow();
         DestinationMapService.MapPoint changshaPoint = destinationMapService.resolvePoint(changshaPost).orElseThrow();
 
-        org.junit.jupiter.api.Assertions.assertTrue(correctedPoint.left() > changshaPoint.left() + 2.0);
+        org.junit.jupiter.api.Assertions.assertEquals(changshaPoint.left(), correctedPoint.left(), 0.01);
+        org.junit.jupiter.api.Assertions.assertEquals(changshaPoint.top(), correctedPoint.top(), 0.01);
+    }
+
+    @Test
+    void mapPlacementCalibratesFullLandmarkAddressesBeforeCityAndProvinceFallbacks() {
+        TravelPost prefixedWestLake = new TravelPost();
+        prefixedWestLake.setProvince("浙江");
+        prefixedWestLake.setLocation("浙江 · 杭州 · 西湖");
+        DestinationMapService.MapPlacement westLake = destinationMapService
+                .resolvePlacement(prefixedWestLake).orElseThrow();
+
+        TravelPost qingguoLane = new TravelPost();
+        qingguoLane.setProvince("江苏");
+        qingguoLane.setLocation("常州青果巷历史文化街区");
+        DestinationMapService.MapPlacement qingguo = destinationMapService
+                .resolvePlacement(qingguoLane).orElseThrow();
+
+        TravelPost jiuzhaigouPost = new TravelPost();
+        jiuzhaigouPost.setProvince("四川");
+        jiuzhaigouPost.setLocation("阿坝州九寨沟风景区");
+        DestinationMapService.MapPlacement jiuzhaigou = destinationMapService
+                .resolvePlacement(jiuzhaigouPost).orElseThrow();
+
+        org.junit.jupiter.api.Assertions.assertEquals(120.158108, westLake.coordinates().longitude(), 0.000001);
+        org.junit.jupiter.api.Assertions.assertEquals(30.241651, westLake.coordinates().latitude(), 0.000001);
+        org.junit.jupiter.api.Assertions.assertEquals("西湖", westLake.groupKey());
+        org.junit.jupiter.api.Assertions.assertEquals("杭州", westLake.groupLabel());
+        org.junit.jupiter.api.Assertions.assertEquals(119.960596, qingguo.coordinates().longitude(), 0.000001);
+        org.junit.jupiter.api.Assertions.assertEquals(31.771879, qingguo.coordinates().latitude(), 0.000001);
+        org.junit.jupiter.api.Assertions.assertEquals(103.9187, jiuzhaigou.coordinates().longitude(), 0.0001);
+        org.junit.jupiter.api.Assertions.assertEquals(33.2520, jiuzhaigou.coordinates().latitude(), 0.0001);
     }
 
     @Test
@@ -317,8 +362,8 @@ class WebWorkflowTests {
                 .findFirst()
                 .orElseThrow();
         org.junit.jupiter.api.Assertions.assertEquals("浙江", westLake.province());
-        org.junit.jupiter.api.Assertions.assertEquals(120.1551, westLake.longitude(), 0.0001);
-        org.junit.jupiter.api.Assertions.assertEquals(30.2741, westLake.latitude(), 0.0001);
+        org.junit.jupiter.api.Assertions.assertEquals(120.158108, westLake.longitude(), 0.000001);
+        org.junit.jupiter.api.Assertions.assertEquals(30.241651, westLake.latitude(), 0.000001);
     }
 
     @Test
@@ -329,8 +374,8 @@ class WebWorkflowTests {
 
         mockMvc.perform(get("/api/location/arrival-match")
                         .session(session)
-                        .param("longitude", "120.1551")
-                        .param("latitude", "30.2741"))
+                        .param("longitude", "120.158108")
+                        .param("latitude", "30.241651"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.location").value("杭州 西湖"))
                 .andExpect(jsonPath("$.province").value("浙江"))

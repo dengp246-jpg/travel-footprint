@@ -65,8 +65,8 @@ class MiniAppFeatureTests {
 
         mockMvc.perform(get("/api/mini/location/arrival-match")
                         .header("X-Mini-Token", token)
-                        .param("longitude", "120.1551")
-                        .param("latitude", "30.2741"))
+                        .param("longitude", "120.158108")
+                        .param("latitude", "30.241651"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.location").value("杭州 西湖"))
                 .andExpect(jsonPath("$.province").value("浙江"))

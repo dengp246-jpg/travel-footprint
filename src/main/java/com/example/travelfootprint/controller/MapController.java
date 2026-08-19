@@ -20,6 +20,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -76,6 +77,10 @@ public class MapController {
     private final DestinationMapService destinationMapService;
     private final ContentVisibilityService contentVisibilityService;
     private final LocationNormalizationService locationNormalizationService;
+    private final String amapJsKey;
+    private final String amapSecurityJsCode;
+    private final String amapServiceHost;
+    private final boolean amapProxyEnabled;
 
     public MapController(
             TravelPostRepository postRepository,
@@ -83,13 +88,21 @@ public class MapController {
             ProvinceCatalogService provinceCatalogService,
             DestinationMapService destinationMapService,
             ContentVisibilityService contentVisibilityService,
-            LocationNormalizationService locationNormalizationService) {
+            LocationNormalizationService locationNormalizationService,
+            @Value("${app.map.amap-js-key:}") String amapJsKey,
+            @Value("${app.map.amap-security-js-code:}") String amapSecurityJsCode,
+            @Value("${app.map.amap-service-host:}") String amapServiceHost,
+            @Value("${app.map.amap-proxy-enabled:true}") boolean amapProxyEnabled) {
         this.postRepository = postRepository;
         this.currentUserService = currentUserService;
         this.provinceCatalogService = provinceCatalogService;
         this.destinationMapService = destinationMapService;
         this.contentVisibilityService = contentVisibilityService;
         this.locationNormalizationService = locationNormalizationService;
+        this.amapJsKey = amapJsKey.trim();
+        this.amapSecurityJsCode = amapSecurityJsCode.trim();
+        this.amapServiceHost = amapServiceHost.trim();
+        this.amapProxyEnabled = amapProxyEnabled;
     }
 
     @GetMapping("/map")
@@ -197,6 +210,8 @@ public class MapController {
                         marker.province(),
                         marker.point().left(),
                         marker.point().top(),
+                        marker.coordinates().longitude(),
+                        marker.coordinates().latitude(),
                         marker.post().getCreatedAt(),
                         marker.post().getCategory(),
                         marker.post().getTravelDate(),
@@ -278,6 +293,14 @@ public class MapController {
         model.addAttribute("totalMappedPosts", markers.size());
         model.addAttribute("allMappedPosts", mappablePosts.size());
         model.addAttribute("resolvedProvincePosts", provinceResolvedPosts.size());
+        boolean useLocalAmapProxy = amapProxyEnabled
+                && amapServiceHost.isBlank()
+                && !amapSecurityJsCode.isBlank();
+        model.addAttribute("amapJsKey", amapJsKey);
+        model.addAttribute("amapSecurityJsCode",
+                useLocalAmapProxy || !amapServiceHost.isBlank() ? "" : amapSecurityJsCode);
+        model.addAttribute("amapServiceHost", amapServiceHost);
+        model.addAttribute("amapUseLocalProxy", useLocalAmapProxy);
         return "map";
     }
 
@@ -286,10 +309,16 @@ public class MapController {
         if (post.isApproximateLocation() && !personalMode && province.isPresent()) {
             ProvinceFocusView focus = PROVINCE_FOCUSES.get(province.get());
             if (focus != null) {
+                Optional<DestinationMapService.GeoPoint> coordinates = destinationMapService
+                        .resolveProvinceCoordinates(province.get());
+                if (coordinates.isEmpty()) {
+                    return Optional.empty();
+                }
                 return Optional.of(new MarkerCandidate(
                         post,
                         province.get(),
                         new DestinationMapService.MapPoint(focus.left(), focus.top()),
+                        coordinates.get(),
                         province.get() + "|模糊位置",
                         province.get() + " · 位置已模糊"));
             }
@@ -302,7 +331,13 @@ public class MapController {
                 ? locationNormalizationService.normalizeDisplayLocation(post)
                 : placement.get().groupLabel();
         String groupKey = province.get() + "|" + (placement.get().groupKey().isBlank() ? groupLabel : placement.get().groupKey());
-        return Optional.of(new MarkerCandidate(post, province.get(), placement.get().point(), groupKey, groupLabel));
+        return Optional.of(new MarkerCandidate(
+                post,
+                province.get(),
+                placement.get().point(),
+                placement.get().coordinates(),
+                groupKey,
+                groupLabel));
     }
 
     private String resolveRequestedMode(String mode, HttpSession session) {
@@ -333,7 +368,7 @@ public class MapController {
     }
 
     private Optional<String> resolveProvinceName(TravelPost post) {
-        return provinceCatalogService.resolveProvince(post.getProvince(), post.getLocation());
+        return destinationMapService.resolveProvinceForMapping(post);
     }
 
     private String normalizeSelectedProvince(String province) {
@@ -416,6 +451,7 @@ public class MapController {
             TravelPost post,
             String province,
             DestinationMapService.MapPoint point,
+            DestinationMapService.GeoPoint coordinates,
             String groupKey,
             String groupLabel) {
     }
@@ -433,6 +469,8 @@ public class MapController {
             String province,
             double left,
             double top,
+            double longitude,
+            double latitude,
             LocalDateTime publishedAt,
             String category,
             LocalDate travelDate,

@@ -17,6 +17,8 @@ android-app/local.properties
 android-app/**/build/
 android-app/signing/
 .env
+.env.*
+!.env.example
 *.iml
 tmp_*.ps1
 *-headers.txt

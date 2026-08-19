@@ -203,9 +203,12 @@ function setupArrivalReminders() {
       setArrivalStatus("已取得粗略位置，正在等待更精确的定位…");
       return;
     }
+    const converted = window.TravelCoordinates
+      ? window.TravelCoordinates.wgs84ToGcj02(coords.longitude, coords.latitude)
+      : [coords.longitude, coords.latitude];
     scheduleCandidate({
-      latitude: coords.latitude,
-      longitude: coords.longitude,
+      latitude: converted[1],
+      longitude: converted[0],
       accuracy
     });
   };

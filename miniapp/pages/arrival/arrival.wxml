@@ -1,17 +1,21 @@
 <view class="page-shell arrival-page">
   <view class="arrival-hero">
     <view class="arrival-symbol">⌖</view>
-    <view class="eyebrow">FOREGROUND ARRIVAL</view>
+    <view class="eyebrow">FOREGROUND ARRIVAL · v2</view>
     <view class="arrival-title">自动到访提醒</view>
     <view class="arrival-copy">仅在本页面显示时检测位置。不会后台定位，不会保存轨迹，也不会自动发布足迹。</view>
-    <button class="arrival-toggle {{enabled ? 'is-enabled' : ''}}" bindtap="toggleReminder">
+    <view class="arrival-toggle {{enabled ? 'is-enabled' : ''}}" role="button"
+          aria-label="{{enabled ? '关闭到访提醒' : '允许定位并开启'}}"
+          bindtap="handleReminderTap" hover-class="arrival-toggle-pressed">
       {{enabled ? '关闭到访提醒' : '允许定位并开启'}}
-    </button>
+    </view>
   </view>
 
   <view class="card status-card">
     <view class="status-heading"><view class="status-dot {{enabled ? 'is-live' : ''}}"></view><view>{{status}}</view></view>
     <view class="muted status-detail">{{statusDetail}}</view>
+    <view wx:if="{{errorDetail}}" class="location-error-box">{{errorDetail}}</view>
+    <button wx:if="{{errorDetail && !enabled}}" class="retry-location" bindtap="retryLocation">重新尝试定位</button>
     <button wx:if="{{!enabled}}" class="settings-link" bindtap="openSettings">检查小程序位置权限</button>
   </view>
 

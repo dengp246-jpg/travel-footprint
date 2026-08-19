@@ -32,22 +32,23 @@ public class DestinationMapService {
             - (CHINA_MAX_LATITUDE - CHINA_MIN_LATITUDE) * MAP_SCALE) / 2.0;
 
     private static final List<DestinationAnchor> DESTINATION_ANCHORS = List.of(
-            destination("浙江", 120.1551, 30.2741, "西湖", "杭州", "杭州西湖"),
-            destination("福建", 118.0667, 24.4486, "鼓浪屿", "厦门", "厦门鼓浪屿"),
+            destination("浙江", 120.158108, 30.241651, "西湖", "杭州", "杭州西湖"),
+            destination("福建", 118.066102, 24.446214, "鼓浪屿", "厦门", "厦门鼓浪屿"),
             destination("湖南", 109.5996, 27.9483, "凤凰古城", "凤凰", "湘西"),
             destination("安徽", 118.3376, 29.7147, "黄山", "黄山风景区"),
             destination("四川", 103.9187, 33.2520, "九寨沟"),
             destination("四川", 100.2980, 28.4861, "稻城亚丁", "亚丁", "稻城"),
             destination("陕西", 109.2732, 34.3841, "兵马俑", "秦始皇兵马俑"),
-            destination("北京", 116.4039, 39.9240, "故宫博物院", "故宫"),
+            destination("北京", 116.397029, 39.917839, "故宫博物院", "故宫"),
             destination("西藏", 91.1175, 29.6570, "布达拉宫", "拉萨"),
             destination("四川", 103.4920, 29.5449, "峨眉山"),
             destination("河南", 112.4777, 34.5607, "龙门石窟", "洛阳"),
             destination("四川", 103.7730, 29.5442, "乐山大佛", "乐山"),
-            destination("湖南", 112.9454, 28.1894, "岳麓山"),
-            destination("湖南", 110.4792, 29.3167, "武陵源", "张家界", "国家森林公园", "张家界国家森林公园"),
+            destination("湖南", 112.936763, 28.187549, "岳麓山"),
+            destination("湖南", 110.469450, 29.353896, "武陵源", "张家界", "国家森林公园", "张家界国家森林公园"),
             destination("云南", 100.2340, 26.8721, "丽江古城", "丽江"),
             destination("江苏", 120.6196, 31.2990, "苏州园林", "苏州"),
+            destination("江苏", 119.960596, 31.771879, "青果巷", "常州青果巷", "青果巷历史文化街区"),
             destination("福建", 117.9910, 27.7510, "武夷山", "南平"),
             destination("上海", 121.4905, 31.2417, "外滩", "黄浦", "上海"),
             destination("山东", 120.3826, 36.0671, "栈桥", "青岛"),
@@ -96,6 +97,7 @@ public class DestinationMapService {
             Map.entry("北京", city("北京", 116.4074, 39.9042)),
             Map.entry("上海", city("上海", 121.4737, 31.2304)),
             Map.entry("苏州", city("江苏", 120.5853, 31.2989)),
+            Map.entry("常州", city("江苏", 119.9741, 31.8112)),
             Map.entry("洛阳", city("河南", 112.4777, 34.5607)),
             Map.entry("乐山", city("四川", 103.7730, 29.5442)),
             Map.entry("南平", city("福建", 117.9910, 27.7510)),
@@ -245,40 +247,67 @@ public class DestinationMapService {
         return resolvePlacement(post).map(placement -> unproject(placement.point()));
     }
 
+    public Optional<GeoPoint> resolveProvinceCoordinates(String provinceName) {
+        if (provinceName == null || provinceName.isBlank()) {
+            return Optional.empty();
+        }
+        return PROVINCE_FALLBACKS.stream()
+                .filter(anchor -> anchor.name().equals(provinceName))
+                .findFirst()
+                .map(anchor -> new GeoPoint(anchor.longitude(), anchor.latitude()));
+    }
+
+    /**
+     * A province explicitly written in the destination text is more specific than a stale form field.
+     * This keeps records such as "province=江西, location=湖南长沙" on the location they actually name.
+     */
+    public Optional<String> resolveProvinceForMapping(TravelPost post) {
+        Optional<String> locationProvince = provinceCatalogService.resolveProvince(null, post.getLocation());
+        return locationProvince.isPresent()
+                ? locationProvince
+                : provinceCatalogService.resolveProvince(post.getProvince(), post.getLocation());
+    }
+
     public Optional<MapPlacement> resolvePlacement(TravelPost post) {
-        String primaryLocation = locationNormalizationService.primaryLocationSegment(post);
-        String searchText = ((post.getProvince() == null ? "" : post.getProvince()) + " " + primaryLocation)
-                .replace(" ", "");
-        String placementLabel = primaryLocation.isBlank()
-                ? locationNormalizationService.normalizeDisplayLocation(post)
-                : primaryLocation;
-        Optional<String> province = provinceCatalogService.resolveProvince(post.getProvince(), post.getLocation());
+        String placementLabel = locationNormalizationService.normalizeDisplayLocation(post);
+        String searchText = ((post.getProvince() == null ? "" : post.getProvince())
+                + " " + (post.getLocation() == null ? "" : post.getLocation())
+                + " " + (post.getTitle() == null ? "" : post.getTitle()))
+                .replaceAll("[\\s·,，、/\\\\|;；]+", "");
+        Optional<String> province = resolveProvinceForMapping(post);
 
         if (hasValidCoordinates(post)) {
             return Optional.of(new MapPlacement(
                     project(post.getLongitude(), post.getLatitude()),
+                    new GeoPoint(post.getLongitude(), post.getLatitude()),
                     placementLabel,
                     placementLabel));
         }
 
-        Optional<String> clusterLabel = resolveClusterLabel(post, primaryLocation);
+        Optional<String> clusterLabel = resolveClusterLabel(placementLabel);
         Optional<GeoAnchor> clusterAnchor = clusterLabel
                 .map(CITY_CLUSTER_ANCHORS::get)
                 .filter(anchor -> province.isEmpty() || province.get().equals(anchor.province()));
         Optional<DestinationAnchor> preciseAnchor = DESTINATION_ANCHORS.stream()
                 .sorted(Comparator.comparingInt((DestinationAnchor anchor) -> anchor.maxKeywordLength()).reversed())
-                .filter(anchor -> anchor.matches(searchText))
+                .filter(anchor -> anchor.matchesLandmark(searchText))
                 .filter(anchor -> province.isEmpty() || province.get().equals(anchor.province()))
                 .findFirst();
-        if (clusterAnchor.isPresent()) {
-            return Optional.of(new MapPlacement(project(clusterAnchor.get().longitude(), clusterAnchor.get().latitude()),
-                    clusterLabel.orElse(placementLabel), clusterLabel.orElse(placementLabel)));
-        }
         if (preciseAnchor.isPresent()) {
+            DestinationAnchor anchor = preciseAnchor.get();
+            String landmarkLabel = anchor.primaryKeyword();
+            String groupLabel = clusterLabel.orElse(landmarkLabel);
             return Optional.of(new MapPlacement(
-                    project(preciseAnchor.get().longitude(), preciseAnchor.get().latitude()),
-                    placementLabel,
-                    placementLabel));
+                    project(anchor.longitude(), anchor.latitude()),
+                    new GeoPoint(anchor.longitude(), anchor.latitude()),
+                    landmarkLabel,
+                    groupLabel));
+        }
+        if (clusterAnchor.isPresent()) {
+            GeoAnchor anchor = clusterAnchor.get();
+            return Optional.of(new MapPlacement(project(anchor.longitude(), anchor.latitude()),
+                    new GeoPoint(anchor.longitude(), anchor.latitude()),
+                    clusterLabel.orElse(placementLabel), clusterLabel.orElse(placementLabel)));
         }
 
         if (province.isEmpty()) {
@@ -292,16 +321,13 @@ public class DestinationMapService {
             return Optional.empty();
         }
 
-        String seedText = ((post.getProvince() == null ? "" : post.getProvince())
-                + "|"
-                + placementLabel).replace(" ", "");
-        int hash = Math.abs(seedText.hashCode());
-        double jitterLongitude = ((hash % 5) - 2) * 0.18;
-        double jitterLatitude = (((hash / 5) % 5) - 2) * 0.14;
-
+        // Do not invent a random-looking coordinate. Unknown destinations stay on the documented
+        // province fallback and naturally aggregate instead of appearing falsely precise.
+        double longitude = fallbackAnchor.get().longitude();
+        double latitude = fallbackAnchor.get().latitude();
         return Optional.of(new MapPlacement(
-                project(fallbackAnchor.get().longitude() + jitterLongitude,
-                        fallbackAnchor.get().latitude() + jitterLatitude),
+                project(longitude, latitude),
+                new GeoPoint(longitude, latitude),
                 placementLabel,
                 placementLabel));
     }
@@ -373,20 +399,29 @@ public class DestinationMapService {
         return new ProvinceAnchor(name, longitude, latitude);
     }
 
-    private Optional<String> resolveClusterLabel(TravelPost post, String primaryLocation) {
-        if (primaryLocation == null || primaryLocation.isBlank()) {
+    private Optional<String> resolveClusterLabel(String normalizedLocation) {
+        if (normalizedLocation == null || normalizedLocation.isBlank()) {
             return Optional.empty();
         }
-        return Optional.of(primaryLocation)
-                .filter(CITY_CLUSTER_ANCHORS::containsKey);
+        String lookupText = normalizedLocation.replace(" ", "").replace("·", "");
+        return CITY_CLUSTER_ANCHORS.keySet().stream()
+                .sorted(Comparator.comparingInt(String::length).reversed())
+                .filter(lookupText::contains)
+                .findFirst();
     }
 
     private record DestinationAnchor(String province, double longitude, double latitude, List<String> keywords) {
 
-        private boolean matches(String normalizedText) {
+        private boolean matchesLandmark(String normalizedText) {
             return keywords.stream()
                     .map(keyword -> keyword.replace(" ", ""))
+                    .filter(keyword -> !keyword.equals(province))
+                    .filter(keyword -> !CITY_CLUSTER_ANCHORS.containsKey(keyword))
                     .anyMatch(normalizedText::contains);
+        }
+
+        private String primaryKeyword() {
+            return keywords.get(0);
         }
 
         private int maxKeywordLength() {
@@ -403,7 +438,7 @@ public class DestinationMapService {
     private record GeoAnchor(String province, double longitude, double latitude) {
     }
 
-    public record MapPlacement(MapPoint point, String groupKey, String groupLabel) {
+    public record MapPlacement(MapPoint point, GeoPoint coordinates, String groupKey, String groupLabel) {
     }
 
     public record MapPoint(double left, double top) {

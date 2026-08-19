@@ -505,6 +505,13 @@ Backups are created under the ignored D-drive directory `backups/<timestamp>/`. 
 - Run `./scripts/backup-oracle.sh` to create a consistent server-side H2/upload backup.
 - See `docs/ORACLE-CLOUD-DEPLOYMENT.md` for VM creation, firewall, HTTPS, verification, and optional GitHub Actions deployment.
 
+### Alibaba Cloud Ubuntu deployment
+
+- Alibaba Cloud deployment files are under `deploy/aliyun/` and are tuned for a 2 vCPU / 2 GiB Ubuntu 22.04 server.
+- Uploaded images and videos use a persistent filesystem mount, while H2 stores application records under the persistent data directory.
+- Run `./scripts/deploy-aliyun.sh` to build and start the website and `./scripts/backup-aliyun.sh` for a consistent cloud backup.
+- See `docs/ALIYUN-DEPLOYMENT.md` for firewall, Docker, swap, migration, ICP filing, and HTTPS steps.
+
 ## Android Application
 
 - The `android-app/` directory contains an installable Android shell for the existing Spring Boot + Thymeleaf application. The backend and database remain on the server; the phone connects through the configured server URL.

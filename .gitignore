@@ -11,6 +11,9 @@ backups/
 deploy/oracle/runtime/
 deploy/oracle/backups/
 deploy/oracle/.env
+deploy/aliyun/runtime/
+deploy/aliyun/backups/
+deploy/aliyun/.env
 outputs/
 .android-sdk/
 .android-tools/

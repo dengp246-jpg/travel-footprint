@@ -497,6 +497,14 @@ powershell -ExecutionPolicy Bypass -File .\scripts\backup-local-data.ps1
 
 Backups are created under the ignored D-drive directory `backups/<timestamp>/`. The backup script refuses to copy the database while port 8080 is still serving the application.
 
+### Oracle Cloud Always Free deployment
+
+- Oracle VM deployment files are under `deploy/oracle/`.
+- Copy `deploy/oracle/.env.example` to `deploy/oracle/.env` on the VM and keep real passwords and AMap values out of Git.
+- Run `./scripts/deploy-oracle.sh` to build and start Spring Boot plus Caddy with persistent H2/upload directories.
+- Run `./scripts/backup-oracle.sh` to create a consistent server-side H2/upload backup.
+- See `docs/ORACLE-CLOUD-DEPLOYMENT.md` for VM creation, firewall, HTTPS, verification, and optional GitHub Actions deployment.
+
 ## Android Application
 
 - The `android-app/` directory contains an installable Android shell for the existing Spring Boot + Thymeleaf application. The backend and database remain on the server; the phone connects through the configured server URL.

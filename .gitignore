@@ -8,6 +8,9 @@ uploads/
 data/
 run/
 backups/
+deploy/oracle/runtime/
+deploy/oracle/backups/
+deploy/oracle/.env
 outputs/
 .android-sdk/
 .android-tools/

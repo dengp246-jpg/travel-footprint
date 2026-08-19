@@ -11,7 +11,7 @@ FROM eclipse-temurin:17-jre
 
 WORKDIR /app
 
-RUN mkdir -p /app/uploads /app/downloads
+RUN mkdir -p /app/data /app/uploads /app/downloads
 
 COPY --from=build /app/target/travel-footprint-0.0.1-SNAPSHOT.jar /app/app.jar
 COPY distribution/travel-footprint-android.apk /app/downloads/travel-footprint-android.apk

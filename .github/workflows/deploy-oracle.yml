@@ -1,0 +1,35 @@
+name: Deploy to Oracle Cloud
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: oracle-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: ${{ vars.OCI_DEPLOY_ENABLED == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configure SSH
+        env:
+          OCI_HOST: ${{ secrets.OCI_HOST }}
+          OCI_SSH_KEY: ${{ secrets.OCI_SSH_KEY }}
+        run: |
+          test -n "$OCI_HOST"
+          test -n "$OCI_SSH_KEY"
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$OCI_SSH_KEY" > ~/.ssh/oracle_travel_footprint
+          chmod 600 ~/.ssh/oracle_travel_footprint
+          ssh-keyscan -H "$OCI_HOST" >> ~/.ssh/known_hosts
+
+      - name: Deploy main branch
+        env:
+          OCI_HOST: ${{ secrets.OCI_HOST }}
+          OCI_USER: ${{ secrets.OCI_USER }}
+        run: |
+          ssh -i ~/.ssh/oracle_travel_footprint "$OCI_USER@$OCI_HOST" \
+            'cd ~/travel-footprint && git pull --ff-only origin main && ./scripts/deploy-oracle.sh'

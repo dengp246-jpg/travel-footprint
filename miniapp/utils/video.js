@@ -28,7 +28,14 @@ function chooseVideo(maxBytes = DEFAULT_MAX_VIDEO_BYTES) {
         resolve({
           path: file.tempFilePath,
           size: file.size || 0,
-          label: formatFileSize(file.size || 0)
+          duration: Number(file.duration) || 0,
+          width: Number(file.width) || 0,
+          height: Number(file.height) || 0,
+          label: [
+            formatFileSize(file.size || 0),
+            Number(file.duration) > 0 ? `${Math.round(file.duration)}秒` : '',
+            Number(file.width) > 0 && Number(file.height) > 0 ? `${file.width}×${file.height}` : ''
+          ].filter(Boolean).join(' · ')
         })
       },
       fail: (error) => {

@@ -84,14 +84,17 @@ public class PlanController {
         Map<Long, List<TripPlanMember>> planMembers = new LinkedHashMap<>();
         Map<Long, List<TripPlanMember>> planInvitations = new LinkedHashMap<>();
         Map<Long, Boolean> ownedPlans = new LinkedHashMap<>();
+        Map<Long, BigDecimal> expenseTotals = plans.isEmpty() ? Map.of() : expenseRepository
+                .sumByTripPlanIds(plans.stream().map(TripPlan::getId).toList()).stream()
+                .collect(java.util.stream.Collectors.toMap(
+                        TravelExpenseRepository.PlanExpenseTotal::getPlanId,
+                        TravelExpenseRepository.PlanExpenseTotal::getTotal));
         plans.forEach(plan -> {
             List<com.example.travelfootprint.model.TravelPost> posts =
                     travelPostRepository.findByTripPlanIdOrderByTravelDateAscCreatedAtAsc(plan.getId());
             planPosts.put(plan.getId(), posts);
             planProgress.put(plan.getId(), progress(plan, posts));
-            planSpent.put(plan.getId(), expenseRepository.findByTripPlanId(plan.getId()).stream()
-                    .map(com.example.travelfootprint.model.TravelExpense::getAmount)
-                    .reduce(BigDecimal.ZERO, BigDecimal::add));
+            planSpent.put(plan.getId(), expenseTotals.getOrDefault(plan.getId(), BigDecimal.ZERO));
             planMembers.put(plan.getId(), planAccessService.acceptedMembers(plan));
             planInvitations.put(plan.getId(), planAccessService.allInvitations(plan));
             ownedPlans.put(plan.getId(), planAccessService.isOwner(plan, currentUser));

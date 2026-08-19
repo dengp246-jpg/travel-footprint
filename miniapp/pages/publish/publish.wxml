@@ -77,6 +77,12 @@
       </view>
     </view>
 
-    <button class="button-primary submit-button" loading="{{submitting || processingPhoto}}" disabled="{{submitting || processingPhoto}}" bindtap="submitPost">{{processingPhoto ? '正在优化图片…' : (submitting ? '正在保存…' : '发布这条足迹')}}</button>
+    <view wx:if="{{submitting || uploadFailed}}" class="upload-progress-card">
+      <view class="upload-progress-head"><text>{{uploadStatus}}</text><text>{{uploadProgress}}%</text></view>
+      <progress percent="{{uploadProgress}}" activeColor="#176557" backgroundColor="#dce8e4" stroke-width="8" border-radius="8" active="{{submitting}}" />
+      <view class="muted upload-progress-note">上传期间请保持小程序打开；失败后不会清空已填写内容。</view>
+      <button wx:if="{{submitting}}" class="button-secondary upload-cancel-button" bindtap="cancelUpload">取消上传</button>
+    </view>
+    <button class="button-primary submit-button" loading="{{submitting || processingPhoto}}" disabled="{{submitting || processingPhoto}}" bindtap="submitPost">{{processingPhoto ? '正在优化图片…' : (submitting ? '正在上传…' : (uploadFailed ? '重新上传' : '发布这条足迹'))}}</button>
   </view>
 </view>

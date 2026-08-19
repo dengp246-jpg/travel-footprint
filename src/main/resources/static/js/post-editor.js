@@ -9,6 +9,7 @@
     "image/webp"
   ]);
   const ALLOWED_VIDEO_TYPES = new Set(["video/mp4", "video/webm"]);
+  let amapLoaderPromise;
 
   document.querySelectorAll("[data-post-editor]").forEach((form) => {
     setupCharacterCounters(form);
@@ -16,8 +17,227 @@
     setupVideoUpload(form);
     setupPrivacyPreview(form);
     setupLocationAssistant(form);
+    setupAmapLocationPicker(form);
+    setupUploadProgress(form);
     setupValidationFeedback(form);
   });
+
+  function setupUploadProgress(form) {
+    const panel = form.querySelector("[data-upload-progress]");
+    const bar = form.querySelector("[data-upload-progress-bar]");
+    const percent = form.querySelector("[data-upload-percent]");
+    const status = form.querySelector("[data-upload-status]");
+    const retry = form.querySelector("[data-upload-retry]");
+    const cancel = form.querySelector("[data-upload-cancel]");
+    const submitButton = form.querySelector("[data-submit-button]");
+    if (!panel || !bar || !percent || !status) return;
+
+    let uploading = false;
+    let currentRequest = null;
+    const warnBeforeLeave = (event) => {
+      if (!uploading) return;
+      event.preventDefault();
+      event.returnValue = "上传仍在进行，确定要离开吗？";
+    };
+    window.addEventListener("beforeunload", warnBeforeLeave);
+
+    const restoreButton = () => {
+      if (!submitButton) return;
+      submitButton.disabled = false;
+      submitButton.removeAttribute("aria-busy");
+      submitButton.textContent = submitButton.dataset.originalLabel || "重新提交";
+    };
+
+    const upload = () => {
+      if (uploading || !form.reportValidity()) return;
+      uploading = true;
+      panel.hidden = false;
+      retry.hidden = true;
+      if (cancel) cancel.hidden = false;
+      bar.value = 0;
+      percent.textContent = "0%";
+      status.textContent = "正在建立安全上传连接…";
+      const xhr = new XMLHttpRequest();
+      currentRequest = xhr;
+      xhr.open((form.method || "POST").toUpperCase(), form.action, true);
+      xhr.setRequestHeader("X-Requested-With", "XMLHttpRequest");
+      xhr.upload.addEventListener("progress", (event) => {
+        if (!event.lengthComputable) {
+          status.textContent = "正在上传，请保持页面打开…";
+          return;
+        }
+        const value = Math.min(99, Math.round(event.loaded * 100 / event.total));
+        bar.value = value;
+        percent.textContent = `${value}%`;
+        status.textContent = value < 100 ? "正在上传图片和视频…" : "服务器正在保存足迹…";
+      });
+      xhr.addEventListener("load", () => {
+        uploading = false;
+        currentRequest = null;
+        if (cancel) cancel.hidden = true;
+        if (xhr.status >= 200 && xhr.status < 400) {
+          bar.value = 100;
+          percent.textContent = "100%";
+          status.textContent = "上传完成，正在打开足迹…";
+          window.location.assign(xhr.responseURL || "/");
+          return;
+        }
+        status.textContent = `上传失败（${xhr.status}），请检查登录状态或文件大小。`;
+        retry.hidden = false;
+        restoreButton();
+      });
+      xhr.addEventListener("error", () => {
+        uploading = false;
+        currentRequest = null;
+        if (cancel) cancel.hidden = true;
+        status.textContent = "网络中断，已保留表单内容，可以直接重试。";
+        retry.hidden = false;
+        restoreButton();
+      });
+      xhr.addEventListener("abort", () => {
+        uploading = false;
+        currentRequest = null;
+        if (cancel) cancel.hidden = true;
+        status.textContent = "上传已取消，可以重新提交。";
+        retry.hidden = false;
+        restoreButton();
+      });
+      xhr.send(new FormData(form));
+    };
+
+    form.addEventListener("submit", (event) => {
+      event.preventDefault();
+      upload();
+    });
+    retry?.addEventListener("click", upload);
+    cancel?.addEventListener("click", () => currentRequest?.abort());
+  }
+
+  function loadAmapEditor(form) {
+    if (window.AMap?.Map) return Promise.resolve(window.AMap);
+    if (amapLoaderPromise) return amapLoaderPromise;
+    const key = (form.dataset.amapKey || "").trim();
+    if (!key) return Promise.reject(new Error("missing-amap-key"));
+    let serviceHost = (form.dataset.amapServiceHost || "").trim();
+    if (form.dataset.amapLocalProxy === "true") {
+      serviceHost = `${window.location.origin}/_AMapService`;
+    }
+    const securityCode = (form.dataset.amapSecurityCode || "").trim();
+    window._AMapSecurityConfig = serviceHost ? { serviceHost } : { securityJsCode: securityCode };
+    amapLoaderPromise = new Promise((resolve, reject) => {
+      const script = document.createElement("script");
+      script.src = "https://webapi.amap.com/loader.js";
+      script.onload = () => window.AMapLoader.load({
+        key,
+        version: "2.0",
+        plugins: ["AMap.PlaceSearch", "AMap.Geocoder", "AMap.Scale"]
+      }).then(resolve).catch(reject);
+      script.onerror = reject;
+      document.head.appendChild(script);
+    });
+    return amapLoaderPromise;
+  }
+
+  function setupAmapLocationPicker(form) {
+    const canvas = form.querySelector("[data-amap-location-map]");
+    const results = form.querySelector("[data-amap-place-results]");
+    const locationInput = form.querySelector("[data-location-input]");
+    const provinceSelect = form.querySelector("[data-province-select]");
+    const latitudeInput = form.querySelector("[data-latitude-input]");
+    const longitudeInput = form.querySelector("[data-longitude-input]");
+    const status = form.querySelector("[data-location-status]");
+    if (!canvas || !results || !locationInput || !provinceSelect || !latitudeInput || !longitudeInput) return;
+
+    loadAmapEditor(form).then((AMap) => {
+      canvas.closest(".smart-location-map")?.classList.add("has-amap-picker");
+      const initialLng = Number(longitudeInput.value);
+      const initialLat = Number(latitudeInput.value);
+      const hasInitial = Number.isFinite(initialLng) && Number.isFinite(initialLat)
+        && longitudeInput.value !== "" && latitudeInput.value !== "";
+      const map = new AMap.Map(canvas, {
+        zoom: hasInitial ? 13 : 4,
+        center: hasInitial ? [initialLng, initialLat] : [104.1954, 35.8617],
+        viewMode: "2D"
+      });
+      map.addControl(new AMap.Scale());
+      const marker = new AMap.Marker({
+        position: hasInitial ? [initialLng, initialLat] : map.getCenter(),
+        draggable: true,
+        visible: hasInitial
+      });
+      map.add(marker);
+      const placeSearch = new AMap.PlaceSearch({ pageSize: 6, pageIndex: 1 });
+      const geocoder = new AMap.Geocoder();
+      let searchTimer;
+
+      const normalizeProvince = (value) => String(value || "")
+        .replace(/特别行政区$/, "")
+        .replace(/壮族自治区$/, "")
+        .replace(/回族自治区$/, "")
+        .replace(/维吾尔自治区$/, "")
+        .replace(/自治区$/, "")
+        .replace(/[省市]$/, "");
+
+      const setPoint = (lng, lat, label, province) => {
+        longitudeInput.value = Number(lng).toFixed(6);
+        latitudeInput.value = Number(lat).toFixed(6);
+        if (label) locationInput.value = label;
+        const normalizedProvince = normalizeProvince(province);
+        if (normalizedProvince && Array.from(provinceSelect.options).some((option) => option.value === normalizedProvince)) {
+          provinceSelect.value = normalizedProvince;
+        }
+        marker.setPosition([lng, lat]);
+        marker.show();
+        map.setZoomAndCenter(14, [lng, lat]);
+        if (status) status.textContent = `${locationInput.value || "地图选点"} 已定位；可拖动标记继续微调。`;
+      };
+
+      const reverseGeocode = (lng, lat) => {
+        geocoder.getAddress([lng, lat], (state, response) => {
+          const component = state === "complete" ? response.regeocode?.addressComponent : null;
+          const formatted = response.regeocode?.formattedAddress;
+          setPoint(lng, lat, formatted || locationInput.value, component?.province);
+        });
+      };
+
+      const renderPlaces = (pois) => {
+        results.replaceChildren();
+        pois.slice(0, 6).forEach((poi) => {
+          if (!poi.location) return;
+          const button = document.createElement("button");
+          button.type = "button";
+          button.textContent = `${poi.name} · ${poi.district || poi.cityname || poi.pname || ""}`;
+          button.addEventListener("click", () => {
+            setPoint(poi.location.getLng(), poi.location.getLat(), poi.name, poi.pname || poi.cityname);
+            results.hidden = true;
+          });
+          results.appendChild(button);
+        });
+        results.hidden = results.childElementCount === 0;
+      };
+
+      locationInput.addEventListener("input", () => {
+        window.clearTimeout(searchTimer);
+        const keyword = locationInput.value.trim();
+        if (keyword.length < 2) {
+          results.hidden = true;
+          return;
+        }
+        searchTimer = window.setTimeout(() => {
+          placeSearch.search(keyword, (state, response) => {
+            renderPlaces(state === "complete" ? (response.poiList?.pois || []) : []);
+          });
+        }, 350);
+      });
+      map.on("click", (event) => reverseGeocode(event.lnglat.getLng(), event.lnglat.getLat()));
+      marker.on("dragend", (event) => reverseGeocode(event.lnglat.getLng(), event.lnglat.getLat()));
+      window.addEventListener("pagehide", () => map.destroy(), { once: true });
+    }).catch(() => {
+      if (status && !form.dataset.amapKey) {
+        status.textContent = "高德 Key 未配置，当前仍可使用内置地点建议和省份定位。";
+      }
+    });
+  }
 
   function setupPrivacyPreview(form) {
     const select = form.querySelector("[data-visibility-select]");
@@ -88,7 +308,7 @@
         if (hint) hint.textContent = originalHint;
         return;
       }
-      if (!ALLOWED_VIDEO_TYPES.has(file.type)) {
+      if (!isAllowedVideoFile(file)) {
         input.value = "";
         showFormError(form, "请选择 MP4 或 WebM 视频。");
         if (hint) hint.textContent = originalHint;
@@ -103,6 +323,15 @@
       if (hint) hint.textContent = `已选择 ${file.name} · ${formatFileSize(file.size)}`;
       if (preview) {
         objectUrl = URL.createObjectURL(file);
+        preview.onloadedmetadata = () => {
+          const duration = Number.isFinite(preview.duration) ? formatDuration(preview.duration) : "时长未知";
+          const resolution = preview.videoWidth && preview.videoHeight
+            ? `${preview.videoWidth}×${preview.videoHeight}`
+            : "分辨率未知";
+          if (hint) {
+            hint.textContent = `已选择 ${file.name} · ${formatFileSize(file.size)} · ${duration} · ${resolution}`;
+          }
+        };
         preview.src = objectUrl;
         preview.hidden = false;
       }
@@ -113,6 +342,20 @@
   function formatFileSize(bytes) {
     if (bytes >= 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(bytes % (1024 * 1024) === 0 ? 0 : 2)}MB`;
     return `${Math.max(1, Math.ceil(bytes / 1024))}KB`;
+  }
+
+  function isAllowedVideoFile(file) {
+    const type = (file.type || "").toLowerCase();
+    if (ALLOWED_VIDEO_TYPES.has(type)) return true;
+    if (type && type !== "application/octet-stream") return false;
+    return /\.(mp4|webm)$/i.test(file.name || "");
+  }
+
+  function formatDuration(seconds) {
+    const wholeSeconds = Math.max(0, Math.round(seconds));
+    const minutes = Math.floor(wholeSeconds / 60);
+    const remainder = String(wholeSeconds % 60).padStart(2, "0");
+    return `${minutes}:${remainder}`;
   }
 
   function setupGalleryUpload(form) {
@@ -142,6 +385,15 @@
       coverIndexInput.value = String(Math.max(0, selectedFiles.indexOf(coverFile)));
     };
 
+    const moveFile = (from, to) => {
+      if (!Number.isInteger(from) || !Number.isInteger(to) || from === to
+          || from < 0 || to < 0 || from >= selectedFiles.length || to >= selectedFiles.length) return;
+      const [moved] = selectedFiles.splice(from, 1);
+      selectedFiles.splice(to, 0, moved);
+      syncInputFiles();
+      render();
+    };
+
     const render = () => {
       releaseObjectUrls();
       grid.replaceChildren();
@@ -159,6 +411,7 @@
         number.textContent = String(index + 1);
         const coverButton = document.createElement("button");
         coverButton.type = "button";
+        coverButton.className = "gallery-upload-cover";
         coverButton.textContent = file === coverFile ? "当前封面" : "设为封面";
         coverButton.classList.toggle("is-cover", file === coverFile);
         coverButton.addEventListener("click", () => {
@@ -166,7 +419,24 @@
           syncInputFiles();
           render();
         });
-        card.append(image, number, coverButton);
+        const orderControls = document.createElement("div");
+        orderControls.className = "gallery-order-controls";
+        const movePrevious = document.createElement("button");
+        movePrevious.type = "button";
+        movePrevious.textContent = "←";
+        movePrevious.title = "向前移动";
+        movePrevious.setAttribute("aria-label", `将第 ${index + 1} 张照片向前移动`);
+        movePrevious.disabled = index === 0;
+        movePrevious.addEventListener("click", () => moveFile(index, index - 1));
+        const moveNext = document.createElement("button");
+        moveNext.type = "button";
+        moveNext.textContent = "→";
+        moveNext.title = "向后移动";
+        moveNext.setAttribute("aria-label", `将第 ${index + 1} 张照片向后移动`);
+        moveNext.disabled = index === selectedFiles.length - 1;
+        moveNext.addEventListener("click", () => moveFile(index, index + 1));
+        orderControls.append(movePrevious, moveNext);
+        card.append(image, number, orderControls, coverButton);
         grid.append(card);
       });
       preview.hidden = selectedFiles.length === 0;
@@ -183,10 +453,7 @@
       const from = Number(event.dataTransfer.getData("text/plain"));
       const to = Number(target?.dataset.index);
       if (!Number.isInteger(from) || !Number.isInteger(to) || from === to) return;
-      const [moved] = selectedFiles.splice(from, 1);
-      selectedFiles.splice(to, 0, moved);
-      syncInputFiles();
-      render();
+      moveFile(from, to);
     });
 
     input.addEventListener("change", async () => {

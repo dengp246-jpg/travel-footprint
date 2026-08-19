@@ -14,9 +14,10 @@ import jakarta.servlet.http.HttpSession;
 import java.io.IOException;
 import java.time.Duration;
 import java.util.Optional;
-import org.springframework.core.io.ByteArrayResource;
-import org.springframework.core.io.Resource;
 import org.springframework.http.CacheControl;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpRange;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
@@ -55,10 +56,11 @@ public class ProtectedUploadController {
 
     @GetMapping("/uploads/**")
     @Transactional(readOnly = true)
-    public ResponseEntity<Resource> upload(
+    public ResponseEntity<byte[]> upload(
             HttpServletRequest request,
             HttpSession session,
             @RequestHeader(value = "X-Mini-Token", required = false) String tokenHeader,
+            @RequestHeader(value = HttpHeaders.RANGE, required = false) String rangeHeader,
             @RequestParam(value = "miniToken", required = false) String tokenQuery) throws IOException {
         String requestPath = request.getRequestURI();
         String relativePath = requestPath.length() <= "/uploads/".length()
@@ -67,11 +69,6 @@ public class ProtectedUploadController {
             return ResponseEntity.notFound().build();
         }
         String publicPath = "/uploads/" + relativePath.replace('\\', '/');
-        FileStorageService.StoredFile storedFile = fileStorageService.load(publicPath);
-        if (storedFile == null) {
-            return ResponseEntity.notFound().build();
-        }
-
         boolean avatar = userRepository.existsByAvatarPath(publicPath);
         User sessionViewer = currentUserService.getCurrentUser(session);
         String miniToken = tokenHeader == null || tokenHeader.isBlank() ? tokenQuery : tokenHeader;
@@ -84,14 +81,50 @@ public class ProtectedUploadController {
             return ResponseEntity.notFound().build();
         }
 
-        MediaType mediaType = MediaType.parseMediaType(storedFile.contentType());
+        FileStorageService.StoredFileMetadata metadata = fileStorageService.metadata(publicPath);
+        if (metadata == null || metadata.size() <= 0) {
+            return ResponseEntity.notFound().build();
+        }
+        long start = 0;
+        long end = metadata.size() - 1;
+        boolean partial = rangeHeader != null && !rangeHeader.isBlank();
+        if (partial) {
+            try {
+                var ranges = HttpRange.parseRanges(rangeHeader);
+                if (ranges.size() != 1) {
+                    return rangeNotSatisfiable(metadata.size());
+                }
+                start = ranges.get(0).getRangeStart(metadata.size());
+                end = ranges.get(0).getRangeEnd(metadata.size());
+            } catch (IllegalArgumentException exception) {
+                return rangeNotSatisfiable(metadata.size());
+            }
+        }
+        FileStorageService.StoredFile storedFile = fileStorageService.loadRange(publicPath, start, end);
+        if (storedFile == null) {
+            return rangeNotSatisfiable(metadata.size());
+        }
+
+        MediaType mediaType = MediaType.parseMediaType(metadata.contentType());
         CacheControl cache = avatar || post.filter(visibilityService::isPublicPost).isPresent()
                 ? CacheControl.maxAge(Duration.ofHours(1)).cachePublic()
                 : CacheControl.noStore();
-        return ResponseEntity.ok()
+        ResponseEntity.BodyBuilder response = ResponseEntity.status(partial ? HttpStatus.PARTIAL_CONTENT : HttpStatus.OK)
                 .cacheControl(cache)
                 .contentType(mediaType)
-                .contentLength(storedFile.content().length)
-                .body(new ByteArrayResource(storedFile.content()));
+                .header(HttpHeaders.ACCEPT_RANGES, "bytes")
+                .contentLength(storedFile.content().length);
+        if (partial) {
+            response.header(HttpHeaders.CONTENT_RANGE, "bytes " + start + "-" + end + "/" + metadata.size());
+        }
+        return response.body(storedFile.content());
+    }
+
+    private ResponseEntity<byte[]> rangeNotSatisfiable(long totalSize) {
+        return ResponseEntity.status(HttpStatus.REQUESTED_RANGE_NOT_SATISFIABLE)
+                .header(HttpHeaders.ACCEPT_RANGES, "bytes")
+                .header(HttpHeaders.CONTENT_RANGE, "bytes */" + totalSize)
+                .cacheControl(CacheControl.noStore())
+                .build();
     }
 }

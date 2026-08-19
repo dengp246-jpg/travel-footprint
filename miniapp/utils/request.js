@@ -93,7 +93,7 @@ function request(options) {
 
 function upload(options) {
   return new Promise((resolve, reject) => {
-    wx.uploadFile({
+    const uploadTask = wx.uploadFile({
       url: buildUrl(options.url),
       filePath: options.filePath,
       name: options.name || 'photo',
@@ -126,6 +126,18 @@ function upload(options) {
         })
       }
     })
+    if (typeof options.onTask === 'function') {
+      options.onTask(uploadTask)
+    }
+    if (typeof options.onProgress === 'function' && uploadTask.onProgressUpdate) {
+      uploadTask.onProgressUpdate((progress) => {
+        options.onProgress({
+          progress: Number(progress.progress) || 0,
+          totalBytesSent: Number(progress.totalBytesSent) || 0,
+          totalBytesExpectedToSend: Number(progress.totalBytesExpectedToSend) || 0
+        })
+      })
+    }
   })
 }
 

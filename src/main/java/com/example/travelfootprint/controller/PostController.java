@@ -35,6 +35,7 @@ import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.stereotype.Controller;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -71,6 +72,18 @@ public class PostController {
     private final AppCatalogService appCatalogService;
     private final DestinationMapService destinationMapService;
     private final TripPlanAccessService planAccessService;
+
+    @Value("${app.map.amap-js-key:}")
+    private String amapJsKey;
+
+    @Value("${app.map.amap-security-js-code:}")
+    private String amapSecurityJsCode;
+
+    @Value("${app.map.amap-service-host:}")
+    private String amapServiceHost;
+
+    @Value("${app.map.amap-proxy-enabled:true}")
+    private boolean amapProxyEnabled;
 
     public PostController(
             TravelPostRepository postRepository,
@@ -157,6 +170,7 @@ public class PostController {
         model.addAttribute("availablePlans", planAccessService.visiblePlans(currentUser));
         model.addAttribute("postPhotos", List.of());
         model.addAttribute("postVisibilities", PostVisibility.values());
+        addAmapEditorConfiguration(model);
         return "post-form";
     }
 
@@ -183,6 +197,14 @@ public class PostController {
         if (currentUser == null) {
             redirectAttributes.addFlashAttribute("errorMessage", "请先登录，再发布旅游足迹。");
             return "redirect:/login";
+        }
+
+        try {
+            postPhotoService.validateAdditions(null, photos);
+            postVideoService.validateUpload(video);
+        } catch (IOException exception) {
+            redirectAttributes.addFlashAttribute("errorMessage", exception.getMessage());
+            return "redirect:/posts/new";
         }
 
         TravelPost post = new TravelPost();
@@ -274,7 +296,16 @@ public class PostController {
         model.addAttribute("availablePlans", planAccessService.visiblePlans(currentUser));
         model.addAttribute("postPhotos", postPhotoService.gallery(post));
         model.addAttribute("postVisibilities", PostVisibility.values());
+        addAmapEditorConfiguration(model);
         return "post-form";
+    }
+
+    private void addAmapEditorConfiguration(Model model) {
+        model.addAttribute("amapJsKey", amapJsKey == null ? "" : amapJsKey.trim());
+        model.addAttribute("amapSecurityJsCode", amapSecurityJsCode == null ? "" : amapSecurityJsCode.trim());
+        model.addAttribute("amapServiceHost", amapServiceHost == null ? "" : amapServiceHost.trim());
+        model.addAttribute("amapUseLocalProxy", amapProxyEnabled
+                && amapSecurityJsCode != null && !amapSecurityJsCode.isBlank());
     }
 
     @PostMapping("/posts/{id}/edit")
@@ -303,6 +334,14 @@ public class PostController {
         if (currentUser == null || !currentUser.getId().equals(post.getAuthor().getId())) {
             redirectAttributes.addFlashAttribute("errorMessage", "只有发布者本人才能编辑这条足迹。");
             return "redirect:/posts/" + id;
+        }
+
+        try {
+            postPhotoService.validateAdditions(post, photos);
+            postVideoService.validateUpload(video);
+        } catch (IOException exception) {
+            redirectAttributes.addFlashAttribute("errorMessage", exception.getMessage());
+            return "redirect:/posts/" + id + "/edit";
         }
 
         if (!fillPost(post, title, location, province, content, travelDate, category, tags, latitude, longitude,

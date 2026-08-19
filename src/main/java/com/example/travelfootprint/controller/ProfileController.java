@@ -12,6 +12,7 @@ import com.example.travelfootprint.repository.UserRepository;
 import com.example.travelfootprint.service.ContentVisibilityService;
 import com.example.travelfootprint.service.CurrentUserService;
 import com.example.travelfootprint.service.FileStorageService;
+import com.example.travelfootprint.service.AndroidAppPackageService;
 import com.example.travelfootprint.service.LocationNormalizationService;
 import com.example.travelfootprint.service.NotificationService;
 import com.example.travelfootprint.service.ProvinceCatalogService;
@@ -47,6 +48,7 @@ public class ProfileController {
     private final ContentVisibilityService contentVisibilityService;
     private final LocationNormalizationService locationNormalizationService;
     private final PasswordEncoder passwordEncoder;
+    private final AndroidAppPackageService androidAppPackageService;
 
     public ProfileController(
             UserRepository userRepository,
@@ -60,7 +62,8 @@ public class ProfileController {
             ProvinceCatalogService provinceCatalogService,
             ContentVisibilityService contentVisibilityService,
             LocationNormalizationService locationNormalizationService,
-            PasswordEncoder passwordEncoder) {
+            PasswordEncoder passwordEncoder,
+            AndroidAppPackageService androidAppPackageService) {
         this.userRepository = userRepository;
         this.postRepository = postRepository;
         this.followRepository = followRepository;
@@ -73,6 +76,7 @@ public class ProfileController {
         this.contentVisibilityService = contentVisibilityService;
         this.locationNormalizationService = locationNormalizationService;
         this.passwordEncoder = passwordEncoder;
+        this.androidAppPackageService = androidAppPackageService;
     }
 
     @GetMapping("/me")
@@ -228,11 +232,12 @@ public class ProfileController {
     }
 
     @GetMapping("/settings")
-    public String settings(HttpSession session, RedirectAttributes redirectAttributes) {
+    public String settings(HttpSession session, Model model, RedirectAttributes redirectAttributes) {
         if (!currentUserService.isLoggedIn(session)) {
             redirectAttributes.addFlashAttribute("errorMessage", "请先登录，再编辑个人资料。");
             return "redirect:/login";
         }
+        model.addAttribute("androidApkAvailable", androidAppPackageService.isAvailable());
         return "settings";
     }
 

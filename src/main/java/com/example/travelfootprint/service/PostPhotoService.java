@@ -88,6 +88,20 @@ public class PostPhotoService {
         }
     }
 
+    @Transactional(readOnly = true)
+    public void validateAdditions(TravelPost post, List<MultipartFile> uploads) throws IOException {
+        List<MultipartFile> selected = uploads == null ? List.of() : uploads.stream()
+                .filter(file -> file != null && !file.isEmpty())
+                .toList();
+        long existingCount = post == null || post.getId() == null ? 0 : photoRepository.countByPostId(post.getId());
+        if (existingCount + selected.size() > MAX_PHOTOS_PER_POST) {
+            throw new IOException("每篇足迹最多保存 " + MAX_PHOTOS_PER_POST + " 张照片。");
+        }
+        for (MultipartFile upload : selected) {
+            fileStorageService.validateImage(upload);
+        }
+    }
+
     @Transactional
     public boolean setCover(TravelPost post, Long photoId) {
         TravelPostPhoto selected = photoRepository.findById(photoId).orElse(null);

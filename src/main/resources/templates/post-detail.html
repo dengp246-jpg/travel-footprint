@@ -57,7 +57,8 @@
             <div class="section-heading compact">
                 <div><span class="eyebrow">TRAVEL VIDEO</span><h2>旅行现场</h2></div>
             </div>
-            <video controls playsinline preload="metadata" th:src="@{${post.videoPath}}">
+            <video controls playsinline preload="metadata" th:src="@{${post.videoPath}}"
+                   th:poster="${post.photoPath != null ? post.photoPath : null}">
                 你的浏览器暂不支持视频播放。
             </video>
         </section>

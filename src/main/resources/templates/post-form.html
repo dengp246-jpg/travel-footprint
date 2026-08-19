@@ -35,6 +35,7 @@
               method="post"
               enctype="multipart/form-data"
               data-draft-key="post-create-draft"
+              th:attr="data-amap-key=${amapJsKey},data-amap-security-code=${amapSecurityJsCode},data-amap-service-host=${amapServiceHost},data-amap-local-proxy=${amapUseLocalProxy}"
               data-post-editor>
             <div class="form-inline-error" data-form-error role="alert" hidden></div>
             <div class="form-grid">
@@ -137,11 +138,13 @@
                                          data-top=${suggestion.top},
                                          data-search=${suggestion.searchText}">浙江 · 杭州西湖</button>
                     </div>
+                    <div class="amap-place-results" data-amap-place-results hidden></div>
                     <button class="smart-location-clear" type="button" data-location-clear hidden>取消精准坐标</button>
                 </div>
                 <div class="smart-location-map" aria-hidden="true">
                     <img th:src="@{/images/china-map-generated.svg}" alt="">
                     <i data-location-preview-pin hidden></i>
+                    <div class="amap-location-picker" data-amap-location-map></div>
                 </div>
             </section>
             <label>
@@ -156,6 +159,13 @@
                 <div class="gallery-upload-grid" data-gallery-grid></div>
                 <button class="secondary-button" type="button" data-clear-gallery>清空本次选择</button>
             </div>
+            <section class="upload-progress-panel" data-upload-progress hidden aria-live="polite">
+                <div><strong data-upload-status>正在准备上传…</strong><span data-upload-percent>0%</span></div>
+                <progress max="100" value="0" data-upload-progress-bar></progress>
+                <small>上传期间请保持页面打开；失败后可以直接重试，不会清空已填写内容。</small>
+                <button class="secondary-button" type="button" data-upload-retry hidden>重新上传</button>
+                <button class="secondary-button" type="button" data-upload-cancel hidden>取消上传</button>
+            </section>
             <div class="offline-draft-actions">
                 <span class="draft-status" data-draft-status>草稿会自动保存到本机</span>
                 <button class="secondary-button" type="button" data-clear-draft>清空本地草稿</button>
@@ -168,7 +178,7 @@
               th:action="@{/posts/{id}/edit(id=${formPost.id})}"
               method="post"
               enctype="multipart/form-data"
-              th:attr="data-draft-key=${'post-edit-draft-' + formPost.id}"
+              th:attr="data-draft-key=${'post-edit-draft-' + formPost.id},data-amap-key=${amapJsKey},data-amap-security-code=${amapSecurityJsCode},data-amap-service-host=${amapServiceHost},data-amap-local-proxy=${amapUseLocalProxy}"
               data-post-editor>
             <div class="form-inline-error" data-form-error role="alert" hidden></div>
             <div class="form-grid">
@@ -271,11 +281,13 @@
                                          data-top=${suggestion.top},
                                          data-search=${suggestion.searchText}">浙江 · 杭州西湖</button>
                     </div>
+                    <div class="amap-place-results" data-amap-place-results hidden></div>
                     <button class="smart-location-clear" type="button" data-location-clear hidden>取消精准坐标</button>
                 </div>
                 <div class="smart-location-map" aria-hidden="true">
                     <img th:src="@{/images/china-map-generated.svg}" alt="">
                     <i data-location-preview-pin hidden></i>
+                    <div class="amap-location-picker" data-amap-location-map></div>
                 </div>
             </section>
             <label>
@@ -291,7 +303,8 @@
             </section>
             <section class="existing-video-panel" th:if="${formPost.videoPath != null}">
                 <strong>当前视频</strong>
-                <video controls playsinline preload="metadata" th:src="@{${formPost.videoPath}}"></video>
+                <video controls playsinline preload="metadata" th:src="@{${formPost.videoPath}}"
+                       th:poster="${formPost.photoPath != null ? formPost.photoPath : null}"></video>
                 <label><input type="checkbox" name="removeVideo" value="true"> 保存时删除当前视频</label>
             </section>
             <input type="hidden" name="coverPhotoIndex" value="0" data-cover-photo-index>
@@ -300,6 +313,13 @@
                 <div class="gallery-upload-grid" data-gallery-grid></div>
                 <button class="secondary-button" type="button" data-clear-gallery>清空本次选择</button>
             </div>
+            <section class="upload-progress-panel" data-upload-progress hidden aria-live="polite">
+                <div><strong data-upload-status>正在准备上传…</strong><span data-upload-percent>0%</span></div>
+                <progress max="100" value="0" data-upload-progress-bar></progress>
+                <small>上传期间请保持页面打开；失败后可以直接重试，不会清空已填写内容。</small>
+                <button class="secondary-button" type="button" data-upload-retry hidden>重新上传</button>
+                <button class="secondary-button" type="button" data-upload-cancel hidden>取消上传</button>
+            </section>
             <div class="offline-draft-actions">
                 <span class="draft-status" data-draft-status>草稿会自动保存到本机</span>
                 <button class="secondary-button" type="button" data-clear-draft>清空本地草稿</button>
@@ -320,6 +340,6 @@
     </aside>
 </main>
 <script defer th:src="@{/js/image-compression.js(v='20260815-1')}"></script>
-<script defer th:src="@{/js/post-editor.js(v='20260817-2')}"></script>
+<script defer th:src="@{/js/post-editor.js(v='20260819-3')}"></script>
 </body>
 </html>

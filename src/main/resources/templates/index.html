@@ -164,7 +164,7 @@
 
             <article class="post-card" th:each="post : ${posts}">
                 <div class="post-card-media" th:if="${post.photoPath != null}">
-                    <img th:src="@{${post.photoPath}}" th:alt="${post.title}">
+                    <img th:src="@{${post.photoPath}}" th:alt="${post.title}" loading="lazy" decoding="async">
                 </div>
                 <div class="post-card-body">
                     <div class="post-meta-row">
@@ -246,8 +246,8 @@
             <section class="side-panel">
                 <div class="section-heading compact">
                     <div>
-                        <span class="eyebrow">热门地点</span>
-                        <h2>高频打卡地</h2>
+                        <span class="eyebrow">本页热门地点</span>
+                        <h2>当前结果高频地点</h2>
                     </div>
                 </div>
                 <div class="empty-state compact" th:if="${topLocations.isEmpty()}">还没有足够的数据生成榜单。</div>

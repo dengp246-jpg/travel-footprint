@@ -12,6 +12,9 @@
   - 标题、地点、分类、标签、出行日期
   - 景点照片上传
   - MP4/WebM 旅行视频上传与在线播放
+  - 视频上传支持进度、取消、失败重试，并兼容手机文件选择器返回的通用 MIME 类型
+  - 上传前统一校验照片和视频，避免编辑失败时出现部分内容已保存
+  - 手机端可通过前移/后移按钮调整相册顺序
   - 旅行感悟填写
   - 经纬度录入并接入旅行地图
 - 足迹管理
@@ -439,6 +442,24 @@ python scripts/generate_china_map_svg.py
 - Open `/health` for the deployment health probe. It reports only overall, database, and upload-storage readiness and does not expose credentials, filesystem paths, or exception details.
 - Unknown routes use a safe 404 page. Internal exception messages and stack traces are disabled in HTTP error responses.
 - Every response includes `X-Request-Id`; requests slower than one second are written to the server log with method, path, status, duration, and request ID, but not the query string.
+
+### Course-design optimization highlights (2026-08-19)
+
+- The AMap page uses AMap JS API 2.0, marker clustering by location, personal route playback, fullscreen browsing, and one-click AMap navigation. Its external permissions are isolated to the `/map` Content Security Policy.
+- Footprint videos support MP4/WebM signature validation, configurable size limits, local metadata preview, visibility checks, and HTTP byte-range responses (`206 Partial Content`). Filesystem deployments read only the requested segment so seeking no longer loads the whole video into memory.
+- The travel passport batches photo counts in one grouped query, and the plan list batches expense totals in one grouped query, avoiding per-item N+1 database requests.
+- The service worker caches only versioned static assets and the neutral offline page. Server-rendered navigations always use the network, preventing one account's HTML from being reused after another account signs in on the same browser.
+- The 256 MB container profile gives the JVM a 128 MB heap and 8 MB direct-memory allowance, leaving room for the process while making video upload and playback more stable than the previous 72 MB heap.
+- The post editor now reports real multipart upload progress, prevents accidental navigation while uploading, preserves the filled form after a network error, and provides one-click retry. Video players reuse the selected footprint cover as a poster and request video metadata only until playback begins.
+- With AMap configured, the post editor searches real places, fills coordinates and province data, accepts map clicks, and lets the user drag the marker to correct the saved position. The deterministic built-in suggestions remain available when AMap is unavailable.
+- The home feed now applies keyword, category, location, following, and source-type filters through JPA specifications and performs stable database pagination instead of loading every public footprint into JVM memory.
+
+Video playback can be verified with a byte-range request after uploading a private video:
+
+```text
+Range: bytes=0-1048575
+Expected: 206 Partial Content, Accept-Ranges: bytes, Content-Range: bytes 0-.../total
+```
 
 ### Local and production profiles
 

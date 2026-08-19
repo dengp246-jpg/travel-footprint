@@ -3,6 +3,7 @@ package com.example.travelfootprint;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.example.travelfootprint.controller.AndroidAppDownloadController;
+import com.example.travelfootprint.service.AndroidAppPackageService;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import org.junit.jupiter.api.Test;
@@ -21,7 +22,8 @@ class AndroidAppDownloadControllerTests {
         byte[] content = new byte[] {0x50, 0x4b, 0x03, 0x04};
         Files.write(apk, content);
 
-        ResponseEntity<Resource> response = new AndroidAppDownloadController(apk.toString()).downloadAndroidApp();
+        ResponseEntity<Resource> response = new AndroidAppDownloadController(
+                new AndroidAppPackageService(apk.toString())).downloadAndroidApp();
 
         assertThat(response.getStatusCode().value()).isEqualTo(200);
         assertThat(response.getHeaders().getContentType().toString()).isEqualTo("application/vnd.android.package-archive");
@@ -36,7 +38,8 @@ class AndroidAppDownloadControllerTests {
     void returnsNotFoundWhenApkHasNotBeenBuilt() throws Exception {
         Path missing = tempDirectory.resolve("missing.apk");
 
-        ResponseEntity<Resource> response = new AndroidAppDownloadController(missing.toString()).downloadAndroidApp();
+        ResponseEntity<Resource> response = new AndroidAppDownloadController(
+                new AndroidAppPackageService(missing.toString())).downloadAndroidApp();
 
         assertThat(response.getStatusCode().value()).isEqualTo(404);
         assertThat(response.getBody()).isNull();

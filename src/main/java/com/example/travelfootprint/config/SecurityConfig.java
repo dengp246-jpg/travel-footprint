@@ -11,6 +11,8 @@ import org.springframework.security.web.header.writers.ContentSecurityPolicyHead
 import org.springframework.security.web.header.writers.DelegatingRequestMatcherHeaderWriter;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 import org.springframework.security.web.util.matcher.NegatedRequestMatcher;
+import org.springframework.security.web.util.matcher.OrRequestMatcher;
+import org.springframework.security.web.util.matcher.RequestMatcher;
 
 @Configuration
 public class SecurityConfig {
@@ -31,6 +33,10 @@ public class SecurityConfig {
     SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         CookieCsrfTokenRepository tokenRepository = CookieCsrfTokenRepository.withHttpOnlyFalse();
         tokenRepository.setCookiePath("/");
+        RequestMatcher amapPages = new OrRequestMatcher(
+                new AntPathRequestMatcher("/map"),
+                new AntPathRequestMatcher("/posts/new"),
+                new AntPathRequestMatcher("/posts/*/edit"));
 
         http
                 .authorizeHttpRequests(authorize -> authorize.anyRequest().permitAll())
@@ -43,10 +49,10 @@ public class SecurityConfig {
                 .headers(headers -> headers
                         .frameOptions(frame -> frame.sameOrigin())
                         .addHeaderWriter(new DelegatingRequestMatcherHeaderWriter(
-                                new AntPathRequestMatcher("/map"),
+                                amapPages,
                                 new ContentSecurityPolicyHeaderWriter(AMAP_CSP)))
                         .addHeaderWriter(new DelegatingRequestMatcherHeaderWriter(
-                                new NegatedRequestMatcher(new AntPathRequestMatcher("/map")),
+                                new NegatedRequestMatcher(amapPages),
                                 new ContentSecurityPolicyHeaderWriter(DEFAULT_CSP)))
                         .referrerPolicy(referrer -> referrer.policy(ReferrerPolicyHeaderWriter.ReferrerPolicy.STRICT_ORIGIN_WHEN_CROSS_ORIGIN))
                         .httpStrictTransportSecurity(hsts -> hsts.includeSubDomains(true).maxAgeInSeconds(31536000))

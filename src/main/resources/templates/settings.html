@@ -67,8 +67,9 @@
                 <h2>下载 Android 安装包</h2>
                 <p>Android 8.0 及以上设备可直接下载安装。云端专用版会自动连接本站；通用版首次启动时填写当前网站的 HTTPS 地址即可。</p>
             </div>
-            <a class="secondary-button" th:href="@{/download/android}"
+            <a class="secondary-button" th:if="${androidApkAvailable}" th:href="@{/download/android}"
                download="travel-footprint-android.apk">下载 APK</a>
+            <span class="download-unavailable-note" th:unless="${androidApkAvailable}">安装包正在准备中，暂时无法下载</span>
         </section>
     </section>
 </main>

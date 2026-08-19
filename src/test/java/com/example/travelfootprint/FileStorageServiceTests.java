@@ -101,6 +101,10 @@ class FileStorageServiceTests {
         assertTrue(storedPath.endsWith(".mp4"));
         assertTrue(java.nio.file.Files.exists(
                 uploadDirectory.resolve(storedPath.substring("/uploads/".length()).replace('/', java.io.File.separatorChar))));
+
+        FileStorageService.StoredFile segment = storageService.loadRange(storedPath, 4, 7);
+        assertEquals(12, segment.totalSize());
+        assertArrayEquals(new byte[] {'f', 't', 'y', 'p'}, segment.content());
     }
 
     @Test
@@ -112,6 +116,20 @@ class FileStorageServiceTests {
         String storedPath = storageService.storeVideo(video, "posts");
 
         assertTrue(storedPath.endsWith(".webm"));
+    }
+
+    @Test
+    void acceptsMobileVideoWithGenericMimeTypeWhenExtensionAndContentMatch() throws IOException {
+        FileStorageService storageService = new FileStorageService(uploadDirectory.toString(), 5 * 1024 * 1024);
+        byte[] mp4Header = new byte[] {
+                0x00, 0x00, 0x00, 0x18, 'f', 't', 'y', 'p', 'i', 's', 'o', 'm'
+        };
+        MockMultipartFile video = new MockMultipartFile(
+                "video", "phone-recording.mp4", "application/octet-stream", mp4Header);
+
+        String storedPath = storageService.storeVideo(video, "posts");
+
+        assertTrue(storedPath.endsWith(".mp4"));
     }
 
     @Test

@@ -63,8 +63,13 @@ public class TravelPassportController {
                 .map(String::trim)
                 .collect(Collectors.groupingBy(Function.identity(), LinkedHashMap::new, Collectors.counting()));
 
+        Map<Long, Long> albumCounts = posts.isEmpty() ? Map.of() : photoRepository
+                .countByPostIds(posts.stream().map(TravelPost::getId).toList()).stream()
+                .collect(Collectors.toMap(
+                        TravelPostPhotoRepository.PostPhotoCount::getPostId,
+                        TravelPostPhotoRepository.PostPhotoCount::getPhotoCount));
         long photoCount = posts.stream().mapToLong(post -> {
-            long albumCount = photoRepository.countByPostId(post.getId());
+            long albumCount = albumCounts.getOrDefault(post.getId(), 0L);
             return Math.max(albumCount, post.getPhotoPath() == null || post.getPhotoPath().isBlank() ? 0 : 1);
         }).sum();
         long videoCount = posts.stream()

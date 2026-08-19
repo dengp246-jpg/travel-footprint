@@ -5,6 +5,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
+import java.nio.ByteBuffer;
+import java.nio.channels.SeekableByteChannel;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -69,19 +72,24 @@ public class FileStorageService {
             return null;
         }
 
+        validateImage(file);
+        byte[] content = file.getBytes();
+        String detectedContentType = detectImageType(content);
+        return storeContent(content, detectedContentType, CONTENT_TYPE_EXTENSIONS.get(detectedContentType), subDirectory);
+    }
+
+    public void validateImage(MultipartFile file) throws IOException {
+        if (file == null || file.isEmpty()) {
+            return;
+        }
         if (file.getSize() > maxImageSize) {
             throw new IOException("图片不能超过 " + readableSize(maxImageSize) + "。");
         }
-
         byte[] content = file.getBytes();
         String detectedContentType = detectImageType(content);
-        String declaredContentType = normalizeContentType(file.getContentType());
-        if (detectedContentType == null || !CONTENT_TYPE_EXTENSIONS.containsKey(declaredContentType)
-                || !detectedContentType.equals(declaredContentType)) {
+        if (!hasCompatibleType(file, detectedContentType, CONTENT_TYPE_EXTENSIONS)) {
             throw new IOException("仅支持 JPG、PNG、GIF 或 WebP 图片。");
         }
-
-        return storeContent(content, detectedContentType, CONTENT_TYPE_EXTENSIONS.get(detectedContentType), subDirectory);
     }
 
     @Transactional
@@ -89,21 +97,47 @@ public class FileStorageService {
         if (file == null || file.isEmpty()) {
             return null;
         }
-        if (file.getSize() > maxVideoSize) {
-            throw new IOException("视频不能超过 " + readableSize(maxVideoSize) + "。");
-        }
+        validateVideo(file);
         byte[] content = file.getBytes();
         String detectedContentType = detectVideoType(content);
-        String declaredContentType = normalizeContentType(file.getContentType());
-        if (detectedContentType == null || !VIDEO_CONTENT_TYPE_EXTENSIONS.containsKey(declaredContentType)
-                || !detectedContentType.equals(declaredContentType)) {
-            throw new IOException("仅支持 MP4 或 WebM 视频，且文件内容必须与格式一致。");
-        }
         return storeContent(
                 content,
                 detectedContentType,
                 VIDEO_CONTENT_TYPE_EXTENSIONS.get(detectedContentType),
                 subDirectory);
+    }
+
+    public void validateVideo(MultipartFile file) throws IOException {
+        if (file == null || file.isEmpty()) {
+            return;
+        }
+        if (file.getSize() > maxVideoSize) {
+            throw new IOException("视频不能超过 " + readableSize(maxVideoSize) + "。");
+        }
+        byte[] content = file.getBytes();
+        String detectedContentType = detectVideoType(content);
+        if (!hasCompatibleType(file, detectedContentType, VIDEO_CONTENT_TYPE_EXTENSIONS)) {
+            throw new IOException("仅支持 MP4 或 WebM 视频，且文件内容必须与格式一致。");
+        }
+    }
+
+    private boolean hasCompatibleType(
+            MultipartFile file,
+            String detectedContentType,
+            Map<String, String> allowedTypes) {
+        if (detectedContentType == null || !allowedTypes.containsKey(detectedContentType)) {
+            return false;
+        }
+        String declaredContentType = normalizeContentType(file.getContentType());
+        if (detectedContentType.equals(declaredContentType)) {
+            return true;
+        }
+        if (!declaredContentType.isBlank() && !"application/octet-stream".equals(declaredContentType)) {
+            return false;
+        }
+        String originalName = file.getOriginalFilename();
+        String expectedExtension = allowedTypes.get(detectedContentType);
+        return originalName != null && originalName.toLowerCase(java.util.Locale.ROOT).endsWith(expectedExtension);
     }
 
     private String storeContent(byte[] content, String contentType, String extension, String subDirectory)
@@ -150,15 +184,67 @@ public class FileStorageService {
 
     @Transactional(readOnly = true)
     public StoredFile load(String publicPath) throws IOException {
+        StoredFileMetadata metadata = metadata(publicPath);
+        if (metadata == null) {
+            return null;
+        }
+        return loadRange(publicPath, 0, metadata.size() - 1);
+    }
+
+    @Transactional(readOnly = true)
+    public StoredFileMetadata metadata(String publicPath) throws IOException {
         if (publicPath == null || !publicPath.startsWith("/uploads/")
                 || publicPath.contains("%") || publicPath.contains("\\")) {
             return null;
         }
         if (databaseStorage) {
             return storedImageRepository.findByPublicPath(publicPath)
-                    .map(image -> new StoredFile(image.getContent(), image.getContentType()))
+                    .map(image -> new StoredFileMetadata(image.getContent().length, image.getContentType()))
                     .orElse(null);
         }
+        Path realFile = resolveStoredFile(publicPath);
+        if (realFile == null) {
+            return null;
+        }
+        String type = Files.probeContentType(realFile);
+        return new StoredFileMetadata(Files.size(realFile),
+                type == null ? "application/octet-stream" : type);
+    }
+
+    @Transactional(readOnly = true)
+    public StoredFile loadRange(String publicPath, long start, long end) throws IOException {
+        if (publicPath == null || !publicPath.startsWith("/uploads/")
+                || publicPath.contains("%") || publicPath.contains("\\") || start < 0 || end < start) {
+            return null;
+        }
+        if (databaseStorage) {
+            return storedImageRepository.findByPublicPath(publicPath)
+                    .filter(image -> end < image.getContent().length)
+                    .map(image -> new StoredFile(Arrays.copyOfRange(
+                            image.getContent(), Math.toIntExact(start), Math.toIntExact(end + 1)),
+                            image.getContentType(), image.getContent().length))
+                    .orElse(null);
+        }
+        StoredFileMetadata metadata = metadata(publicPath);
+        if (metadata == null || end >= metadata.size()) {
+            return null;
+        }
+        Path realFile = resolveStoredFile(publicPath);
+        if (realFile == null) {
+            return null;
+        }
+        int length = Math.toIntExact(end - start + 1);
+        ByteBuffer buffer = ByteBuffer.allocate(length);
+        try (SeekableByteChannel channel = Files.newByteChannel(realFile, StandardOpenOption.READ)) {
+            channel.position(start);
+            while (buffer.hasRemaining() && channel.read(buffer) >= 0) {
+                // Continue until the requested segment is full or EOF is reached.
+            }
+        }
+        return new StoredFile(Arrays.copyOf(buffer.array(), buffer.position()), metadata.contentType(), metadata.size());
+    }
+
+    private Path resolveStoredFile(String publicPath) throws IOException {
         String relativePath = publicPath.substring("/uploads/".length());
         if (relativePath.isBlank()) {
             return null;
@@ -169,12 +255,7 @@ public class FileStorageService {
         }
         Path realRoot = uploadRoot.toRealPath();
         Path realFile = candidate.toRealPath();
-        if (!realFile.startsWith(realRoot)) {
-            return null;
-        }
-        String type = Files.probeContentType(realFile);
-        return new StoredFile(Files.readAllBytes(realFile),
-                type == null ? "application/octet-stream" : type);
+        return realFile.startsWith(realRoot) ? realFile : null;
     }
 
     public boolean isReady() {
@@ -291,6 +372,9 @@ public class FileStorageService {
         return Math.max(1L, bytes / 1024L) + "KB";
     }
 
-    public record StoredFile(byte[] content, String contentType) {
+    public record StoredFile(byte[] content, String contentType, long totalSize) {
+    }
+
+    public record StoredFileMetadata(long size, String contentType) {
     }
 }

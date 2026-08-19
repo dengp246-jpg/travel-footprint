@@ -1,40 +1,13 @@
-const CACHE_VERSION = "travelfootprint-offline-v32";
+const CACHE_VERSION = "travelfootprint-offline-v34";
 const SHELL_CACHE = [
-  "/",
-  "/map",
-  "/login",
-  "/register",
   "/offline.html",
-  "/css/style.css?v=20260817-4",
+  "/css/style.css?v=20260819-2",
   "/css/premium.css?v=20260809-1",
   "/js/app-shell.js?v=20260818-1",
   "/js/image-compression.js?v=20260815-1",
-  "/js/post-editor.js?v=20260817-2",
+  "/js/post-editor.js?v=20260819-3",
   "/manifest.webmanifest?v=20260808-2"
 ];
-const SENSITIVE_PATH_PREFIXES = [
-  "/messages",
-  "/notifications",
-  "/search",
-  "/recommendations",
-  "/insights",
-  "/passport",
-  "/reports",
-  "/recap",
-  "/plans",
-  "/calendar",
-  "/expenses",
-  "/goals",
-  "/wishlist",
-  "/me",
-  "/favorites",
-  "/discover",
-  "/settings",
-  "/admin",
-  "/api/",
-  "/h2-console"
-];
-
 self.addEventListener("install", (event) => {
   event.waitUntil(
     caches.open(CACHE_VERSION).then((cache) => cache.addAll(SHELL_CACHE)).then(() => self.skipWaiting())
@@ -66,37 +39,14 @@ self.addEventListener("fetch", (event) => {
   }
 
   if (request.mode === "navigate") {
-    const personalMap = url.pathname === "/map" && url.searchParams.get("mode") === "personal";
-    const privatePostEditor = url.pathname === "/posts/new" || /^\/posts\/\d+\/edit$/.test(url.pathname);
-    if (personalMap || privatePostEditor
-        || SENSITIVE_PATH_PREFIXES.some((prefix) => url.pathname.startsWith(prefix))) {
-      event.respondWith(networkOnly(request));
-      return;
-    }
-    event.respondWith(networkFirst(request));
+    // Server-rendered pages can change with the session. Never persist their HTML
+    // in a shared browser cache; only use the neutral offline page on failure.
+    event.respondWith(networkOnly(request));
     return;
   }
 
   event.respondWith(staleWhileRevalidate(request));
 });
-
-async function networkFirst(request) {
-  const cache = await caches.open(CACHE_VERSION);
-  try {
-    const response = await fetch(request);
-    if (response.ok) {
-      cache.put(request, response.clone());
-    }
-    return response;
-  } catch (error) {
-    const cached = await cache.match(request);
-    if (cached) {
-      return cached;
-    }
-    const offlinePage = await cache.match("/offline.html");
-    return offlinePage || Response.error();
-  }
-}
 
 async function networkOnly(request) {
   try {

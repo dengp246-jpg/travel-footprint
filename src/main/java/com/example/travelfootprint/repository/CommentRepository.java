@@ -17,6 +17,8 @@ public interface CommentRepository extends JpaRepository<Comment, Long> {
 
     long countByPostId(Long postId);
 
+    long countByReviewStatusAndAuthorEnabledTrue(ContentReviewStatus reviewStatus);
+
     void deleteByPostId(Long postId);
 
     @Query("""

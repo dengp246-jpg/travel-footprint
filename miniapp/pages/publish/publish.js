@@ -71,6 +71,9 @@ function emptyForm() {
 Page({
   data: {
     submitting: false,
+    uploadProgress: 0,
+    uploadStatus: '',
+    uploadFailed: false,
     provinceIndex: 0,
     provinceOptions: [],
     categoryIndex: 0,
@@ -272,6 +275,20 @@ Page({
     this.setData({ videoPath: '', videoName: '' })
   },
 
+  updateUploadProgress(stage, progress, start = 0, span = 100) {
+    const normalized = Math.max(0, Math.min(100, Number(progress) || 0))
+    this.setData({
+      uploadProgress: Math.min(99, Math.round(start + normalized * span / 100)),
+      uploadStatus: stage
+    })
+  },
+
+  cancelUpload() {
+    if (this.currentUploadTask && this.currentUploadTask.abort) {
+      this.currentUploadTask.abort()
+    }
+  },
+
   validate() {
     const { title, location, province, category, travelDate, content } = this.data.form
     if (![title, location, province, category, travelDate, content].every((value) => String(value || '').trim())) {
@@ -296,7 +313,15 @@ Page({
     }
     if (this.data.submitting || !this.validate()) return
 
-    this.setData({ submitting: true })
+    this.setData({
+      submitting: true,
+      uploadProgress: 0,
+      uploadStatus: '正在建立安全上传连接…',
+      uploadFailed: false
+    })
+    if (wx.enableAlertBeforeUnload) {
+      wx.enableAlertBeforeUnload({ message: '足迹仍在上传，离开会中断本次提交。' })
+    }
     try {
       const formData = {
         ...this.data.form,
@@ -308,7 +333,14 @@ Page({
           url: '/api/mini/posts',
           filePath: this.data.photoPath,
           name: 'photo',
-          formData
+          formData,
+          onTask: (task) => { this.currentUploadTask = task },
+          onProgress: ({ progress }) => this.updateUploadProgress(
+            this.data.videoPath ? '正在上传封面照片…' : '正在上传照片并保存足迹…',
+            progress,
+            0,
+            this.data.videoPath ? 50 : 100
+          )
         })
       } else if (this.data.videoPath) {
         createdPost = await upload({
@@ -316,9 +348,12 @@ Page({
           filePath: this.data.videoPath,
           name: 'video',
           formData,
-          timeout: 60000
+          timeout: 60000,
+          onTask: (task) => { this.currentUploadTask = task },
+          onProgress: ({ progress }) => this.updateUploadProgress('正在上传视频并保存足迹…', progress)
         })
       } else {
+        this.setData({ uploadProgress: 40, uploadStatus: '正在保存足迹…' })
         createdPost = await request({
           url: '/api/mini/posts',
           method: 'POST',
@@ -332,7 +367,9 @@ Page({
             url: `/api/mini/posts/${createdPost.id}/video`,
             filePath: this.data.videoPath,
             name: 'video',
-            timeout: 60000
+            timeout: 60000,
+            onTask: (task) => { this.currentUploadTask = task },
+            onProgress: ({ progress }) => this.updateUploadProgress('足迹已保存，正在上传视频…', progress, 50, 50)
           })
         } catch (error) {
           wx.showModal({
@@ -342,6 +379,8 @@ Page({
           })
         }
       }
+      this.currentUploadTask = null
+      this.setData({ uploadProgress: 100, uploadStatus: '上传完成，正在打开足迹…' })
       wx.showToast({ title: '足迹已发布', icon: 'success' })
       const form = emptyForm()
       form.province = this.data.provinceOptions[this.data.provinceIndex] || ''
@@ -359,8 +398,18 @@ Page({
       })
       setTimeout(() => wx.switchTab({ url: '/pages/feed/feed' }), 500)
     } catch (error) {
+      this.currentUploadTask = null
+      this.setData({
+        uploadFailed: true,
+        uploadStatus: error.errMsg && error.errMsg.includes('abort')
+          ? '上传已取消，可直接重新提交。'
+          : '上传失败，表单内容已保留，可直接重试。'
+      })
       wx.showToast({ title: error.message || '发布失败', icon: 'none' })
     } finally {
+      if (wx.disableAlertBeforeUnload) {
+        wx.disableAlertBeforeUnload()
+      }
       this.setData({ submitting: false })
     }
   }

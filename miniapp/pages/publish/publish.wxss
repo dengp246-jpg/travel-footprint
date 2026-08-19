@@ -34,3 +34,7 @@
 .privacy-preview-title { margin-top: 8rpx; color: #153f3a; font-size: 28rpx; font-weight: 720; }
 .privacy-preview-copy { margin-top: 8rpx; color: #58716c; font-size: 21rpx; line-height: 1.6; }
 .submit-button { margin-top: 36rpx; }
+.upload-progress-card { margin-top: 30rpx; padding: 24rpx; border: 2rpx solid #cde4df; border-radius: 20rpx; background: #f3faf7; }
+.upload-progress-head { display: flex; justify-content: space-between; gap: 20rpx; margin-bottom: 16rpx; color: #153f3a; font-size: 23rpx; font-weight: 650; }
+.upload-progress-note { margin-top: 14rpx; font-size: 20rpx; line-height: 1.55; }
+.upload-cancel-button { min-height: 68rpx; margin: 18rpx 0 0; font-size: 22rpx; }

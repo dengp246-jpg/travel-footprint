@@ -3,8 +3,7 @@ package com.example.travelfootprint.controller;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
-import java.nio.file.Path;
-import org.springframework.beans.factory.annotation.Value;
+import com.example.travelfootprint.service.AndroidAppPackageService;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.CacheControl;
@@ -21,19 +20,19 @@ public class AndroidAppDownloadController {
     private static final MediaType APK_MEDIA_TYPE = MediaType.parseMediaType("application/vnd.android.package-archive");
     private static final String DOWNLOAD_NAME = "travel-footprint-android.apk";
 
-    private final Path apkPath;
+    private final AndroidAppPackageService androidAppPackageService;
 
-    public AndroidAppDownloadController(
-            @Value("${app.android-apk-path:outputs/travel-footprint-android-debug.apk}") String apkPath) {
-        this.apkPath = Path.of(apkPath).toAbsolutePath().normalize();
+    public AndroidAppDownloadController(AndroidAppPackageService androidAppPackageService) {
+        this.androidAppPackageService = androidAppPackageService;
     }
 
     @GetMapping("/download/android")
     public ResponseEntity<Resource> downloadAndroidApp() throws IOException {
-        if (!Files.isRegularFile(apkPath) || !Files.isReadable(apkPath)) {
+        if (!androidAppPackageService.isAvailable()) {
             return ResponseEntity.notFound().build();
         }
 
+        var apkPath = androidAppPackageService.path();
         Resource apk = new FileSystemResource(apkPath);
         ContentDisposition disposition = ContentDisposition.attachment()
                 .filename(DOWNLOAD_NAME, StandardCharsets.UTF_8)

@@ -349,8 +349,12 @@ class WebWorkflowTests {
 
         mockMvc.perform(get("/posts/new").session(session))
                 .andExpect(status().isOk())
+                .andExpect(header().string("Content-Security-Policy", containsString("https://*.amap.com")))
                 .andExpect(content().string(containsString("data-location-assistant")))
                 .andExpect(content().string(containsString("data-location-suggestion")))
+                .andExpect(content().string(containsString("data-amap-location-map")))
+                .andExpect(content().string(containsString("data-amap-place-results")))
+                .andExpect(content().string(containsString("data-upload-progress")))
                 .andExpect(content().string(containsString("杭州 西湖")))
                 .andExpect(content().string(containsString("data-latitude-input")))
                 .andExpect(content().string(containsString("data-longitude-input")))
@@ -364,6 +368,27 @@ class WebWorkflowTests {
         org.junit.jupiter.api.Assertions.assertEquals("浙江", westLake.province());
         org.junit.jupiter.api.Assertions.assertEquals(120.158108, westLake.longitude(), 0.000001);
         org.junit.jupiter.api.Assertions.assertEquals(30.241651, westLake.latitude(), 0.000001);
+    }
+
+    @Test
+    void homeFeedUsesStableDatabasePagination() throws Exception {
+        User user = createUser(true);
+        String prefix = "分页体验-" + UUID.randomUUID().toString().substring(0, 8);
+        for (int index = 0; index < 7; index++) {
+            createPost(user, ContentReviewStatus.APPROVED, prefix + "-" + index,
+                    "浙江 杭州 西湖", "浙江", "城市漫游", LocalDate.of(2026, 8, 1));
+        }
+
+        mockMvc.perform(get("/").param("q", prefix).param("page", "1"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("第 1 / 2 页")))
+                .andExpect(content().string(containsString(prefix + "-6")))
+                .andExpect(content().string(not(containsString(prefix + "-0"))));
+
+        mockMvc.perform(get("/").param("q", prefix).param("page", "2"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("第 2 / 2 页")))
+                .andExpect(content().string(containsString(prefix + "-0")));
     }
 
     @Test
@@ -570,7 +595,16 @@ class WebWorkflowTests {
             mockMvc.perform(get(videoPath).session(session))
                     .andExpect(status().isOk())
                     .andExpect(header().string("Content-Type", "video/mp4"))
+                    .andExpect(header().string("Accept-Ranges", "bytes"))
                     .andExpect(header().string("Cache-Control", containsString("no-store")));
+            mockMvc.perform(get(videoPath).session(session).header("Range", "bytes=4-7"))
+                    .andExpect(status().isPartialContent())
+                    .andExpect(header().string("Content-Range", "bytes 4-7/12"))
+                    .andExpect(header().string("Content-Length", "4"))
+                    .andExpect(content().bytes(new byte[] {'f', 't', 'y', 'p'}));
+            mockMvc.perform(get(videoPath).session(session).header("Range", "bytes=99-120"))
+                    .andExpect(status().isRequestedRangeNotSatisfiable())
+                    .andExpect(header().string("Content-Range", "bytes */12"));
             mockMvc.perform(get("/posts/{id}", post.getId()).session(session))
                     .andExpect(status().isOk())
                     .andExpect(content().string(containsString("<video")))

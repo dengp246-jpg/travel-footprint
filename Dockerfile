@@ -20,7 +20,7 @@ ENV APP_ANDROID_APK_PATH=/app/downloads/travel-footprint-android.apk \
     SPRING_PROFILES_ACTIVE=prod \
     APP_DEMO_SEED_ENABLED=false \
     APP_UPLOAD_STORAGE_MODE=database \
-    JAVA_TOOL_OPTIONS="-Xms32m -Xmx72m -Xss512k -XX:MaxMetaspaceSize=96m -XX:CompressedClassSpaceSize=20m -XX:ReservedCodeCacheSize=16m -XX:MaxDirectMemorySize=4m -XX:ActiveProcessorCount=1 -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -XX:+ExitOnOutOfMemoryError"
+    JAVA_TOOL_OPTIONS="-Xms48m -Xmx128m -Xss512k -XX:MaxMetaspaceSize=96m -XX:CompressedClassSpaceSize=20m -XX:ReservedCodeCacheSize=16m -XX:MaxDirectMemorySize=8m -XX:ActiveProcessorCount=1 -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -XX:+ExitOnOutOfMemoryError"
 
 EXPOSE 8080
 

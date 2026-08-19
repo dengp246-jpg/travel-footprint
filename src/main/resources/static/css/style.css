@@ -4741,6 +4741,81 @@ body.map-fullscreen-fallback {
     background: #061622;
 }
 
+.amap-location-picker {
+    position: absolute;
+    inset: 0;
+    z-index: 3;
+    min-height: 240px;
+    border-radius: inherit;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 180ms ease;
+}
+
+.smart-location-map.has-amap-picker .amap-location-picker {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.smart-location-map.has-amap-picker > img,
+.smart-location-map.has-amap-picker > i {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.amap-place-results {
+    display: grid;
+    gap: 6px;
+    margin-top: 10px;
+}
+
+.amap-place-results button {
+    width: 100%;
+    padding: 9px 11px;
+    border: 1px solid rgba(23, 101, 87, 0.18);
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.92);
+    color: var(--ink);
+    text-align: left;
+    cursor: pointer;
+}
+
+.amap-place-results button:hover,
+.amap-place-results button:focus-visible {
+    border-color: var(--accent);
+    background: rgba(23, 101, 87, 0.08);
+}
+
+.upload-progress-panel {
+    margin-top: 18px;
+    padding: 16px 18px;
+    border: 1px solid rgba(23, 101, 87, 0.2);
+    border-radius: 16px;
+    background: rgba(23, 101, 87, 0.06);
+}
+
+.upload-progress-panel > div {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.upload-progress-panel progress {
+    width: 100%;
+    height: 10px;
+    margin: 10px 0 6px;
+    accent-color: var(--accent);
+}
+
+.upload-progress-panel small {
+    display: block;
+    color: var(--muted);
+}
+
+.upload-progress-panel button {
+    margin-top: 10px;
+}
+
 .smart-location-map img {
     display: block;
     width: 100%;
@@ -5571,7 +5646,7 @@ body.map-fullscreen-fallback {
     background: rgba(3, 37, 34, 0.72);
 }
 
-.gallery-upload-item button {
+.gallery-upload-item .gallery-upload-cover {
     position: absolute;
     right: 7px;
     bottom: 7px;
@@ -5583,9 +5658,45 @@ body.map-fullscreen-fallback {
     cursor: pointer;
 }
 
-.gallery-upload-item button.is-cover {
+.gallery-upload-item .gallery-upload-cover.is-cover {
     color: #083d38;
     background: #99f6e4;
+}
+
+.gallery-order-controls {
+    position: absolute;
+    left: 7px;
+    bottom: 7px;
+    display: flex;
+    gap: 5px;
+}
+
+.gallery-order-controls button {
+    display: grid;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    place-items: center;
+    border: 0;
+    border-radius: 9px;
+    color: #fff;
+    background: rgba(3, 37, 34, 0.78);
+    cursor: pointer;
+}
+
+.gallery-order-controls button:disabled {
+    opacity: 0.38;
+    cursor: not-allowed;
+}
+
+.download-unavailable-note {
+    display: inline-flex;
+    align-items: center;
+    min-height: 42px;
+    padding: 8px 13px;
+    border-radius: 11px;
+    color: var(--muted);
+    background: rgba(100, 116, 139, 0.1);
 }
 
 .existing-photo-strip > div {

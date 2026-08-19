@@ -35,6 +35,10 @@ public class PostVideoService {
         }
     }
 
+    public void validateUpload(MultipartFile upload) throws IOException {
+        fileStorageService.validateVideo(upload);
+    }
+
     @Transactional
     public void deleteVideo(TravelPost post) {
         if (post == null || post.getVideoPath() == null || post.getVideoPath().isBlank()) {

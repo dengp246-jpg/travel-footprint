@@ -568,8 +568,13 @@ public class MiniAppApiController {
                 .map(String::trim)
                 .collect(Collectors.groupingBy(Function.identity(), LinkedHashMap::new, Collectors.counting()));
 
+        Map<Long, Long> albumCounts = posts.isEmpty() ? Map.of() : photoRepository
+                .countByPostIds(posts.stream().map(TravelPost::getId).toList()).stream()
+                .collect(Collectors.toMap(
+                        TravelPostPhotoRepository.PostPhotoCount::getPostId,
+                        TravelPostPhotoRepository.PostPhotoCount::getPhotoCount));
         long photoCount = posts.stream().mapToLong(post -> {
-            long albumCount = photoRepository.countByPostId(post.getId());
+            long albumCount = albumCounts.getOrDefault(post.getId(), 0L);
             return Math.max(albumCount, isBlank(post.getPhotoPath()) ? 0 : 1);
         }).sum();
         long videoCount = posts.stream().filter(post -> !isBlank(post.getVideoPath())).count();
@@ -904,7 +909,7 @@ public class MiniAppApiController {
     }
 
     private MiniUserProfile toUserProfile(User user) {
-        long postCount = postRepository.findByAuthorIdOrderByCreatedAtDesc(user.getId()).size();
+        long postCount = postRepository.countByAuthorId(user.getId());
         long followingCount = followRepository.countByFollowerId(user.getId());
         long followerCount = followRepository.countByFollowingId(user.getId());
         return new MiniUserProfile(

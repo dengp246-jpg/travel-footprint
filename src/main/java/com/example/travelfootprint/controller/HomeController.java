@@ -19,6 +19,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+import jakarta.persistence.criteria.Predicate;
+import java.util.ArrayList;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -71,23 +77,28 @@ public class HomeController {
             Model model,
             HttpSession session) {
         User currentUser = currentUserService.getCurrentUser(session);
-        List<TravelPost> posts = contentVisibilityService.approvedPosts(postRepository.findAllByOrderByCreatedAtDesc());
         List<User> users = userRepository.findAll();
-        List<com.example.travelfootprint.model.Comment> comments = commentRepository.findAll();
         Set<Long> followingIds = viewDataService.followingUserIds(currentUser);
 
-        List<TravelPost> baseFilteredPosts = posts.stream()
-                .filter(post -> !"following".equalsIgnoreCase(scope) || followingIds.contains(post.getAuthor().getId()))
-                .filter(post -> q == null || q.isBlank() || containsKeyword(post, q))
-                .filter(post -> category == null || category.isBlank() || category.equals(post.getCategory()))
-                .filter(post -> matchesLocation(post, location))
-                .toList();
+        Specification<TravelPost> baseFilter = feedSpecification(
+                q, category, location, scope, "all", followingIds);
+        Specification<TravelPost> selectedFilter = feedSpecification(
+                q, category, location, scope, contentType, followingIds);
+        int requestedPage = Math.max(page, 1) - 1;
+        Page<TravelPost> postPage = postRepository.findAll(
+                selectedFilter,
+                PageRequest.of(requestedPage, PAGE_SIZE,
+                        Sort.by(Sort.Direction.DESC, "createdAt").and(Sort.by(Sort.Direction.DESC, "id"))));
+        if (requestedPage >= postPage.getTotalPages() && postPage.getTotalPages() > 0) {
+            requestedPage = postPage.getTotalPages() - 1;
+            postPage = postRepository.findAll(
+                    selectedFilter,
+                    PageRequest.of(requestedPage, PAGE_SIZE,
+                            Sort.by(Sort.Direction.DESC, "createdAt").and(Sort.by(Sort.Direction.DESC, "id"))));
+        }
+        List<TravelPost> pagePosts = postPage.getContent();
 
-        List<TravelPost> filteredPosts = baseFilteredPosts.stream()
-                .filter(post -> matchesContentType(post, contentType))
-                .toList();
-
-        Map<String, Long> topLocations = filteredPosts.stream()
+        Map<String, Long> topLocations = pagePosts.stream()
                 .collect(Collectors.groupingBy(
                         locationNormalizationService::normalizeDisplayLocation,
                         Collectors.counting()))
@@ -109,27 +120,18 @@ public class HomeController {
                 .limit(5)
                 .toList();
 
-        long communityCount = baseFilteredPosts.stream()
-                .filter(post -> post.getSourceUrl() == null)
-                .count();
-        long referenceCount = baseFilteredPosts.stream()
-                .filter(post -> post.getSourceUrl() != null)
-                .count();
+        long communityCount = postRepository.count(baseFilter.and(sourceTypeSpecification("community")));
+        long referenceCount = postRepository.count(baseFilter.and(sourceTypeSpecification("reference")));
+        long totalItems = postPage.getTotalElements();
+        int totalPages = Math.max(1, postPage.getTotalPages());
+        int currentPage = postPage.isEmpty() ? 1 : postPage.getNumber() + 1;
 
-        int totalItems = filteredPosts.size();
-        int totalPages = Math.max(1, (int) Math.ceil(totalItems / (double) PAGE_SIZE));
-        int currentPage = Math.min(Math.max(page, 1), totalPages);
-        int fromIndex = Math.min((currentPage - 1) * PAGE_SIZE, totalItems);
-        int toIndex = Math.min(fromIndex + PAGE_SIZE, totalItems);
-        List<TravelPost> pagePosts = filteredPosts.subList(fromIndex, toIndex);
-
-        long approvedCommentCount = comments.stream()
-                .filter(contentVisibilityService::isApproved)
-                .count();
-        long pendingPostCount = postsPendingApproval();
-        long pendingCommentCount = comments.stream()
-                .filter(comment -> comment.getReviewStatus() == ContentReviewStatus.PENDING)
-                .count();
+        long approvedCommentCount = commentRepository
+                .countByReviewStatusAndAuthorEnabledTrue(ContentReviewStatus.APPROVED);
+        long pendingPostCount = postRepository.count((root, query, builder) ->
+                builder.equal(root.get("reviewStatus"), ContentReviewStatus.PENDING));
+        long pendingCommentCount = commentRepository
+                .countByReviewStatusAndAuthorEnabledTrue(ContentReviewStatus.PENDING);
 
         model.addAttribute("posts", pagePosts);
         model.addAttribute("likeCounts", viewDataService.likeCounts(pagePosts));
@@ -154,8 +156,8 @@ public class HomeController {
         model.addAttribute("totalResults", totalItems);
         model.addAttribute("hasPreviousPage", currentPage > 1);
         model.addAttribute("hasNextPage", currentPage < totalPages);
-        model.addAttribute("totalUsers", users.stream().filter(User::isEnabled).count());
-        model.addAttribute("totalPosts", posts.size());
+        model.addAttribute("totalUsers", userRepository.countByEnabledTrue());
+        model.addAttribute("totalPosts", postRepository.count(feedSpecification(null, null, null, "all", "all", Set.of())));
         model.addAttribute("totalComments", approvedCommentCount);
         model.addAttribute("totalLikes", likeRepository.count());
         model.addAttribute("totalFavorites", favoriteRepository.count());
@@ -164,35 +166,62 @@ public class HomeController {
         return "index";
     }
 
-    private boolean containsKeyword(TravelPost post, String q) {
-        String keyword = q.trim().toLowerCase();
-        return post.getTitle().toLowerCase().contains(keyword)
-                || locationNormalizationService.normalizeLookupKey(post).contains(keyword.replace(" ", ""))
-                || post.getContent().toLowerCase().contains(keyword)
-                || post.getAuthor().getNickname().toLowerCase().contains(keyword);
+    private Specification<TravelPost> feedSpecification(
+            String q,
+            String category,
+            String location,
+            String scope,
+            String contentType,
+            Set<Long> followingIds) {
+        return (root, query, builder) -> {
+            List<Predicate> predicates = new ArrayList<>();
+            predicates.add(builder.or(
+                    builder.equal(root.get("reviewStatus"), ContentReviewStatus.APPROVED),
+                    builder.isNull(root.get("reviewStatus"))));
+            predicates.add(builder.or(
+                    builder.equal(root.get("visibility"), com.example.travelfootprint.model.PostVisibility.PUBLIC),
+                    builder.isNull(root.get("visibility"))));
+            predicates.add(builder.isTrue(root.get("author").get("enabled")));
+            if ("following".equalsIgnoreCase(scope)) {
+                predicates.add(followingIds.isEmpty()
+                        ? builder.disjunction()
+                        : root.get("author").get("id").in(followingIds));
+            }
+            if (q != null && !q.isBlank()) {
+                String keyword = "%" + q.trim().toLowerCase() + "%";
+                predicates.add(builder.or(
+                        builder.like(builder.lower(root.get("title")), keyword),
+                        builder.like(builder.lower(root.get("content")), keyword),
+                        builder.like(builder.lower(root.get("location")), keyword),
+                        builder.like(builder.lower(root.get("province")), keyword),
+                        builder.like(builder.lower(root.get("author").get("nickname")), keyword)));
+            }
+            if (category != null && !category.isBlank()) {
+                predicates.add(builder.equal(root.get("category"), category));
+            }
+            if (location != null && !location.isBlank()) {
+                String locationKeyword = "%" + location.trim().toLowerCase() + "%";
+                predicates.add(builder.or(
+                        builder.like(builder.lower(root.get("location")), locationKeyword),
+                        builder.like(builder.lower(root.get("province")), locationKeyword)));
+            }
+            Predicate sourcePredicate = sourceTypeSpecification(contentType).toPredicate(root, query, builder);
+            if (sourcePredicate != null) {
+                predicates.add(sourcePredicate);
+            }
+            return builder.and(predicates.toArray(Predicate[]::new));
+        };
     }
 
-    private boolean matchesLocation(TravelPost post, String location) {
-        if (location == null || location.isBlank()) {
-            return true;
-        }
-        return locationNormalizationService.normalizeLookupKey(post)
-                .contains(locationNormalizationService.normalizeLookupKey(post.getProvince(), location));
-    }
-
-    private boolean matchesContentType(TravelPost post, String contentType) {
-        if ("community".equalsIgnoreCase(contentType)) {
-            return post.getSourceUrl() == null;
-        }
-        if ("reference".equalsIgnoreCase(contentType)) {
-            return post.getSourceUrl() != null;
-        }
-        return true;
-    }
-
-    private long postsPendingApproval() {
-        return postRepository.findAll().stream()
-                .filter(post -> post.getReviewStatus() == ContentReviewStatus.PENDING)
-                .count();
+    private Specification<TravelPost> sourceTypeSpecification(String contentType) {
+        return (root, query, builder) -> {
+            if ("community".equalsIgnoreCase(contentType)) {
+                return builder.isNull(root.get("sourceUrl"));
+            }
+            if ("reference".equalsIgnoreCase(contentType)) {
+                return builder.isNotNull(root.get("sourceUrl"));
+            }
+            return builder.conjunction();
+        };
     }
 }
